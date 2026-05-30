@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(npx sequelize-cli *)",
+      "Bash(awk '{print $NF}')",
+      "Bash(grep -E \"\\(md|json\\)$\")",
+      "Bash(npm run *)",
+      "Bash(mysql -u root -proot workdesk24 -e \"SHOW TABLES;\")",
+      "Bash(netstat -ano)",
+      "Bash(taskkill *)",
+      "Bash(curl *)",
+      "Bash(node -e \"const mysql = require\\('mysql2'\\); const conn = mysql.createConnection\\({host:'localhost',user:'root',password:'',database:'workdesk24'}\\); conn.connect\\(\\); conn.query\\('SHOW TABLES', \\(err, results\\) => { if\\(err\\) console.error\\(err\\); else console.table\\(results\\); conn.end\\(\\); }\\);\")",
+      "Bash(chmod +x scripts/migrate-fresh.sh)",
+      "Bash(mysql -u root -e \"SHOW TABLES FROM workdesk24;\")",
+      "Bash(node -e \"const db = require\\('./config/database.js'\\); db.query\\('SHOW TABLES', \\(err, res\\) => { if\\(err\\) console.error\\(err\\); else console.log\\(res\\); process.exit\\(\\); }\\);\")",
+      "Bash(node *)",
+      "Bash(tee migration-output.log)",
+      "Bash(mysql -u root workdesk24 -e \"DESCRIBE wd_inquiries;\")",
+      "Bash(pkill -f \"node.*server\")",
+      "Bash(npm list *)",
+      "Bash(npm start *)",
+      "Bash(npx ts-node *)",
+      "Bash(mysql -u root -proot workdesk24 -e \"DESCRIBE wd_users;\")",
+      "Bash(where mysql.exe)",
+      "Bash(pkill -f \"ts-node.*server\")",
+      "Bash(xargs -I {} taskkill //F //PID {})",
+      "Bash(tasklist)",
+      "Bash(awk '{print $2}')",
+      "Bash(ps -p 18040 -o command=)",
+      "Bash(PORT=3002 npx ts-node src/server.ts)",
+      "Bash(findstr :3001)",
+      "Bash(mysql *)"
+    ]
+  }
+}

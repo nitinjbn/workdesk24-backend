@@ -1,0 +1,905 @@
+{
+  "info": {
+    "name": "Workdesk24 API v1 - Complete",
+    "description": "Complete API collection for Workdesk24 with authentication, admin, app, and sync endpoints. All APIs use POST method and require JWT token except public routes.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "workdesk24-api-v1",
+    "version": "1.0.0"
+  },
+  "variable": [
+    {
+      "key": "BASE_URL",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "TOKEN",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Public Routes",
+      "description": "Public endpoints that do not require authentication",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/public/info/health",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "public", "info", "health"]
+            }
+          }
+        },
+        {
+          "name": "Get API Version",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/public/info/version",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "public", "info", "version"]
+            }
+          }
+        },
+        {
+          "name": "Submit Inquiry",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"phone\": \"+1234567890\",\n  \"subject\": \"Question about services\",\n  \"message\": \"I would like to know more about your offerings.\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/public/inquiries",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "public", "inquiries"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Authentication",
+      "description": "User registration and login endpoints",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\",\n  \"name\": \"John Doe\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/auth/register",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.token) {",
+                  "        pm.collectionVariables.set(\"TOKEN\", response.token);",
+                  "        console.log(\"Token saved:\", response.token);",
+                  "    } else if (response.data && response.data.token) {",
+                  "        pm.collectionVariables.set(\"TOKEN\", response.data.token);",
+                  "        console.log(\"Token saved:\", response.data.token);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/auth/login",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "auth", "login"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "App Routes",
+      "description": "Mobile app endpoints - requires authentication",
+      "item": [
+        {
+          "name": "Profile",
+          "item": [
+            {
+              "name": "Get Profile",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{TOKEN}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/app/profile/get",
+                  "host": ["{{BASE_URL}}"],
+                  "path": ["api", "v1", "app", "profile", "get"]
+                }
+              }
+            },
+            {
+              "name": "Update Profile",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{TOKEN}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Jane Smith\",\n  \"email\": \"jane@example.com\"\n}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/app/profile/update",
+                  "host": ["{{BASE_URL}}"],
+                  "path": ["api", "v1", "app", "profile", "update"]
+                }
+              }
+            },
+            {
+              "name": "Change Password",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{TOKEN}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"currentPassword\": \"password123\",\n  \"newPassword\": \"newpassword456\"\n}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/app/profile/password",
+                  "host": ["{{BASE_URL}}"],
+                  "path": ["api", "v1", "app", "profile", "password"]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Data",
+          "item": [
+            {
+              "name": "Get App Data",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{TOKEN}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/app/data/get",
+                  "host": ["{{BASE_URL}}"],
+                  "path": ["api", "v1", "app", "data", "get"]
+                }
+              }
+            },
+            {
+              "name": "Create App Data",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{TOKEN}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"key\": \"value\",\n  \"data\": \"example\"\n}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/app/data/create",
+                  "host": ["{{BASE_URL}}"],
+                  "path": ["api", "v1", "app", "data", "create"]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sync",
+          "description": "Data synchronization endpoints for Android app",
+          "item": [
+            {
+              "name": "Sync Attendance",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{TOKEN}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"records\": [\n    {\n      \"localId\": \"att_001\",\n      \"checkInTime\": \"2026-05-30T09:00:00Z\",\n      \"checkOutTime\": \"2026-05-30T17:30:00Z\",\n      \"checkInLat\": 28.6139,\n      \"checkInLng\": 77.2090,\n      \"checkOutLat\": 28.6140,\n      \"checkOutLng\": 77.2091,\n      \"workingHours\": 8.5,\n      \"status\": \"checked_out\",\n      \"notes\": \"Regular day\"\n    }\n  ]\n}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/app/sync/attendance",
+                  "host": ["{{BASE_URL}}"],
+                  "path": ["api", "v1", "app", "sync", "attendance"]
+                }
+              }
+            },
+            {
+              "name": "Sync GPS History",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{TOKEN}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"records\": [\n    {\n      \"localId\": \"gps_001\",\n      \"latitude\": 28.6139,\n      \"longitude\": 77.2090,\n      \"accuracy\": 5.2,\n      \"altitude\": 220.5,\n      \"speed\": 0,\n      \"bearing\": 0,\n      \"recordedAt\": \"2026-05-30T09:00:00Z\",\n      \"batteryLevel\": 85,\n      \"activityType\": \"still\"\n    },\n    {\n      \"localId\": \"gps_002\",\n      \"latitude\": 28.6145,\n      \"longitude\": 77.2095,\n      \"accuracy\": 8.5,\n      \"speed\": 12.5,\n      \"recordedAt\": \"2026-05-30T09:30:00Z\",\n      \"batteryLevel\": 84,\n      \"activityType\": \"driving\"\n    }\n  ]\n}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/app/sync/gps-history",
+                  "host": ["{{BASE_URL}}"],
+                  "path": ["api", "v1", "app", "sync", "gps-history"]
+                }
+              }
+            },
+            {
+              "name": "Sync Visits",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{TOKEN}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"records\": [\n    {\n      \"localId\": \"visit_001\",\n      \"customerName\": \"ABC Corporation\",\n      \"customerPhone\": \"+919876543210\",\n      \"customerEmail\": \"contact@abc.com\",\n      \"address\": \"123 Business Park, Delhi\",\n      \"latitude\": 28.6139,\n      \"longitude\": 77.2090,\n      \"visitType\": \"meeting\",\n      \"purpose\": \"Product demonstration\",\n      \"notes\": \"Interested in premium package\",\n      \"checkInTime\": \"2026-05-30T10:00:00Z\",\n      \"checkOutTime\": \"2026-05-30T11:30:00Z\",\n      \"duration\": 90,\n      \"status\": \"completed\",\n      \"outcome\": \"success\"\n    }\n  ]\n}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/app/sync/visits",
+                  "host": ["{{BASE_URL}}"],
+                  "path": ["api", "v1", "app", "sync", "visits"]
+                }
+              }
+            },
+            {
+              "name": "Sync Orders",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{TOKEN}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"records\": [\n    {\n      \"localId\": \"order_001\",\n      \"orderNumber\": \"ORD-2026-001\",\n      \"customerName\": \"ABC Corporation\",\n      \"customerPhone\": \"+919876543210\",\n      \"customerEmail\": \"contact@abc.com\",\n      \"deliveryAddress\": \"123 Business Park, Delhi\",\n      \"items\": [\n        {\n          \"productId\": \"P001\",\n          \"productName\": \"Product A\",\n          \"quantity\": 10,\n          \"unitPrice\": 500,\n          \"total\": 5000\n        },\n        {\n          \"productId\": \"P002\",\n          \"productName\": \"Product B\",\n          \"quantity\": 5,\n          \"unitPrice\": 1000,\n          \"total\": 5000\n        }\n      ],\n      \"totalAmount\": 10000,\n      \"taxAmount\": 1800,\n      \"discountAmount\": 500,\n      \"netAmount\": 11300,\n      \"status\": \"confirmed\",\n      \"paymentStatus\": \"pending\",\n      \"orderDate\": \"2026-05-30T11:30:00Z\",\n      \"deliveryDate\": \"2026-06-05T00:00:00Z\",\n      \"notes\": \"Deliver to warehouse\"\n    }\n  ]\n}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/app/sync/orders",
+                  "host": ["{{BASE_URL}}"],
+                  "path": ["api", "v1", "app", "sync", "orders"]
+                }
+              }
+            },
+            {
+              "name": "Sync Payments",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{TOKEN}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"records\": [\n    {\n      \"localId\": \"payment_001\",\n      \"orderId\": null,\n      \"transactionId\": \"TXN123456789\",\n      \"amount\": 5000,\n      \"paymentMethod\": \"upi\",\n      \"paymentDate\": \"2026-05-30T12:00:00Z\",\n      \"status\": \"completed\",\n      \"referenceNumber\": \"UPI/REF/123456\",\n      \"notes\": \"Advance payment\",\n      \"latitude\": 28.6139,\n      \"longitude\": 77.2090\n    }\n  ]\n}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/app/sync/payments",
+                  "host": ["{{BASE_URL}}"],
+                  "path": ["api", "v1", "app", "sync", "payments"]
+                }
+              }
+            },
+            {
+              "name": "Sync Feedback",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{TOKEN}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"records\": [\n    {\n      \"localId\": \"feedback_001\",\n      \"relatedType\": \"visit\",\n      \"relatedId\": null,\n      \"customerName\": \"ABC Corporation\",\n      \"customerPhone\": \"+919876543210\",\n      \"rating\": 5,\n      \"category\": \"Product Quality\",\n      \"subject\": \"Excellent service\",\n      \"message\": \"Very satisfied with the product demonstration and service quality.\",\n      \"sentiment\": \"positive\",\n      \"status\": \"pending\",\n      \"feedbackDate\": \"2026-05-30T11:30:00Z\",\n      \"latitude\": 28.6139,\n      \"longitude\": 77.2090\n    }\n  ]\n}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/app/sync/feedback",
+                  "host": ["{{BASE_URL}}"],
+                  "path": ["api", "v1", "app", "sync", "feedback"]
+                }
+              }
+            },
+            {
+              "name": "Sync Images",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{TOKEN}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"records\": [\n    {\n      \"localId\": \"img_001\",\n      \"relatedType\": \"visit\",\n      \"relatedId\": null,\n      \"fileName\": \"visit_photo_001.jpg\",\n      \"originalName\": \"IMG_20260530_103045.jpg\",\n      \"filePath\": \"/uploads/visits/2026/05/visit_photo_001.jpg\",\n      \"fileSize\": 245680,\n      \"mimeType\": \"image/jpeg\",\n      \"base64Data\": \"/9j/4AAQSkZJRgABAQAAAQABAAD...\",\n      \"width\": 1920,\n      \"height\": 1080,\n      \"latitude\": 28.6139,\n      \"longitude\": 77.2090,\n      \"capturedAt\": \"2026-05-30T10:30:00Z\",\n      \"description\": \"Meeting room photo\"\n    }\n  ]\n}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/app/sync/images",
+                  "host": ["{{BASE_URL}}"],
+                  "path": ["api", "v1", "app", "sync", "images"]
+                }
+              }
+            },
+            {
+              "name": "Sync All Data",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{TOKEN}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"attendance\": [\n    {\n      \"localId\": \"att_001\",\n      \"checkInTime\": \"2026-05-30T09:00:00Z\",\n      \"checkInLat\": 28.6139,\n      \"checkInLng\": 77.2090,\n      \"status\": \"checked_in\"\n    }\n  ],\n  \"gpsHistory\": [\n    {\n      \"localId\": \"gps_001\",\n      \"latitude\": 28.6139,\n      \"longitude\": 77.2090,\n      \"recordedAt\": \"2026-05-30T09:00:00Z\"\n    }\n  ],\n  \"visits\": [],\n  \"orders\": [],\n  \"payments\": [],\n  \"feedback\": [],\n  \"images\": []\n}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/app/sync/all",
+                  "host": ["{{BASE_URL}}"],
+                  "path": ["api", "v1", "app", "sync", "all"]
+                }
+              }
+            },
+            {
+              "name": "Get Server Updates",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{TOKEN}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"lastSyncTime\": \"2026-05-30T08:00:00Z\"\n}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/app/sync/get-updates",
+                  "host": ["{{BASE_URL}}"],
+                  "path": ["api", "v1", "app", "sync", "get-updates"]
+                }
+              }
+            },
+            {
+              "name": "Get Sync Status",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{TOKEN}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/app/sync/status",
+                  "host": ["{{BASE_URL}}"],
+                  "path": ["api", "v1", "app", "sync", "status"]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Admin Routes",
+      "description": "Admin endpoints - requires authentication",
+      "item": [
+        {
+          "name": "Users",
+          "item": [
+            {
+              "name": "List Users",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{TOKEN}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"page\": 1,\n  \"limit\": 10\n}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/admin/users/list",
+                  "host": ["{{BASE_URL}}"],
+                  "path": ["api", "v1", "admin", "users", "list"]
+                }
+              }
+            },
+            {
+              "name": "Get User by ID",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{TOKEN}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"id\": 1\n}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/admin/users/get",
+                  "host": ["{{BASE_URL}}"],
+                  "path": ["api", "v1", "admin", "users", "get"]
+                }
+              }
+            },
+            {
+              "name": "Update User",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{TOKEN}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"id\": 1,\n  \"name\": \"Updated Name\",\n  \"email\": \"updated@example.com\"\n}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/admin/users/update",
+                  "host": ["{{BASE_URL}}"],
+                  "path": ["api", "v1", "admin", "users", "update"]
+                }
+              }
+            },
+            {
+              "name": "Delete User",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{TOKEN}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"id\": 2\n}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/admin/users/delete",
+                  "host": ["{{BASE_URL}}"],
+                  "path": ["api", "v1", "admin", "users", "delete"]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Inquiries",
+          "item": [
+            {
+              "name": "List Inquiries",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{TOKEN}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"page\": 1,\n  \"limit\": 10,\n  \"status\": \"pending\",\n  \"priority\": \"high\"\n}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/admin/inquiries/list",
+                  "host": ["{{BASE_URL}}"],
+                  "path": ["api", "v1", "admin", "inquiries", "list"]
+                }
+              }
+            },
+            {
+              "name": "Get Inquiry by ID",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{TOKEN}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"id\": 1\n}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/admin/inquiries/get",
+                  "host": ["{{BASE_URL}}"],
+                  "path": ["api", "v1", "admin", "inquiries", "get"]
+                }
+              }
+            },
+            {
+              "name": "Update Inquiry",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{TOKEN}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"id\": 1,\n  \"priority\": \"urgent\",\n  \"adminNotes\": \"Follow up required immediately\"\n}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/admin/inquiries/update",
+                  "host": ["{{BASE_URL}}"],
+                  "path": ["api", "v1", "admin", "inquiries", "update"]
+                }
+              }
+            },
+            {
+              "name": "Update Inquiry Status",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{TOKEN}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"id\": 1,\n  \"status\": \"in_progress\"\n}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/admin/inquiries/status",
+                  "host": ["{{BASE_URL}}"],
+                  "path": ["api", "v1", "admin", "inquiries", "status"]
+                }
+              }
+            },
+            {
+              "name": "Assign Inquiry",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{TOKEN}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"id\": 1,\n  \"adminId\": 2\n}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/admin/inquiries/assign",
+                  "host": ["{{BASE_URL}}"],
+                  "path": ["api", "v1", "admin", "inquiries", "assign"]
+                }
+              }
+            },
+            {
+              "name": "Delete Inquiry",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{TOKEN}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"id\": 1\n}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/admin/inquiries/delete",
+                  "host": ["{{BASE_URL}}"],
+                  "path": ["api", "v1", "admin", "inquiries", "delete"]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Dashboard",
+          "item": [
+            {
+              "name": "Get Statistics",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{TOKEN}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/admin/dashboard/stats",
+                  "host": ["{{BASE_URL}}"],
+                  "path": ["api", "v1", "admin", "dashboard", "stats"]
+                }
+              }
+            },
+            {
+              "name": "Get Recent Inquiries",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{TOKEN}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"limit\": 5\n}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/admin/dashboard/recent-inquiries",
+                  "host": ["{{BASE_URL}}"],
+                  "path": ["api", "v1", "admin", "dashboard", "recent-inquiries"]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
