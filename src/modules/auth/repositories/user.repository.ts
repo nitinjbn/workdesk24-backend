@@ -1,7 +1,6 @@
 import { BaseRepository } from '../../../shared/repositories/base.repository';
 import User from '../../../models/schemas/User';
 import { WhereOptions } from 'sequelize';
-import bcrypt from 'bcryptjs';
 
 export class UserRepository extends BaseRepository<typeof User.prototype> {
   constructor() {
@@ -9,12 +8,7 @@ export class UserRepository extends BaseRepository<typeof User.prototype> {
   }
 
   async create(data: Partial<typeof User.prototype>): Promise<typeof User.prototype> {
-    // Hash password before creating
-    if (data.password) {
-      data.password = await bcrypt.hash(data.password, 10);
-    }
-
-    // Set default values
+    // Set default values (password hashing handled by model hook)
     const now = Math.floor(Date.now() / 1000);
     return this.model.create({
       ...data,
