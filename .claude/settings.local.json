@@ -30,7 +30,9 @@
       "Bash(ps -p 18040 -o command=)",
       "Bash(PORT=3002 npx ts-node src/server.ts)",
       "Bash(findstr :3001)",
-      "Bash(mysql *)"
+      "Bash(mysql *)",
+      "Bash(lsof -ti:3000)",
+      "Bash(xargs -r kill -9)"
     ]
   }
 }

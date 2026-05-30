@@ -14,7 +14,7 @@ router.post('/sync/payments', syncController.syncPayments.bind(syncController));
 router.post('/sync/feedback', syncController.syncFeedback.bind(syncController));
 router.post('/sync/images', syncController.syncImages.bind(syncController));
 router.post('/sync/all', syncController.syncAll.bind(syncController));
-router.post('/sync/updates', syncController.getUpdates.bind(syncController));
+router.post('/sync/get-updates', syncController.getUpdates.bind(syncController));
 router.post('/sync/status', syncController.getSyncStatus.bind(syncController));
 
 router.post('/profile/get', (req, res) => {

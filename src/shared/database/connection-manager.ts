@@ -248,15 +248,24 @@ export class DatabaseConnectionManager {
 
   /**
    * Update connection metrics
+   * Note: Accessing internal pool structure - may vary by Sequelize version
    */
   private updateMetrics(): void {
-    const pool = (this.sequelize.connectionManager as any).pool;
+    try {
+      const connectionManager = this.sequelize.connectionManager as any;
+      const pool = connectionManager?.pool;
 
-    if (pool) {
-      this.metrics.totalConnections = pool.size || 0;
-      this.metrics.activeConnections = pool.using || 0;
-      this.metrics.idleConnections = pool.available || 0;
-      this.metrics.waitingRequests = pool.waiting || 0;
+      if (pool) {
+        // Generic-pool properties (used by Sequelize v6)
+        this.metrics.totalConnections = pool.size || 0;
+        this.metrics.activeConnections = (pool.borrowed || pool.using || 0);
+        this.metrics.idleConnections = (pool.available || pool.free || 0);
+        this.metrics.waitingRequests = (pool.pending || pool.waiting || 0);
+      }
+    } catch (error: any) {
+      logger.warn('Failed to update connection pool metrics', {
+        error: error.message,
+      });
     }
 
     this.metrics.uptime = Date.now() - this.metrics.startTime.getTime();
@@ -306,25 +315,22 @@ export class DatabaseConnectionManager {
 
   /**
    * Setup event listeners for connection events
+   * Note: Sequelize v6 doesn't expose connectionManager events directly.
+   * We rely on pool metrics and hooks instead.
    */
   private setupEventListeners(): void {
-    // Connection acquired
-    this.sequelize.connectionManager.on('connection:acquire', () => {
-      this.metrics.activeConnections++;
+    // Use Sequelize hooks for connection tracking
+    this.sequelize.addHook('beforeConnect', () => {
+      logger.debug('Database connection attempt');
     });
 
-    // Connection released
-    this.sequelize.connectionManager.on('connection:release', () => {
-      this.metrics.activeConnections--;
+    this.sequelize.addHook('afterConnect', () => {
+      this.metrics.totalConnections++;
+      logger.debug('Database connection established');
     });
 
-    // Connection error
-    this.sequelize.connectionManager.on('connection:error', (error: Error) => {
-      this.metrics.errors++;
-      logger.error('Database connection error', {
-        error: error.message,
-        stack: error.stack,
-      });
+    this.sequelize.addHook('beforeDisconnect', () => {
+      logger.debug('Database disconnecting');
     });
   }
 

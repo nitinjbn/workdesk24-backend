@@ -1,5 +1,4 @@
-import transporter from '../config/email';
-import { InquiryAttributes } from '../types';
+import transporter from '../../config/email';
 
 interface EmailOptions {
   to: string;
@@ -12,6 +11,14 @@ interface EmailResult {
   success: boolean;
   messageId?: string;
   error?: string;
+}
+
+interface InquiryData {
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+  phone?: string;
 }
 
 class EmailService {
@@ -34,11 +41,12 @@ class EmailService {
     }
   }
 
-  static async sendInquiryNotification(inquiry: InquiryAttributes): Promise<EmailResult> {
+  static async sendInquiryNotification(inquiry: InquiryData): Promise<EmailResult> {
     const subject = `New Inquiry: ${inquiry.subject}`;
     const text = `
       New inquiry received from ${inquiry.name}
       Email: ${inquiry.email}
+      ${inquiry.phone ? `Phone: ${inquiry.phone}` : ''}
       Subject: ${inquiry.subject}
       Message: ${inquiry.message}
     `;
@@ -47,6 +55,7 @@ class EmailService {
       <h2>New Inquiry Received</h2>
       <p><strong>Name:</strong> ${inquiry.name}</p>
       <p><strong>Email:</strong> ${inquiry.email}</p>
+      ${inquiry.phone ? `<p><strong>Phone:</strong> ${inquiry.phone}</p>` : ''}
       <p><strong>Subject:</strong> ${inquiry.subject}</p>
       <p><strong>Message:</strong></p>
       <p>${inquiry.message}</p>
@@ -60,7 +69,7 @@ class EmailService {
     });
   }
 
-  static async sendInquiryConfirmation(inquiry: InquiryAttributes): Promise<EmailResult> {
+  static async sendInquiryConfirmation(inquiry: InquiryData): Promise<EmailResult> {
     const subject = 'Thank you for your inquiry';
     const text = `
       Dear ${inquiry.name},

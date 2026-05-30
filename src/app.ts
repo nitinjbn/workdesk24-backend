@@ -2,6 +2,7 @@ import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import routes from './routes';
+import healthRoutes from './routes/health.routes';
 import { errorHandler } from './shared/middleware/error-handler.middleware';
 
 dotenv.config();
@@ -17,6 +18,7 @@ app.use(express.urlencoded({ extended: true }));
 app.set('trust proxy', true);
 
 // Routes
+app.use('/api', healthRoutes);
 app.use('/api', routes);
 
 // 404 handler

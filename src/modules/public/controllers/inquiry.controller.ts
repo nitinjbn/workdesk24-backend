@@ -84,6 +84,53 @@ export class InquiryController {
       next(error);
     }
   }
+
+  async updateInquiry(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id, priority, adminNotes } = req.body;
+
+      const inquiry = await inquiryService.updateInquiry(id, { priority, adminNotes });
+
+      res.json({
+        success: true,
+        message: 'Inquiry updated successfully',
+        data: inquiry,
+      } as ApiResponse);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async assignInquiry(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id, adminId } = req.body;
+
+      const inquiry = await inquiryService.assignInquiry(id, adminId);
+
+      res.json({
+        success: true,
+        message: 'Inquiry assigned successfully',
+        data: inquiry,
+      } as ApiResponse);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async deleteInquiry(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.body;
+
+      await inquiryService.deleteInquiry(id);
+
+      res.json({
+        success: true,
+        message: 'Inquiry deleted successfully',
+      } as ApiResponse);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default new InquiryController();

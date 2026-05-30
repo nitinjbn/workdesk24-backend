@@ -36,6 +36,31 @@ export class InquiryService {
     }
     return inquiry;
   }
+
+  async updateInquiry(id: number, data: { priority?: string; adminNotes?: string }) {
+    const inquiry = await inquiryRepository.update(id, data as any);
+    if (!inquiry) {
+      throw new Error('Inquiry not found');
+    }
+    return inquiry;
+  }
+
+  async assignInquiry(id: number, adminId: number) {
+    const inquiry = await inquiryRepository.update(id, { assignedTo: adminId } as any);
+    if (!inquiry) {
+      throw new Error('Inquiry not found');
+    }
+    return inquiry;
+  }
+
+  async deleteInquiry(id: number) {
+    const inquiry = await inquiryRepository.findById(id);
+    if (!inquiry) {
+      throw new Error('Inquiry not found');
+    }
+    await inquiryRepository.delete(id);
+    return true;
+  }
 }
 
 export default new InquiryService();
