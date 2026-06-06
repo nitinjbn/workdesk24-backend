@@ -120,13 +120,15 @@ export function initFeedback(sequelize: Sequelize): typeof Feedback {
         allowNull: true,
       },
       syncedAt: {
-        type: DataTypes.DATE,
+        type: DataTypes.BIGINT,
         allowNull: true,
-        },
+        field: 'syncedAt',
+      },
     },
     {
       sequelize,
       tableName: 'wd_feedback',
+      timestamps: false,
       indexes: [
         { fields: ['user_id'] },
         { fields: ['local_id'] },

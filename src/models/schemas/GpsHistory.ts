@@ -1,7 +1,7 @@
 import { Model, DataTypes, Sequelize, Optional } from 'sequelize';
 import { GpsHistoryAttributes } from '../../types';
 
-interface GpsHistoryCreationAttributes extends Optional<GpsHistoryAttributes, 'id' | 'localId' | 'accuracy' | 'altitude' | 'speed' | 'bearing' | 'batteryLevel' | 'activityType' | 'syncedAt' | 'createdAt' | 'updatedAt'> {}
+interface GpsHistoryCreationAttributes extends Optional<GpsHistoryAttributes, 'id' | 'localId' | 'accuracy' | 'altitude' | 'speed' | 'provider' | 'batteryPercentage' | 'isCharging' | 'syncedAt' | 'createdAt' | 'updatedAt'> {}
 
 class GpsHistory extends Model<GpsHistoryAttributes, GpsHistoryCreationAttributes> implements GpsHistoryAttributes {
   public id!: number;
@@ -12,13 +12,14 @@ class GpsHistory extends Model<GpsHistoryAttributes, GpsHistoryCreationAttribute
   public accuracy?: number;
   public altitude?: number;
   public speed?: number;
-  public bearing?: number;
-  public recordedAt!: Date;
-  public batteryLevel?: number;
-  public activityType?: string;
-  public syncedAt?: Date;
-  public readonly createdAt!: Date;
-  public readonly updatedAt!: Date;
+  public provider?: string;
+  public batteryPercentage?: number;
+  public isCharging?: number;
+  public createdAt!: number;
+  public updatedAt!: number | null;
+  public syncedAt?: number;  
+  public isDeleted!: number;
+  public deletedAt?: number | null;
 
   public static associate(models: any): void {
     GpsHistory.belongsTo(models.User, {
@@ -38,13 +39,11 @@ export function initGpsHistory(sequelize: Sequelize): typeof GpsHistory {
       },
       userId: {
         type: DataTypes.INTEGER.UNSIGNED,
-        allowNull: false,
-        field: 'user_id',
+        allowNull: false
       },
       localId: {
         type: DataTypes.STRING(100),
-        allowNull: true,
-        field: 'local_id',
+        allowNull: true
       },
       latitude: {
         type: DataTypes.DECIMAL(10, 8),
@@ -66,37 +65,47 @@ export function initGpsHistory(sequelize: Sequelize): typeof GpsHistory {
         type: DataTypes.FLOAT,
         allowNull: true,
       },
-      bearing: {
-        type: DataTypes.FLOAT,
+      provider: {
+        type: DataTypes.STRING(100),
         allowNull: true,
       },
-      recordedAt: {
-        type: DataTypes.DATE,
-        allowNull: false,
-        field: 'recorded_at',
-      },
-      batteryLevel: {
+      batteryPercentage: {
         type: DataTypes.INTEGER,
-        allowNull: true,
-        field: 'battery_level',
+        allowNull: true
       },
-      activityType: {
-        type: DataTypes.STRING(50),
-        allowNull: true,
-        field: 'activity_type',
+      isCharging: {
+        type: DataTypes.TINYINT,
+        allowNull: true
       },
+      createdAt: {
+        type: DataTypes.BIGINT,
+        allowNull: false
+      },
+      updatedAt: {
+        type: DataTypes.BIGINT,
+        allowNull: true
+      },      
       syncedAt: {
-        type: DataTypes.DATE,
-        allowNull: true,
-        },
+        type: DataTypes.BIGINT,
+        allowNull: true
+      },
+      isDeleted: {
+        type: DataTypes.TINYINT,
+        allowNull: false,
+        defaultValue: 0
+      },
+      deletedAt: {
+        type: DataTypes.BIGINT,
+        allowNull: true
+      },
     },
     {
       sequelize,
       tableName: 'wd_gps_history',
+      timestamps: false,
       indexes: [
-        { fields: ['user_id'] },
-        { fields: ['recorded_at'] },
-        { fields: ['local_id'] },
+        { fields: ['userId'] },
+        { fields: ['localId'] },
       ],
     }
   );

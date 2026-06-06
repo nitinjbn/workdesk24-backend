@@ -43,8 +43,8 @@ export interface AttendanceAttributes {
   id?: number;
   userId: number;
   localId?: string;
-  checkInTime: Date;
-  checkOutTime?: Date;
+  checkInTime: number;
+  checkOutTime?: number;
   checkInLat?: number;
   checkInLng?: number;
   checkOutLat?: number;
@@ -52,9 +52,9 @@ export interface AttendanceAttributes {
   workingHours?: number;
   status: 'checked_in' | 'checked_out';
   notes?: string;
-  syncedAt?: Date;
-  createdAt?: Date;
-  updatedAt?: Date;
+  syncedAt?: number;
+  createdAt?: number;
+  updatedAt?: number;
 }
 
 // GPS History attributes
@@ -67,13 +67,14 @@ export interface GpsHistoryAttributes {
   accuracy?: number;
   altitude?: number;
   speed?: number;
-  bearing?: number;
-  recordedAt: Date;
-  batteryLevel?: number;
-  activityType?: string;
-  syncedAt?: Date;
-  createdAt?: Date;
-  updatedAt?: Date;
+  provider?: string;
+  batteryPercentage?: number;
+  isCharging?: number;
+  createdAt?: number;
+  updatedAt?: number | null;  
+  syncedAt?: number;
+  isDeleted?: number;
+  deletedAt?: number | null;
 }
 
 // Visit attributes
@@ -90,14 +91,14 @@ export interface VisitAttributes {
   visitType: 'meeting' | 'delivery' | 'support' | 'sales' | 'other';
   purpose?: string;
   notes?: string;
-  checkInTime: Date;
-  checkOutTime?: Date;
+  checkInTime: number;
+  checkOutTime?: number;
   duration?: number;
   status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
   outcome?: 'success' | 'failed' | 'rescheduled' | 'not_available';
-  syncedAt?: Date;
-  createdAt?: Date;
-  updatedAt?: Date;
+  syncedAt?: number;
+  createdAt?: number;
+  updatedAt?: number;
 }
 
 // Order attributes
@@ -117,12 +118,12 @@ export interface OrderAttributes {
   netAmount: number;
   status: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
   paymentStatus: 'pending' | 'partial' | 'paid' | 'refunded';
-  orderDate: Date;
-  deliveryDate?: Date;
+  orderDate: number;
+  deliveryDate?: number;
   notes?: string;
-  syncedAt?: Date;
-  createdAt?: Date;
-  updatedAt?: Date;
+  syncedAt?: number;
+  createdAt?: number;
+  updatedAt?: number;
 }
 
 // Payment attributes
@@ -134,15 +135,15 @@ export interface PaymentAttributes {
   transactionId?: string;
   amount: number;
   paymentMethod: 'cash' | 'card' | 'upi' | 'bank_transfer' | 'cheque' | 'other';
-  paymentDate: Date;
+  paymentDate: number;
   status: 'pending' | 'completed' | 'failed' | 'refunded';
   referenceNumber?: string;
   notes?: string;
   latitude?: number;
   longitude?: number;
-  syncedAt?: Date;
-  createdAt?: Date;
-  updatedAt?: Date;
+  syncedAt?: number;
+  createdAt?: number;
+  updatedAt?: number;
 }
 
 // Feedback attributes
@@ -163,9 +164,9 @@ export interface FeedbackAttributes {
   feedbackDate: Date;
   latitude?: number;
   longitude?: number;
-  syncedAt?: Date;
-  createdAt?: Date;
-  updatedAt?: Date;
+  syncedAt?: number;
+  createdAt?: number;
+  updatedAt?: number;
 }
 
 // Image attributes
@@ -185,11 +186,11 @@ export interface ImageAttributes {
   height?: number;
   latitude?: number;
   longitude?: number;
-  capturedAt?: Date;
+  capturedAt?: number;
   description?: string;
-  syncedAt?: Date;
-  createdAt?: Date;
-  updatedAt?: Date;
+  syncedAt?: number;
+  createdAt?: number;
+  updatedAt?: number;
 }
 
 // User attributes
@@ -198,8 +199,8 @@ export interface UserAttributes {
   email: string;
   password: string;
   name?: string;
-  createdAt?: Date;
-  updatedAt?: Date;
+  createdAt?: number;
+  updatedAt?: number;
 }
 
 // Inquiry attributes

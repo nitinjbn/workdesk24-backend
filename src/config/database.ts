@@ -1,5 +1,5 @@
 import dotenv from 'dotenv';
-import { Dialect } from 'sequelize';
+import type { Dialect } from 'sequelize';
 
 dotenv.config();
 

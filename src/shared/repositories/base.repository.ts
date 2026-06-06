@@ -31,10 +31,12 @@ export abstract class BaseRepository<T extends Model & BaseModel> {
 
   async create(data: Partial<T>): Promise<T> {
     const now = Math.floor(Date.now() / 1000);
+
+    console.log('Creating record with data:', { ...data, createdAt: now, updatedAt: now, isDeleted: 0, deletedAt: null });
     return this.model.create({
       ...data,
-      createdAt: now,
-      updatedAt: now,
+      createdAt: (data as any).createdAt || now,
+      updatedAt: (data as any).updatedAt || now,
       isDeleted: 0,
       deletedAt: null,
     } as any);
@@ -47,7 +49,7 @@ export abstract class BaseRepository<T extends Model & BaseModel> {
     const now = Math.floor(Date.now() / 1000);
     await instance.update({
       ...data,
-      updatedAt: now,
+      updatedAt: (data as any).updatedAt || now,
     } as any);
 
     return instance;
@@ -60,8 +62,7 @@ export abstract class BaseRepository<T extends Model & BaseModel> {
     const now = Math.floor(Date.now() / 1000);
     await instance.update({
       isDeleted: 1,
-      deletedAt: now,
-      updatedAt: now,
+      deletedAt: now
     } as any);
 
     return true;
