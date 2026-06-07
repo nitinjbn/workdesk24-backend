@@ -27,11 +27,13 @@ interface AttendanceAttributes extends BaseModel {
   dayoverBatteryPercentage?: number;
   isChargingOnDayover?: number;
   dayoverRemarks?: string;
+  attendanceTime: number;
+  dayoverTime?: number;
   workingHours?: number;
   syncedAt?: number;
 }
 
-interface AttendanceCreationAttributes extends Optional<AttendanceAttributes, 'id' | 'attendanceStatus' | 'vehicleType' | 'vehicleCategory' | 'attendanceOdometerReading' | 'attendanceImage' | 'attendanceRemarks' | 'attendanceLatitude' | 'attendanceLongitude' | 'attendanceLocationAccuracy' | 'attendanceLocationAltitude' | 'attendanceLocationSpeed' | 'attendanceLocationProvider' | 'attendanceBatteryPercentage' | 'isChargingOnAttendance' | 'dayoverLatitude' | 'dayoverLongitude' | 'dayoverLocationAccuracy' | 'dayoverLocationAltitude' | 'dayoverLocationSpeed' | 'dayoverLocationProvider' | 'dayoverBatteryPercentage' | 'isChargingOnDayover' | 'dayoverRemarks' | 'workingHours' | 'createdAt' | 'updatedAt' | 'syncedAt' | 'isDeleted' | 'deletedAt'> {}
+interface AttendanceCreationAttributes extends Optional<AttendanceAttributes, 'id' | 'attendanceStatus' | 'vehicleType' | 'vehicleCategory' | 'attendanceOdometerReading' | 'attendanceImage' | 'attendanceRemarks' | 'attendanceLatitude' | 'attendanceLongitude' | 'attendanceLocationAccuracy' | 'attendanceLocationAltitude' | 'attendanceLocationSpeed' | 'attendanceLocationProvider' | 'attendanceBatteryPercentage' | 'isChargingOnAttendance' | 'dayoverLatitude' | 'dayoverLongitude' | 'dayoverLocationAccuracy' | 'dayoverLocationAltitude' | 'dayoverLocationSpeed' | 'dayoverLocationProvider' | 'dayoverBatteryPercentage' | 'isChargingOnDayover' | 'dayoverRemarks' | 'attendanceTime' | 'dayoverTime' | 'workingHours' | 'createdAt' | 'updatedAt' | 'syncedAt' | 'isDeleted' | 'deletedAt'> {}
 
 class Attendance extends Model<AttendanceAttributes, AttendanceCreationAttributes> implements AttendanceAttributes {
   public id!: number;
@@ -60,6 +62,8 @@ class Attendance extends Model<AttendanceAttributes, AttendanceCreationAttribute
   public dayoverBatteryPercentage?: number;
   public isChargingOnDayover?: number;
   public dayoverRemarks?: string;
+  public attendanceTime!: number;
+  public dayoverTime?: number;
   public workingHours?: number;
   public createdAt!: number;
   public updatedAt!: number;
@@ -182,6 +186,18 @@ export function initAttendance(sequelize: Sequelize): typeof Attendance {
       },
       dayoverRemarks: {
         type: DataTypes.STRING(255),
+        allowNull: true
+      },
+      attendanceTime: {
+        type: DataTypes.BIGINT,
+        allowNull: false
+      },
+      dayoverTime: {
+        type: DataTypes.BIGINT,
+        allowNull: true
+      },
+      workingHours: {
+        type: DataTypes.FLOAT,
         allowNull: true
       },
       createdAt: {
