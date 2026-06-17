@@ -19,12 +19,12 @@ class Order extends Model<OrderAttributes, OrderCreationAttributes> implements O
   public netAmount!: number;
   public status!: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
   public paymentStatus!: 'pending' | 'partial' | 'paid' | 'refunded';
-  public orderDate!: Date;
-  public deliveryDate?: Date;
+  public orderDate!: number;
+  public deliveryDate?: number;
   public notes?: string;
-  public syncedAt?: Date;
-  public readonly createdAt!: Date;
-  public readonly updatedAt!: Date;
+  public syncedAt?: number;
+  public createdAt?: number;
+  public updatedAt?: number;
 
   public static associate(models: any): void {
     Order.belongsTo(models.User, {

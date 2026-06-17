@@ -16,14 +16,14 @@ class Visit extends Model<VisitAttributes, VisitCreationAttributes> implements V
   public visitType!: 'meeting' | 'delivery' | 'support' | 'sales' | 'other';
   public purpose?: string;
   public notes?: string;
-  public checkInTime!: Date;
-  public checkOutTime?: Date;
+  public checkInTime!: number;
+  public checkOutTime?: number;
   public duration?: number;
   public status!: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
   public outcome?: 'success' | 'failed' | 'rescheduled' | 'not_available';
-  public syncedAt?: Date;
-  public readonly createdAt!: Date;
-  public readonly updatedAt!: Date;
+  public syncedAt?: number;
+  public createdAt?: number;
+  public updatedAt?: number;
 
   public static associate(models: any): void {
     Visit.belongsTo(models.User, {

@@ -20,9 +20,9 @@ class Feedback extends Model<FeedbackAttributes, FeedbackCreationAttributes> imp
   public feedbackDate!: Date;
   public latitude?: number;
   public longitude?: number;
-  public syncedAt?: Date;
-  public readonly createdAt!: Date;
-  public readonly updatedAt!: Date;
+  public syncedAt?: number;
+  public createdAt?: number;
+  public updatedAt?: number;
 
   public static associate(models: any): void {
     Feedback.belongsTo(models.User, {

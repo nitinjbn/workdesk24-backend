@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { authMiddleware } from '../../../shared/middleware/auth.middleware';
+import { AuthRequest } from '../../../types';
 import syncController from '../../../modules/sync/controllers/sync.controller';
 
 const router = Router();
@@ -17,7 +18,7 @@ router.post('/sync/all', syncController.syncAll.bind(syncController));
 router.post('/sync/get-updates', syncController.getUpdates.bind(syncController));
 router.post('/sync/status', syncController.getSyncStatus.bind(syncController));
 
-router.post('/profile/get', (req, res) => {
+router.post('/profile/get', (req: AuthRequest, res) => {
   res.json({
     success: true,
     message: 'Profile retrieved successfully',

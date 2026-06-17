@@ -11,15 +11,15 @@ class Payment extends Model<PaymentAttributes, PaymentCreationAttributes> implem
   public transactionId?: string;
   public amount!: number;
   public paymentMethod!: 'cash' | 'card' | 'upi' | 'bank_transfer' | 'cheque' | 'other';
-  public paymentDate!: Date;
+  public paymentDate!: number;
   public status!: 'pending' | 'completed' | 'failed' | 'refunded';
   public referenceNumber?: string;
   public notes?: string;
   public latitude?: number;
   public longitude?: number;
-  public syncedAt?: Date;
-  public readonly createdAt!: Date;
-  public readonly updatedAt!: Date;
+  public syncedAt?: number;
+  public createdAt?: number;
+  public updatedAt?: number;
 
   public static associate(models: any): void {
     Payment.belongsTo(models.User, {

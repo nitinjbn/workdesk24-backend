@@ -18,8 +18,8 @@ class Inquiry extends Model<InquiryAttributes, InquiryCreationAttributes> implem
   public adminNotes?: string;
   public source?: string;
   public resolvedAt?: number;
-  public readonly createdAt!: number;
-  public readonly updatedAt!: number;
+  public createdAt!: number;
+  public updatedAt!: number;
   public isDeleted!: number;
   public deletedAt!: number | null;
 

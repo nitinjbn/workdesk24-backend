@@ -1,5 +1,5 @@
 import dotenv from 'dotenv';
-import { Options, Dialect, Logging } from 'sequelize';
+import { Options, Dialect, Transaction } from 'sequelize';
 import winston from 'winston';
 
 dotenv.config();
@@ -70,7 +70,7 @@ function calculatePoolSize(): { min: number; max: number } {
  * Production-safe query logger
  * Logs slow queries and errors without exposing sensitive data
  */
-const productionLogging: Logging = (sql: string, timing?: number) => {
+const productionLogging = (sql: string, timing?: number): void => {
   const env = process.env.NODE_ENV || 'development';
   const slowQueryThreshold = parseInt(process.env.SLOW_QUERY_THRESHOLD || '1000', 10);
 
@@ -163,7 +163,7 @@ const config: Config = {
     },
 
     // Transaction configuration
-    transactionType: 'IMMEDIATE',
+    transactionType: Transaction.TYPES.IMMEDIATE,
     isolationLevel: 'READ_COMMITTED',
   },
 
@@ -267,7 +267,7 @@ const config: Config = {
       freezeTableName: true,
     },
 
-    transactionType: 'IMMEDIATE',
+    transactionType: Transaction.TYPES.IMMEDIATE,
     isolationLevel: 'READ_COMMITTED',
   },
 
@@ -348,7 +348,7 @@ const config: Config = {
     },
 
     // Transaction configuration
-    transactionType: 'IMMEDIATE',
+    transactionType: Transaction.TYPES.IMMEDIATE,
     isolationLevel: 'READ_COMMITTED',
 
     // Query optimization

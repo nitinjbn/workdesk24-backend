@@ -1,9 +1,9 @@
 export interface BaseModel {
   id: number;
-  createdAt: number;
-  updatedAt: number;
-  isDeleted: number;
-  deletedAt: number | null;
+  createdAt?: number;
+  updatedAt?: number;
+  isDeleted?: number;
+  deletedAt?: number | null;
 }
 
 export interface PaginationParams {

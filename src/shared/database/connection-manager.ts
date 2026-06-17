@@ -14,7 +14,7 @@ import { logger } from '../../config/database.production';
  * - Connection pool monitoring
  */
 
-interface ConnectionMetrics {
+export interface ConnectionMetrics {
   totalConnections: number;
   activeConnections: number;
   idleConnections: number;
@@ -26,7 +26,7 @@ interface ConnectionMetrics {
   startTime: Date;
 }
 
-interface HealthCheckResult {
+export interface HealthCheckResult {
   isHealthy: boolean;
   responseTime: number;
   error?: string;
@@ -338,7 +338,7 @@ export class DatabaseConnectionManager {
    * Get pool configuration
    */
   private getPoolConfig(): { min: number; max: number; acquire: number; idle: number } {
-    const options = this.sequelize.options;
+    const options = (this.sequelize as Sequelize & { options?: { pool?: { min?: number; max?: number; acquire?: number; idle?: number } } }).options;
     return {
       min: options.pool?.min || 0,
       max: options.pool?.max || 0,

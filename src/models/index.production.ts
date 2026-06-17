@@ -10,7 +10,7 @@ import { initPayment } from './schemas/Payment';
 import { initFeedback } from './schemas/Feedback';
 import { initImage } from './schemas/Image';
 import config, { logger } from '../config/database.production';
-import { DatabaseConnectionManager } from '../shared/database/connection-manager';
+import { DatabaseConnectionManager, type ConnectionMetrics, type HealthCheckResult } from '../shared/database/connection-manager';
 
 dotenv.config();
 
@@ -129,14 +129,14 @@ export function getDatabaseStatus() {
 /**
  * Get database metrics
  */
-export function getDatabaseMetrics() {
+export function getDatabaseMetrics(): ConnectionMetrics {
   return connectionManager.getMetrics();
 }
 
 /**
  * Perform health check
  */
-export async function performHealthCheck() {
+export async function performHealthCheck(): Promise<HealthCheckResult> {
   return connectionManager.healthCheck();
 }
 

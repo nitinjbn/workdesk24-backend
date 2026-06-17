@@ -19,11 +19,11 @@ class Image extends Model<ImageAttributes, ImageCreationAttributes> implements I
   public height?: number;
   public latitude?: number;
   public longitude?: number;
-  public capturedAt?: Date;
+  public capturedAt?: number;
   public description?: string;
-  public syncedAt?: Date;
-  public readonly createdAt!: Date;
-  public readonly updatedAt!: Date;
+  public syncedAt?: number;
+  public createdAt?: number;
+  public updatedAt?: number;
 
   public static associate(models: any): void {
     Image.belongsTo(models.User, {

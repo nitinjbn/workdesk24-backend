@@ -64,7 +64,7 @@ export class AuthService {
 
   private generateToken(userId: number): string {
     const secret = process.env.JWT_SECRET || 'your-secret-key';
-    const expiresIn = process.env.JWT_EXPIRES_IN || '7d';
+    const expiresIn = (process.env.JWT_EXPIRES_IN || '7d') as jwt.SignOptions['expiresIn'];
 
     return jwt.sign({ userId }, secret, { expiresIn });
   }

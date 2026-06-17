@@ -4,42 +4,56 @@ import { BaseModel, PaginatedResponse, PaginationParams } from '../types/base.ty
 export abstract class BaseRepository<T extends Model & BaseModel> {
   constructor(protected model: ModelStatic<T>) {}
 
+  private supportsSoftDelete(): boolean {
+    const attributes = ((this.model as any).getAttributes?.() || (this.model as any).rawAttributes || {}) as Record<string, unknown>;
+    return Object.prototype.hasOwnProperty.call(attributes, 'isDeleted');
+  }
+
+  private withSoftDelete(where?: WhereOptions<T>): WhereOptions<T> {
+    if (!this.supportsSoftDelete()) {
+      return (where || {}) as WhereOptions<T>;
+    }
+
+    return {
+      ...(where || {}),
+      isDeleted: 0,
+    } as WhereOptions<T>;
+  }
+
   async findById(id: number): Promise<T | null> {
     return this.model.findOne({
-      where: { id, isDeleted: 0 } as WhereOptions<T>,
+      where: this.withSoftDelete({ id } as WhereOptions<T>),
     });
   }
 
   async findAll(options?: FindOptions<T>): Promise<T[]> {
     return this.model.findAll({
       ...options,
-      where: {
-        ...options?.where,
-        isDeleted: 0,
-      } as WhereOptions<T>,
+      where: this.withSoftDelete(options?.where as WhereOptions<T> | undefined),
     });
   }
 
   async findOne(where: WhereOptions<T>): Promise<T | null> {
     return this.model.findOne({
-      where: {
-        ...where,
-        isDeleted: 0,
-      } as WhereOptions<T>,
+      where: this.withSoftDelete(where),
     });
   }
 
   async create(data: Partial<T>): Promise<T> {
     const now = Math.floor(Date.now() / 1000);
 
-    console.log('Creating record with data:', { ...data, createdAt: now, updatedAt: now, isDeleted: 0, deletedAt: null });
-    return this.model.create({
+    const payload: Record<string, unknown> = {
       ...data,
       createdAt: (data as any).createdAt || now,
       updatedAt: (data as any).updatedAt || now,
-      isDeleted: 0,
-      deletedAt: null,
-    } as any);
+    };
+
+    if (this.supportsSoftDelete()) {
+      payload.isDeleted = 0;
+      payload.deletedAt = null;
+    }
+
+    return this.model.create(payload as any);
   }
 
   async update(id: number, data: Partial<T>): Promise<T | null> {
@@ -58,6 +72,11 @@ export abstract class BaseRepository<T extends Model & BaseModel> {
   async delete(id: number): Promise<boolean> {
     const instance = await this.findById(id);
     if (!instance) return false;
+
+    if (!this.supportsSoftDelete()) {
+      await instance.destroy();
+      return true;
+    }
 
     const now = Math.floor(Date.now() / 1000);
     await instance.update({
@@ -80,10 +99,7 @@ export abstract class BaseRepository<T extends Model & BaseModel> {
     const offset = (page - 1) * limit;
 
     const { rows, count } = await this.model.findAndCountAll({
-      where: {
-        ...where,
-        isDeleted: 0,
-      } as WhereOptions<T>,
+      where: this.withSoftDelete(where),
       limit,
       offset,
       order: [['createdAt', 'DESC']],
@@ -102,10 +118,7 @@ export abstract class BaseRepository<T extends Model & BaseModel> {
 
   async count(where?: WhereOptions<T>): Promise<number> {
     return this.model.count({
-      where: {
-        ...where,
-        isDeleted: 0,
-      } as WhereOptions<T>,
+      where: this.withSoftDelete(where),
     });
   }
 }
