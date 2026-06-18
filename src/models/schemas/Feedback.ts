@@ -121,7 +121,7 @@ export function initFeedback(sequelize: Sequelize): typeof Feedback {
     },
     {
       sequelize,
-      tableName: 'wd_feedback',
+      tableName: 'wd_feedbacks',
       timestamps: false,
       indexes: [
         { fields: ['userId'] },
