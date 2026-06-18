@@ -83,22 +83,37 @@ export interface VisitAttributes {
   userId: number;
   localId?: string;
   customerName: string;
+  customerCode?: string;
+  customerId?: number;
   customerPhone?: string;
   customerEmail?: string;
-  address?: string;
-  latitude?: number;
-  longitude?: number;
-  visitType: 'meeting' | 'delivery' | 'support' | 'sales' | 'other';
+  customerAddress?: string;
+  checkInLatitude?: number;
+  checkInLongitude?: number;
+  checkInLocationAccuracy?: number;
+  checkInLocationAltitude?: number;
+  checkInLocationSpeed?: number;
+  checkInLocationProvider?: string;
+  checkInBatteryPercentage?: number;
+  isChargingOnCheckIn?: number;
+  checkOutLatitude?: number;
+  checkOutLongitude?: number;
+  checkOutLocationAccuracy?: number;
+  checkOutLocationAltitude?: number;
+  checkOutLocationSpeed?: number;
+  checkOutLocationProvider?: string;
+  checkOutBatteryPercentage?: number;
+  isChargingOnCheckOut?: number;
   purpose?: string;
-  notes?: string;
+  remarks?: string;
   checkInTime: number;
   checkOutTime?: number;
-  duration?: number;
-  status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
-  outcome?: 'success' | 'failed' | 'rescheduled' | 'not_available';
+  visitDuration?: number;
   syncedAt?: number;
   createdAt?: number;
   updatedAt?: number;
+  isDeleted?: number;
+  deletedAt?: number | null;
 }
 
 // Order attributes

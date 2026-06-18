@@ -1,29 +1,41 @@
 import { Model, DataTypes, Sequelize, Optional } from 'sequelize';
 import { VisitAttributes } from '../../types';
 
-interface VisitCreationAttributes extends Optional<VisitAttributes, 'id' | 'localId' | 'customerPhone' | 'customerEmail' | 'address' | 'latitude' | 'longitude' | 'purpose' | 'notes' | 'checkOutTime' | 'duration' | 'outcome' | 'syncedAt' | 'createdAt' | 'updatedAt'> {}
+interface VisitCreationAttributes extends Optional<VisitAttributes, 'id' | 'localId' | 'customerPhone' | 'customerEmail' | 'customerAddress' | 'checkInLatitude' | 'checkInLongitude' | 'purpose' | 'remarks' | 'checkOutTime' | 'visitDuration' | 'syncedAt' | 'createdAt' | 'updatedAt'> {}
 
 class Visit extends Model<VisitAttributes, VisitCreationAttributes> implements VisitAttributes {
   public id!: number;
   public userId!: number;
   public localId?: string;
+  public customerId!: number;
   public customerName!: string;
   public customerPhone?: string;
   public customerEmail?: string;
-  public address?: string;
-  public latitude?: number;
-  public longitude?: number;
-  public visitType!: 'meeting' | 'delivery' | 'support' | 'sales' | 'other';
+  public customerAddress?: string;
+  public checkInLatitude?: number;
+  public checkOutLatitude?: number;
+  public checkInLocationAccuracy?: number;
+  public checkOutLocationAccuracy?: number;
+  public checkInLocationAltitude?: number;
+  public checkOutLocationAltitude?: number;
+  public checkInLocationSpeed?: number;
+  public checkOutLocationSpeed?: number;
+  public checkInLocationProvider?: string;
+  public checkOutLocationProvider?: string;
+  public checkInBatteryPercentage?: number;
+  public checkOutBatteryPercentage?: number;
+  public isChargingOnCheckIn?: number;
+  public isChargingOnCheckOut?: number;
   public purpose?: string;
-  public notes?: string;
+  public remarks?: string;
   public checkInTime!: number;
   public checkOutTime?: number;
-  public duration?: number;
-  public status!: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
-  public outcome?: 'success' | 'failed' | 'rescheduled' | 'not_available';
+  public visitDuration?: number;
   public syncedAt?: number;
   public createdAt?: number;
   public updatedAt?: number;
+  public isDeleted?: number;
+  public deletedAt?: number;
 
   public static associate(models: any): void {
     Visit.belongsTo(models.User, {
@@ -45,95 +57,159 @@ export function initVisit(sequelize: Sequelize): typeof Visit {
   Visit.init(
     {
       id: {
-        type: DataTypes.INTEGER.UNSIGNED,
+        type: DataTypes.BIGINT,
         autoIncrement: true,
         primaryKey: true,
       },
       userId: {
-        type: DataTypes.INTEGER.UNSIGNED,
-        allowNull: false,
-        field: 'user_id',
+        type: DataTypes.BIGINT,
+        allowNull: false
       },
       localId: {
         type: DataTypes.STRING(100),
-        allowNull: true,
-        field: 'local_id',
+        allowNull: true
+      },
+      customerId: {
+        type: DataTypes.BIGINT,
+        allowNull: false
       },
       customerName: {
         type: DataTypes.STRING(200),
-        allowNull: false,
-        field: 'customer_name',
+        allowNull: false
+      },
+      customerCode: {
+        type: DataTypes.STRING(50),
+        allowNull: true
       },
       customerPhone: {
         type: DataTypes.STRING(20),
-        allowNull: true,
-        field: 'customer_phone',
+        allowNull: true
       },
       customerEmail: {
         type: DataTypes.STRING(255),
-        allowNull: true,
-        field: 'customer_email',
+        allowNull: true
       },
-      address: {
+      customerAddress: {
         type: DataTypes.TEXT,
-        allowNull: true,
-      },
-      latitude: {
-        type: DataTypes.DECIMAL(10, 8),
-        allowNull: true,
-      },
-      longitude: {
-        type: DataTypes.DECIMAL(11, 8),
-        allowNull: true,
-      },
-      visitType: {
-        type: DataTypes.ENUM('meeting', 'delivery', 'support', 'sales', 'other'),
-        defaultValue: 'meeting',
-        field: 'visit_type',
+        allowNull: true
       },
       purpose: {
-        type: DataTypes.TEXT,
+        type: DataTypes.STRING(50),
         allowNull: true,
       },
-      notes: {
+      remarks: {
         type: DataTypes.TEXT,
         allowNull: true,
       },
       checkInTime: {
-        type: DataTypes.DATE,
-        allowNull: false,
-        field: 'check_in_time',
+        type: DataTypes.BIGINT,
+        allowNull: false
       },
       checkOutTime: {
-        type: DataTypes.DATE,
+        type: DataTypes.BIGINT,
+        allowNull: true
+      },
+      visitDuration: {
+        type: DataTypes.FLOAT,
         allowNull: true,
-        field: 'check_out_time',
       },
-      duration: {
-        type: DataTypes.INTEGER,
+      checkInLatitude: {
+        type: DataTypes.DECIMAL(10, 8),
         allowNull: true,
       },
-      status: {
-        type: DataTypes.ENUM('scheduled', 'in_progress', 'completed', 'cancelled'),
-        defaultValue: 'scheduled',
+      checkInLongitude: {
+        type: DataTypes.DECIMAL(11, 8),
+        allowNull: true,
       },
-      outcome: {
-        type: DataTypes.ENUM('success', 'failed', 'rescheduled', 'not_available'),
+      checkInLocationAccuracy: {
+        type: DataTypes.FLOAT,
+        allowNull: true
+      },
+      checkInLocationAltitude: {
+        type: DataTypes.FLOAT,
+        allowNull: true
+      },
+      checkInLocationSpeed: {
+        type: DataTypes.FLOAT,
+        allowNull: true
+      },
+      checkInLocationProvider: {
+        type: DataTypes.STRING(100),
+        allowNull: true
+      },
+      checkInBatteryPercentage: {
+        type: DataTypes.TINYINT,
+        allowNull: true
+      },
+      isChargingOnCheckIn: {
+        type: DataTypes.TINYINT,
+        allowNull: true
+      },
+      checkOutLatitude: {
+        type: DataTypes.DECIMAL(10, 8),
+        allowNull: true,
+      },
+      checkOutLongitude: {
+        type: DataTypes.DECIMAL(11, 8),
+        allowNull: true,
+      },
+      checkOutLocationAccuracy: {
+        type: DataTypes.FLOAT,
+        allowNull: true
+      },
+      checkOutLocationAltitude: {
+        type: DataTypes.FLOAT,
+        allowNull: true
+      },
+      checkOutLocationSpeed: {
+        type: DataTypes.FLOAT,
+        allowNull: true
+      },
+      checkOutLocationProvider: {
+        type: DataTypes.STRING(100),
+        allowNull: true
+      },
+      checkOutBatteryPercentage: {
+        type: DataTypes.TINYINT,
+        allowNull: true
+      },
+      isChargingOnCheckOut: {
+        type: DataTypes.TINYINT,
+        allowNull: true
+      },
+      createdAt: {
+        type: DataTypes.BIGINT,
+        allowNull: false,
+      },
+      updatedAt: {
+        type: DataTypes.BIGINT,
         allowNull: true,
       },
       syncedAt: {
-        type: DataTypes.DATE,
+        type: DataTypes.BIGINT,
         allowNull: true,
-        },
+      },
+      isDeleted: {
+        type: DataTypes.TINYINT,
+        allowNull: false,
+        defaultValue: 0,
+      },
+      deletedAt: {
+        type: DataTypes.BIGINT,
+        allowNull: true,
+        defaultValue: null,
+      },
     },
     {
       sequelize,
       tableName: 'wd_visits',
       indexes: [
-        { fields: ['user_id'] },
-        { fields: ['local_id'] },
-        { fields: ['check_in_time'] },
-        { fields: ['status'] },
+        { fields: ['userId'] },
+        { fields: ['localId'] },
+        { fields: ['customerId'] },
+        { fields: ['checkInTime'] },
+        { fields: ['checkOutTime'] },
+        { fields: ['visitDuration'] },
       ],
     }
   );
