@@ -1,26 +1,19 @@
 import { Model, DataTypes, Sequelize, Optional } from 'sequelize';
 import { ImageAttributes } from '../../types';
 
-interface ImageCreationAttributes extends Optional<ImageAttributes, 'id' | 'localId' | 'relatedId' | 'originalName' | 'fileSize' | 'mimeType' | 'base64Data' | 'width' | 'height' | 'latitude' | 'longitude' | 'capturedAt' | 'description' | 'syncedAt' | 'createdAt' | 'updatedAt'> {}
+interface ImageCreationAttributes extends Optional<ImageAttributes, 'id' | 'localId' | 'visitId' | 'latitude' | 'longitude' | 'syncedAt' | 'createdAt' | 'updatedAt'> {}
 
 class Image extends Model<ImageAttributes, ImageCreationAttributes> implements ImageAttributes {
   public id!: number;
   public userId!: number;
   public localId?: string;
-  public relatedType!: 'visit' | 'order' | 'payment' | 'feedback' | 'attendance' | 'profile' | 'other';
-  public relatedId?: number;
-  public fileName!: string;
-  public originalName?: string;
-  public filePath!: string;
-  public fileSize?: number;
-  public mimeType?: string;
-  public base64Data?: string;
-  public width?: number;
-  public height?: number;
+  public visitId?: number;
+  public caption!: string;
+  public mediaUrl?: string;
+  public mediaType?: string;
+  public capturedAt!: number;
   public latitude?: number;
   public longitude?: number;
-  public capturedAt?: number;
-  public description?: string;
   public syncedAt?: number;
   public createdAt?: number;
   public updatedAt?: number;
@@ -30,6 +23,10 @@ class Image extends Model<ImageAttributes, ImageCreationAttributes> implements I
       foreignKey: 'userId',
       as: 'user',
     });
+    Image.belongsTo(models.Visit, {
+      foreignKey: 'visitId',
+      as: 'visit',
+    });
   }
 }
 
@@ -37,67 +34,37 @@ export function initImage(sequelize: Sequelize): typeof Image {
   Image.init(
     {
       id: {
-        type: DataTypes.INTEGER.UNSIGNED,
+        type: DataTypes.BIGINT,
         autoIncrement: true,
         primaryKey: true,
       },
       userId: {
-        type: DataTypes.INTEGER.UNSIGNED,
+        type: DataTypes.BIGINT,
         allowNull: false,
-        field: 'user_id',
       },
       localId: {
         type: DataTypes.STRING(100),
         allowNull: true,
-        field: 'local_id',
       },
-      relatedType: {
-        type: DataTypes.ENUM('visit', 'order', 'payment', 'feedback', 'attendance', 'profile', 'other'),
+      visitId: {
+        type: DataTypes.BIGINT,
         allowNull: false,
-        field: 'related_type',
       },
-      relatedId: {
-        type: DataTypes.INTEGER.UNSIGNED,
-        allowNull: true,
-        field: 'related_id',
-      },
-      fileName: {
-        type: DataTypes.STRING(255),
-        allowNull: false,
-        field: 'file_name',
-      },
-      originalName: {
+      caption: {
         type: DataTypes.STRING(255),
         allowNull: true,
-        field: 'original_name',
       },
-      filePath: {
-        type: DataTypes.STRING(500),
+      mediaUrl: {
+        type: DataTypes.STRING(255),
         allowNull: false,
-        field: 'file_path',
       },
-      fileSize: {
-        type: DataTypes.INTEGER,
-        allowNull: true,
-        field: 'file_size',
-      },
-      mimeType: {
-        type: DataTypes.STRING(100),
-        allowNull: true,
-        field: 'mime_type',
-      },
-      base64Data: {
-        type: DataTypes.TEXT('long'),
-        allowNull: true,
-        field: 'base64_data',
-      },
-      width: {
-        type: DataTypes.INTEGER,
+      mediaType: {
+        type: DataTypes.STRING(50),
         allowNull: true,
       },
-      height: {
-        type: DataTypes.INTEGER,
-        allowNull: true,
+      capturedAt: {
+        type: DataTypes.BIGINT,
+        allowNull: false,
       },
       latitude: {
         type: DataTypes.DECIMAL(10, 8),
@@ -107,28 +74,62 @@ export function initImage(sequelize: Sequelize): typeof Image {
         type: DataTypes.DECIMAL(11, 8),
         allowNull: true,
       },
-      capturedAt: {
-        type: DataTypes.DATE,
-        allowNull: true,
-        field: 'captured_at',
+      locationAccuracy: {
+        type: DataTypes.FLOAT,
+        allowNull: true
       },
-      description: {
-        type: DataTypes.TEXT,
+      locationAltitude: {
+        type: DataTypes.FLOAT,
+        allowNull: true
+      },
+      locationSpeed: {
+        type: DataTypes.FLOAT,
+        allowNull: true
+      },
+      locationProvider: {
+        type: DataTypes.STRING(100),
+        allowNull: true
+      },
+      batteryPercentage: {
+        type: DataTypes.TINYINT,
+        allowNull: true
+      },
+      isCharging: {
+        type: DataTypes.TINYINT,
+        allowNull: true
+      },
+      createdAt: {
+        type: DataTypes.BIGINT,
+        allowNull: false,
+      },
+      updatedAt: {
+        type: DataTypes.BIGINT,
         allowNull: true,
       },
       syncedAt: {
-        type: DataTypes.DATE,
+        type: DataTypes.BIGINT,
         allowNull: true,
-        },
+      },
+      isDeleted: {
+        type: DataTypes.TINYINT,
+        allowNull: false,
+        defaultValue: 0,
+      },
+      deletedAt: {
+        type: DataTypes.BIGINT,
+        allowNull: true,
+        defaultValue: null,
+      },
     },
     {
       sequelize,
       tableName: 'wd_images',
+      timestamps: false,
       indexes: [
-        { fields: ['user_id'] },
-        { fields: ['local_id'] },
-        { fields: ['related_type', 'related_id'] },
-        { fields: ['captured_at'] },
+        { fields: ['userId'] },
+        { fields: ['localId'] },
+        { fields: ['visitId'] },
+        { fields: ['capturedAt'] }
       ],
     }
   );

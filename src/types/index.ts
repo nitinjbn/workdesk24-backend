@@ -193,23 +193,24 @@ export interface ImageAttributes {
   id?: number;
   userId: number;
   localId?: string;
-  relatedType: 'visit' | 'order' | 'payment' | 'feedback' | 'attendance' | 'profile' | 'other';
-  relatedId?: number;
-  fileName: string;
-  originalName?: string;
-  filePath: string;
-  fileSize?: number;
-  mimeType?: string;
-  base64Data?: string;
-  width?: number;
-  height?: number;
+  visitId?: number;
+  caption: string;
+  mediaUrl?: string;
+  mediaType?: string;
+  capturedAt: number;
   latitude?: number;
   longitude?: number;
-  capturedAt?: number;
-  description?: string;
+  locationAccuracy?: number;
+  locationAltitude?: number;
+  locationSpeed?: number;
+  locationProvider?: string;
+  batteryPercentage?: number;
+  isCharging?: number;
   syncedAt?: number;
   createdAt?: number;
   updatedAt?: number;
+  isDeleted?: number;
+  deletedAt?: number | null;
 }
 
 // User attributes
