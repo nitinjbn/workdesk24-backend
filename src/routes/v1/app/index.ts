@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { authMiddleware } from '../../../shared/middleware/auth.middleware';
+import { resolveVisitLocalId } from '../../../shared/middleware/resolve-visit-local-id.middleware';
 import { AuthRequest } from '../../../types';
 import syncController from '../../../modules/sync/controllers/sync.controller';
 
@@ -12,10 +13,10 @@ router.use(authMiddleware);
 router.post('/sync/attendance', syncController.syncAttendance.bind(syncController));
 router.post('/sync/gps-history', syncController.syncGpsHistory.bind(syncController));
 router.post('/sync/visits', syncController.syncVisits.bind(syncController));
-router.post('/sync/orders', syncController.syncOrders.bind(syncController));
-router.post('/sync/payments', syncController.syncPayments.bind(syncController));
-router.post('/sync/feedback', syncController.syncFeedback.bind(syncController));
-router.post('/sync/images', syncController.syncImages.bind(syncController));
+router.post('/sync/orders', resolveVisitLocalId(), syncController.syncOrders.bind(syncController));
+router.post('/sync/payments', resolveVisitLocalId(), syncController.syncPayments.bind(syncController));
+router.post('/sync/feedback', resolveVisitLocalId(), syncController.syncFeedback.bind(syncController));
+router.post('/sync/images', resolveVisitLocalId(), syncController.syncImages.bind(syncController));
 router.post('/sync/all', syncController.syncAll.bind(syncController));
 router.post('/sync/get-updates', syncController.getUpdates.bind(syncController));
 router.post('/sync/status', syncController.getSyncStatus.bind(syncController));

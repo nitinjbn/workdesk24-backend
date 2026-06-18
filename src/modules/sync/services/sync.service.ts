@@ -6,6 +6,7 @@ import orderProductRepository from '../../staff/repositories/order-product.repos
 import paymentRepository from '../../staff/repositories/payment.repository';
 import feedbackRepository from '../../staff/repositories/feedback.repository';
 import imageRepository from '../../staff/repositories/image.repository';
+import { resolveVisitLocalIdForRecord } from '../../../shared/utils/visit-local-id-resolver';
 
 interface SyncRecord {
   localId?: string;
@@ -94,27 +95,20 @@ export class SyncService {
 
     for (const record of records) {
       try {
-        const { localId, products, items, visitLocalId, ...orderData } = record;
+        const { localId, products, items, ...orderData } = record;
+        await resolveVisitLocalIdForRecord(userId, orderData);
+
         const now = Math.floor(Date.now() / 1000);
         const orderProducts = Array.isArray(products) ? products : Array.isArray(items) ? items : undefined;
         let visitId = orderData.visitId;
-
-        if (visitLocalId) {
-          const visit = await visitRepository.findByLocalId(userId, visitLocalId);
-
-          if (!visit) {
-            throw new Error(`Visit not found for visitLocalId: ${visitLocalId}`);
-          }
-
-          visitId = visit.id;
-        }
 
         if (!visitId) {
           throw new Error('visitLocalId or visitId is required');
         }
 
+        const { visitLocalId, ...orderPayload } = orderData;
         const resolvedOrderData: SyncRecord = {
-          ...orderData,
+          ...orderPayload,
           visitId,
         };
 
