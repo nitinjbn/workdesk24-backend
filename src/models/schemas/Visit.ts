@@ -203,6 +203,7 @@ export function initVisit(sequelize: Sequelize): typeof Visit {
     {
       sequelize,
       tableName: 'wd_visits',
+      timestamps: false,
       indexes: [
         { fields: ['userId'] },
         { fields: ['localId'] },
