@@ -147,20 +147,29 @@ export interface OrderAttributes {
 export interface PaymentAttributes {
   id?: number;
   userId: number;
-  orderId?: number;
   localId?: string;
+  visitId: number;
+  paymentCaptureTime?: number;
   transactionId?: string;
   amount: number;
-  paymentMethod: 'cash' | 'card' | 'upi' | 'bank_transfer' | 'cheque' | 'other';
+  paymentMode: string;
   paymentDate: number;
-  status: 'pending' | 'completed' | 'failed' | 'refunded';
-  referenceNumber?: string;
-  notes?: string;
+  remarks?: string;
+  chequeNumber?: string;
+  paymentProofImageUrl?: string;
   latitude?: number;
   longitude?: number;
+  locationAccuracy?: number;
+  locationAltitude?: number;
+  locationSpeed?: number;
+  locationProvider?: string;
+  batteryPercentage?: number;
+  isChargingOnPayment?: number;
   syncedAt?: number;
   createdAt?: number;
   updatedAt?: number;
+  isDeleted?: number;
+  deletedAt?: number | null;
 }
 
 // Feedback attributes

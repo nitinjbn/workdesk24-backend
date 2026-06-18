@@ -1,14 +1,13 @@
 import { Model, DataTypes, Sequelize, Optional } from 'sequelize';
 import { PaymentAttributes } from '../../types';
 
-interface PaymentCreationAttributes extends Optional<PaymentAttributes, 'id' | 'localId' | 'visitId' | 'latitude' | 'longitude' | 'syncedAt' | 'createdAt' | 'updatedAt'> {}
+interface PaymentCreationAttributes extends Optional<PaymentAttributes, 'id' | 'localId' | 'latitude' | 'longitude' | 'syncedAt' | 'createdAt' | 'updatedAt'> {}
 
 class Payment extends Model<PaymentAttributes, PaymentCreationAttributes> implements PaymentAttributes {
   public id!: number;
   public userId!: number;
-  public orderId?: number;
   public localId?: string;
-  public visitId?: number;
+  public visitId!: number;
   public paymentCaptureTime?: number;
   public transactionId?: string;
   public amount!: number;
