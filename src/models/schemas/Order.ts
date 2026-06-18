@@ -31,17 +31,9 @@ class Order extends Model<OrderAttributes, OrderCreationAttributes> implements O
       foreignKey: 'userId',
       as: 'user',
     });
-    Order.hasMany(models.Payment, {
-      foreignKey: 'orderId',
-      as: 'payments',
-    });
-    Order.hasMany(models.Image, {
-      foreignKey: 'relatedId',
-      constraints: false,
-      scope: {
-        relatedType: 'order',
-      },
-      as: 'images',
+    Order.belongsTo(models.Visit, {
+      foreignKey: 'visitId',
+      as: 'visit',
     });
   }
 }

@@ -43,11 +43,7 @@ class Visit extends Model<VisitAttributes, VisitCreationAttributes> implements V
       as: 'user',
     });
     Visit.hasMany(models.Image, {
-      foreignKey: 'relatedId',
-      constraints: false,
-      scope: {
-        relatedType: 'visit',
-      },
+      foreignKey: 'visitId',
       as: 'images',
     });
   }

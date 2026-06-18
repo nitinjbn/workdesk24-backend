@@ -26,17 +26,9 @@ class Payment extends Model<PaymentAttributes, PaymentCreationAttributes> implem
       foreignKey: 'userId',
       as: 'user',
     });
-    Payment.belongsTo(models.Order, {
-      foreignKey: 'orderId',
-      as: 'order',
-    });
-    Payment.hasMany(models.Image, {
-      foreignKey: 'relatedId',
-      constraints: false,
-      scope: {
-        relatedType: 'payment',
-      },
-      as: 'images',
+    Payment.belongsTo(models.Visit, {
+      foreignKey: 'visitId',
+      as: 'visit',
     });
   }
 }
