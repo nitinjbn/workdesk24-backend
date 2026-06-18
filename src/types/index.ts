@@ -85,9 +85,11 @@ export interface VisitAttributes {
   customerName: string;
   customerCode?: string;
   customerId?: number;
+  contactPerson?: string;
   customerPhone?: string;
   customerEmail?: string;
   customerAddress?: string;
+  customerType?: string;
   checkInLatitude?: number;
   checkInLongitude?: number;
   checkInLocationAccuracy?: number;

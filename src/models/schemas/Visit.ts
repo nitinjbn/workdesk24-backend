@@ -81,6 +81,10 @@ export function initVisit(sequelize: Sequelize): typeof Visit {
         type: DataTypes.STRING(50),
         allowNull: true
       },
+      contactPerson: {
+        type: DataTypes.STRING(100),
+        allowNull: true
+      },
       customerPhone: {
         type: DataTypes.STRING(20),
         allowNull: true
@@ -91,6 +95,10 @@ export function initVisit(sequelize: Sequelize): typeof Visit {
       },
       customerAddress: {
         type: DataTypes.TEXT,
+        allowNull: true
+      },
+      customerType: {
+        type: DataTypes.STRING(50),
         allowNull: true
       },
       purpose: {
