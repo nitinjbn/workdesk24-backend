@@ -1,25 +1,35 @@
 import { Model, DataTypes, Sequelize, Optional } from 'sequelize';
 import { PaymentAttributes } from '../../types';
 
-interface PaymentCreationAttributes extends Optional<PaymentAttributes, 'id' | 'orderId' | 'localId' | 'transactionId' | 'referenceNumber' | 'notes' | 'latitude' | 'longitude' | 'syncedAt' | 'createdAt' | 'updatedAt'> {}
+interface PaymentCreationAttributes extends Optional<PaymentAttributes, 'id' | 'localId' | 'visitId' | 'latitude' | 'longitude' | 'syncedAt' | 'createdAt' | 'updatedAt'> {}
 
 class Payment extends Model<PaymentAttributes, PaymentCreationAttributes> implements PaymentAttributes {
   public id!: number;
   public userId!: number;
   public orderId?: number;
   public localId?: string;
+  public visitId?: number;
+  public paymentCaptureTime?: number;
   public transactionId?: string;
   public amount!: number;
-  public paymentMethod!: 'cash' | 'card' | 'upi' | 'bank_transfer' | 'cheque' | 'other';
   public paymentDate!: number;
-  public status!: 'pending' | 'completed' | 'failed' | 'refunded';
-  public referenceNumber?: string;
-  public notes?: string;
+  public paymentMode!: string;
+  public remarks?: string
+  public chequeNumber?: string;
+  public paymentProofImageUrl?: string;
   public latitude?: number;
   public longitude?: number;
+  public locationAccuracy?: number;
+  public locationAltitude?: number;
+  public locationSpeed?: number;
+  public locationProvider?: string;
+  public batteryPercentage?: number;
+  public isChargingOnPayment?: number;
   public syncedAt?: number;
   public createdAt?: number;
   public updatedAt?: number;
+  public isDeleted?: number;
+  public deletedAt?: number | null;
 
   public static associate(models: any): void {
     Payment.belongsTo(models.User, {
@@ -37,55 +47,48 @@ export function initPayment(sequelize: Sequelize): typeof Payment {
   Payment.init(
     {
       id: {
-        type: DataTypes.INTEGER.UNSIGNED,
+        type: DataTypes.BIGINT,
         autoIncrement: true,
         primaryKey: true,
       },
       userId: {
-        type: DataTypes.INTEGER.UNSIGNED,
+        type: DataTypes.BIGINT,
         allowNull: false,
-        field: 'user_id',
-      },
-      orderId: {
-        type: DataTypes.INTEGER.UNSIGNED,
-        allowNull: true,
-        field: 'order_id',
       },
       localId: {
         type: DataTypes.STRING(100),
         allowNull: true,
-        field: 'local_id',
       },
-      transactionId: {
-        type: DataTypes.STRING(200),
-        allowNull: true,
-        field: 'transaction_id',
+      visitId: {
+        type: DataTypes.BIGINT,
+        allowNull: false,
       },
       amount: {
         type: DataTypes.DECIMAL(10, 2),
         allowNull: false,
       },
-      paymentMethod: {
-        type: DataTypes.ENUM('cash', 'card', 'upi', 'bank_transfer', 'cheque', 'other'),
+      paymentMode: {
+        type: DataTypes.STRING(50),
         allowNull: false,
-        field: 'payment_method',
       },
       paymentDate: {
-        type: DataTypes.DATE,
+        type: DataTypes.BIGINT,
         allowNull: false,
-        field: 'payment_date',
       },
-      status: {
-        type: DataTypes.ENUM('pending', 'completed', 'failed', 'refunded'),
-        defaultValue: 'pending',
-      },
-      referenceNumber: {
-        type: DataTypes.STRING(200),
-        allowNull: true,
-        field: 'reference_number',
-      },
-      notes: {
+      remarks: {
         type: DataTypes.TEXT,
+        allowNull: true,
+      },
+      chequeNumber: {
+        type: DataTypes.STRING(50),
+        allowNull: true,
+      },
+      transactionId: {
+        type: DataTypes.STRING(100),
+        allowNull: true,
+      },
+      paymentProofImageUrl: {
+        type: DataTypes.STRING(255),
         allowNull: true,
       },
       latitude: {
@@ -96,20 +99,66 @@ export function initPayment(sequelize: Sequelize): typeof Payment {
         type: DataTypes.DECIMAL(11, 8),
         allowNull: true,
       },
-      syncedAt: {
-        type: DataTypes.DATE,
+      locationAccuracy: {
+        type: DataTypes.FLOAT,
+        allowNull: true
+      },
+      locationAltitude: {
+        type: DataTypes.FLOAT,
+        allowNull: true
+      },
+      locationSpeed: {
+        type: DataTypes.FLOAT,
+        allowNull: true
+      },
+      locationProvider: {
+        type: DataTypes.STRING(100),
+        allowNull: true
+      },
+      batteryPercentage: {
+        type: DataTypes.TINYINT,
+        allowNull: true
+      },
+      isChargingOnPayment: {
+        type: DataTypes.TINYINT,
+        allowNull: true
+      },
+      paymentCaptureTime: {
+        type: DataTypes.BIGINT,
+        allowNull: true
+      },
+      createdAt: {
+        type: DataTypes.BIGINT,
+        allowNull: false,
+      },
+      updatedAt: {
+        type: DataTypes.BIGINT,
         allowNull: true,
-        },
+      },
+      syncedAt: {
+        type: DataTypes.BIGINT,
+        allowNull: true,
+      },
+      isDeleted: {
+        type: DataTypes.TINYINT,
+        allowNull: false,
+        defaultValue: 0,
+      },
+      deletedAt: {
+        type: DataTypes.BIGINT,
+        allowNull: true,
+        defaultValue: null,
+      },
     },
     {
       sequelize,
       tableName: 'wd_payments',
+      timestamps: false,
       indexes: [
-        { fields: ['user_id'] },
-        { fields: ['order_id'] },
-        { fields: ['local_id'] },
-        { fields: ['transaction_id'] },
-        { fields: ['payment_date'] },
+        { fields: ['userId'] },
+        { fields: ['localId'] },
+        { fields: ['visitId'] },
+        { fields: ['paymentDate'] }
       ],
     }
   );
