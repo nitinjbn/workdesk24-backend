@@ -124,23 +124,53 @@ export interface OrderAttributes {
   userId: number;
   localId?: string;
   orderNumber?: string;
-  customerName: string;
-  customerPhone?: string;
-  customerEmail?: string;
-  deliveryAddress?: string;
-  items?: any; // JSON
+  visitId?: number;
+  customerId?: number;
   totalAmount: number;
   taxAmount?: number;
-  discountAmount?: number;
-  netAmount: number;
-  status: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
-  paymentStatus: 'pending' | 'partial' | 'paid' | 'refunded';
-  orderDate: number;
-  deliveryDate?: number;
-  notes?: string;
+  totalDiscount?: number;
+  totalUniqueProducts?: number;
+  totalQuantity?: number;
+  orderTime: number;
+  remarks?: string;
+  latitude?: number;
+  longitude?: number;
+  locationAccuracy?: number;
+  locationAltitude?: number;
+  locationSpeed?: number;
+  locationProvider?: string;
+  batteryPercentage?: number;
+  isCharging?: number;
   syncedAt?: number;
   createdAt?: number;
   updatedAt?: number;
+  isDeleted?: number;
+  deletedAt?: number | null;
+}
+
+// Order Product attributes
+export interface OrderProductAttributes {
+  id?: number;
+  orderId: number;
+  userId: number;
+  localId?: string;
+  visitId?: number;
+  customerId?: number;
+  productId?: number;
+  productName: string;
+  productCode?: string;
+  description?: string;
+  quantity: number;
+  mrp?: number;
+  discountPercentage?: number;
+  discountAmount?: number;
+  taxAmount?: number;
+  totalAmount?: number;
+  syncedAt?: number;
+  createdAt?: number;
+  updatedAt?: number;
+  isDeleted?: number;
+  deletedAt?: number | null;
 }
 
 // Payment attributes
@@ -148,15 +178,15 @@ export interface PaymentAttributes {
   id?: number;
   userId: number;
   localId?: string;
-  visitId: number;
-  paymentCaptureTime?: number;
-  transactionId?: string;
+  visitId?: number;
   amount: number;
   paymentMode: string;
   paymentDate: number;
   remarks?: string;
   chequeNumber?: string;
+  transactionId?: string;
   paymentProofImageUrl?: string;
+  paymentCaptureTime?: number;
   latitude?: number;
   longitude?: number;
   locationAccuracy?: number;

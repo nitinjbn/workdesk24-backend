@@ -6,6 +6,7 @@ import { initAttendance } from './schemas/Attendance';
 import { initGpsHistory } from './schemas/GpsHistory';
 import { initVisit } from './schemas/Visit';
 import { initOrder } from './schemas/Order';
+import { initOrderProduct } from './schemas/OrderProduct';
 import { initPayment } from './schemas/Payment';
 import { initFeedback } from './schemas/Feedback';
 import { initImage } from './schemas/Image';
@@ -30,6 +31,7 @@ const Attendance = initAttendance(sequelize);
 const GpsHistory = initGpsHistory(sequelize);
 const Visit = initVisit(sequelize);
 const Order = initOrder(sequelize);
+const OrderProduct = initOrderProduct(sequelize);
 const Payment = initPayment(sequelize);
 const Feedback = initFeedback(sequelize);
 const Image = initImage(sequelize);
@@ -42,6 +44,7 @@ const db: any = {
   GpsHistory,
   Visit,
   Order,
+  OrderProduct,
   Payment,
   Feedback,
   Image,
@@ -65,6 +68,7 @@ export {
   GpsHistory,
   Visit,
   Order,
+  OrderProduct,
   Payment,
   Feedback,
   Image,

@@ -1,27 +1,20 @@
 import { Model, DataTypes, Sequelize, Optional } from 'sequelize';
 import { OrderAttributes } from '../../types';
 
-interface OrderCreationAttributes extends Optional<OrderAttributes, 'id' | 'localId' | 'orderNumber' | 'customerPhone' | 'customerEmail' | 'deliveryAddress' | 'items' | 'taxAmount' | 'discountAmount' | 'deliveryDate' | 'notes' | 'syncedAt' | 'createdAt' | 'updatedAt'> {}
+interface OrderCreationAttributes extends Optional<OrderAttributes, 'id' | 'localId' | 'orderNumber' | 'visitId' | 'customerId' | 'syncedAt' | 'createdAt' | 'updatedAt'> {}
 
 class Order extends Model<OrderAttributes, OrderCreationAttributes> implements OrderAttributes {
   public id!: number;
   public userId!: number;
   public localId?: string;
+  public visitId!: number;
+  public customerId!: number;
   public orderNumber?: string;
-  public customerName!: string;
-  public customerPhone?: string;
-  public customerEmail?: string;
-  public deliveryAddress?: string;
-  public items?: any;
   public totalAmount!: number;
   public taxAmount?: number;
-  public discountAmount?: number;
-  public netAmount!: number;
-  public status!: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
-  public paymentStatus!: 'pending' | 'partial' | 'paid' | 'refunded';
-  public orderDate!: number;
-  public deliveryDate?: number;
-  public notes?: string;
+  public totalDiscount?: number;
+  public orderTime: number;
+  public remarks?: string;
   public syncedAt?: number;
   public createdAt?: number;
   public updatedAt?: number;
@@ -35,6 +28,10 @@ class Order extends Model<OrderAttributes, OrderCreationAttributes> implements O
       foreignKey: 'visitId',
       as: 'visit',
     });
+    Order.hasMany(models.OrderProduct, {
+      foreignKey: 'orderId',
+      as: 'products',
+    });
   }
 }
 
@@ -42,111 +39,129 @@ export function initOrder(sequelize: Sequelize): typeof Order {
   Order.init(
     {
       id: {
-        type: DataTypes.INTEGER.UNSIGNED,
+        type: DataTypes.BIGINT,
         autoIncrement: true,
         primaryKey: true,
       },
       userId: {
-        type: DataTypes.INTEGER.UNSIGNED,
+        type: DataTypes.BIGINT,
         allowNull: false,
-        field: 'user_id',
       },
       localId: {
         type: DataTypes.STRING(100),
         allowNull: true,
-        field: 'local_id',
+      },
+      visitId: {
+        type: DataTypes.BIGINT,
+        allowNull: false,
+      },
+      customerId: {
+        type: DataTypes.BIGINT,
+        allowNull: false,
       },
       orderNumber: {
         type: DataTypes.STRING(100),
-        allowNull: true,
-        unique: true,
-        field: 'order_number',
-      },
-      customerName: {
-        type: DataTypes.STRING(200),
-        allowNull: false,
-        field: 'customer_name',
-      },
-      customerPhone: {
-        type: DataTypes.STRING(20),
-        allowNull: true,
-        field: 'customer_phone',
-      },
-      customerEmail: {
-        type: DataTypes.STRING(255),
-        allowNull: true,
-        field: 'customer_email',
-      },
-      deliveryAddress: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-        field: 'delivery_address',
-      },
-      items: {
-        type: DataTypes.JSON,
-        allowNull: true,
+        allowNull: true
       },
       totalAmount: {
         type: DataTypes.DECIMAL(10, 2),
         allowNull: false,
         defaultValue: 0.00,
-        field: 'total_amount',
       },
       taxAmount: {
         type: DataTypes.DECIMAL(10, 2),
         allowNull: true,
         defaultValue: 0.00,
-        field: 'tax_amount',
       },
-      discountAmount: {
+      totalDiscount: {
         type: DataTypes.DECIMAL(10, 2),
         allowNull: true,
         defaultValue: 0.00,
-        field: 'discount_amount',
       },
-      netAmount: {
-        type: DataTypes.DECIMAL(10, 2),
-        allowNull: false,
-        defaultValue: 0.00,
-        field: 'net_amount',
-      },
-      status: {
-        type: DataTypes.ENUM('pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'),
-        defaultValue: 'pending',
-      },
-      paymentStatus: {
-        type: DataTypes.ENUM('pending', 'partial', 'paid', 'refunded'),
-        defaultValue: 'pending',
-        field: 'payment_status',
-      },
-      orderDate: {
-        type: DataTypes.DATE,
-        allowNull: false,
-        field: 'order_date',
-      },
-      deliveryDate: {
-        type: DataTypes.DATE,
+      totalUniqueProducts: {
+        type: DataTypes.TINYINT,
         allowNull: true,
-        field: 'delivery_date',
+        defaultValue: 0,
       },
-      notes: {
+      totalQuantity: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        defaultValue: 0,
+      },
+      orderTime: {
+        type: DataTypes.BIGINT,
+        allowNull: false,
+      },
+      remarks: {
         type: DataTypes.TEXT,
         allowNull: true,
       },
-      syncedAt: {
-        type: DataTypes.DATE,
+      latitude: {
+        type: DataTypes.DECIMAL(10, 8),
         allowNull: true,
-        },
+      },
+      longitude: {
+        type: DataTypes.DECIMAL(11, 8),
+        allowNull: true,
+      },
+      locationAccuracy: {
+        type: DataTypes.FLOAT,
+        allowNull: true
+      },
+      locationAltitude: {
+        type: DataTypes.FLOAT,
+        allowNull: true
+      },
+      locationSpeed: {
+        type: DataTypes.FLOAT,
+        allowNull: true
+      },
+      locationProvider: {
+        type: DataTypes.STRING(100),
+        allowNull: true
+      },
+      batteryPercentage: {
+        type: DataTypes.TINYINT,
+        allowNull: true
+      },
+      isCharging: {
+        type: DataTypes.TINYINT,
+        allowNull: true
+      },
+      createdAt: {
+        type: DataTypes.BIGINT,
+        allowNull: false,
+      },
+      updatedAt: {
+        type: DataTypes.BIGINT,
+        allowNull: true,
+      },
+      syncedAt: {
+        type: DataTypes.BIGINT,
+        allowNull: true,
+      },
+      isDeleted: {
+        type: DataTypes.TINYINT,
+        allowNull: false,
+        defaultValue: 0,
+      },
+      deletedAt: {
+        type: DataTypes.BIGINT,
+        allowNull: true,
+        defaultValue: null,
+      },
     },
     {
       sequelize,
       tableName: 'wd_orders',
+      timestamps: false,
       indexes: [
-        { fields: ['user_id'] },
-        { fields: ['local_id'] },
-        { fields: ['order_number'] },
-        { fields: ['status'] },
-        { fields: ['order_date'] },
+        { fields: ['userId'] },
+        { fields: ['localId'] },
+        { fields: ['customerId'] },
+        { fields: ['visitId'] },
+        { fields: ['orderNumber'] },
+        { fields: ['orderTime'] },
       ],
     }
   );

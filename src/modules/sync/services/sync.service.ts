@@ -2,6 +2,7 @@ import attendanceRepository from '../../staff/repositories/attendance.repository
 import gpsHistoryRepository from '../../staff/repositories/gps-history.repository';
 import visitRepository from '../../staff/repositories/visit.repository';
 import orderRepository from '../../staff/repositories/order.repository';
+import orderProductRepository from '../../staff/repositories/order-product.repository';
 import paymentRepository from '../../staff/repositories/payment.repository';
 import feedbackRepository from '../../staff/repositories/feedback.repository';
 import imageRepository from '../../staff/repositories/image.repository';
@@ -85,7 +86,65 @@ export class SyncService {
   }
 
   async syncOrders(userId: number, records: SyncRecord[]): Promise<SyncResult> {
-    return this.syncData(orderRepository, userId, records);
+    const results: SyncResult = {
+      success: [],
+      failed: [],
+      updated: [],
+    };
+
+    for (const record of records) {
+      try {
+        const { localId, products, items, ...orderData } = record;
+        const now = Math.floor(Date.now() / 1000);
+        const orderProducts = Array.isArray(products) ? products : Array.isArray(items) ? items : undefined;
+
+        let instance = null;
+
+        if (localId) {
+          instance = await orderRepository.findByLocalId(userId, localId);
+        }
+
+        if (instance) {
+          await orderRepository.update(instance.id, {
+            ...orderData,
+            userId,
+            syncedAt: now,
+          });
+
+          if (orderProducts) {
+            await orderProductRepository.replaceForOrder(instance.id, userId, orderProducts, now);
+          }
+
+          results.updated.push({
+            localId,
+            serverId: instance.id,
+          });
+        } else {
+          const newRecord = await orderRepository.create({
+            ...orderData,
+            userId,
+            localId,
+            syncedAt: now,
+          });
+
+          if (orderProducts) {
+            await orderProductRepository.replaceForOrder(newRecord.id, userId, orderProducts, now);
+          }
+
+          results.success.push({
+            localId,
+            serverId: newRecord.id,
+          });
+        }
+      } catch (error: any) {
+        results.failed.push({
+          localId: record.localId,
+          error: error.message,
+        });
+      }
+    }
+
+    return results;
   }
 
   async syncPayments(userId: number, records: SyncRecord[]): Promise<SyncResult> {
