@@ -94,9 +94,29 @@ export class SyncService {
 
     for (const record of records) {
       try {
-        const { localId, products, items, ...orderData } = record;
+        const { localId, products, items, visitLocalId, ...orderData } = record;
         const now = Math.floor(Date.now() / 1000);
         const orderProducts = Array.isArray(products) ? products : Array.isArray(items) ? items : undefined;
+        let visitId = orderData.visitId;
+
+        if (visitLocalId) {
+          const visit = await visitRepository.findByLocalId(userId, visitLocalId);
+
+          if (!visit) {
+            throw new Error(`Visit not found for visitLocalId: ${visitLocalId}`);
+          }
+
+          visitId = visit.id;
+        }
+
+        if (!visitId) {
+          throw new Error('visitLocalId or visitId is required');
+        }
+
+        const resolvedOrderData: SyncRecord = {
+          ...orderData,
+          visitId,
+        };
 
         let instance = null;
 
@@ -106,13 +126,22 @@ export class SyncService {
 
         if (instance) {
           await orderRepository.update(instance.id, {
-            ...orderData,
+            ...resolvedOrderData,
             userId,
             syncedAt: now,
           });
 
           if (orderProducts) {
-            await orderProductRepository.replaceForOrder(instance.id, userId, orderProducts, now);
+            await orderProductRepository.replaceForOrder(
+              instance.id,
+              userId,
+              orderProducts.map((product) => ({
+                ...product,
+                visitId,
+                customerId: product.customerId ?? resolvedOrderData.customerId,
+              })),
+              now
+            );
           }
 
           results.updated.push({
@@ -121,14 +150,23 @@ export class SyncService {
           });
         } else {
           const newRecord = await orderRepository.create({
-            ...orderData,
+            ...resolvedOrderData,
             userId,
             localId,
             syncedAt: now,
           });
 
           if (orderProducts) {
-            await orderProductRepository.replaceForOrder(newRecord.id, userId, orderProducts, now);
+            await orderProductRepository.replaceForOrder(
+              newRecord.id,
+              userId,
+              orderProducts.map((product) => ({
+                ...product,
+                visitId,
+                customerId: product.customerId ?? resolvedOrderData.customerId,
+              })),
+              now
+            );
           }
 
           results.success.push({
