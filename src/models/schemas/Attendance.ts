@@ -18,6 +18,7 @@ interface AttendanceAttributes extends BaseModel {
   attendanceLocationProvider?: string;
   attendanceBatteryPercentage?: number;
   isChargingOnAttendance?: number;
+  dayoverImage?: string;
   dayoverLatitude?: number;
   dayoverLongitude?: number;
   dayoverLocationAccuracy?: number;
@@ -150,6 +151,10 @@ export function initAttendance(sequelize: Sequelize): typeof Attendance {
       },
       isChargingOnAttendance: {
         type: DataTypes.TINYINT,
+        allowNull: true
+      },
+      dayoverImage: {
+        type: DataTypes.STRING(255),
         allowNull: true
       },
       dayoverLatitude: {
