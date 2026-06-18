@@ -168,22 +168,24 @@ export interface FeedbackAttributes {
   id?: number;
   userId: number;
   localId?: string;
-  relatedType: 'visit' | 'order' | 'product' | 'service' | 'general';
-  relatedId?: number;
-  customerName?: string;
-  customerPhone?: string;
-  rating?: number;
-  category?: string;
-  subject?: string;
+  visitId?: number;
   message: string;
-  sentiment?: 'positive' | 'neutral' | 'negative';
-  status: 'pending' | 'reviewed' | 'resolved' | 'archived';
-  feedbackDate: Date;
+  mediaUrl?: string;
+  mediaType?: string;
+  feedbackTime: number;
   latitude?: number;
   longitude?: number;
+  locationAccuracy?: number;
+  locationAltitude?: number;
+  locationSpeed?: number;
+  locationProvider?: string;
+  batteryPercentage?: number;
+  isChargingOnFeedback?: number;
   syncedAt?: number;
   createdAt?: number;
   updatedAt?: number;
+  isDeleted?: number;
+  deletedAt?: number | null;
 }
 
 // Image attributes
