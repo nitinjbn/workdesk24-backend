@@ -173,6 +173,31 @@ export interface OrderProductAttributes {
   deletedAt?: number | null;
 }
 
+// Product attributes
+export interface ProductAttributes {
+  id?: number;
+  hostId: number;
+  productCode?: string;
+  productName: string;
+  shortName?: string;
+  description?: string;
+  categoryId?: number;
+  brandId?: number;
+  uomId?: number;
+  sku?: string;
+  barcode?: string;
+  hsnCode?: string;
+  purchasePrice?: number;
+  sellingPrice?: number;
+  mrp?: number;
+  taxPercentage?: number;
+  isEnabled?: number;
+  isDeleted?: number;
+  createdAt?: number;
+  updatedAt?: number;
+  deletedAt?: number | null;
+}
+
 // Payment attributes
 export interface PaymentAttributes {
   id?: number;
@@ -324,4 +349,84 @@ export interface EnvironmentVariables {
   EMAIL_USER: string;
   EMAIL_PASSWORD: string;
   EMAIL_FROM: string;
+}
+
+export interface ProductCategoryAttributes {
+  id?: number;
+  hostId: number;
+  categoryName: string;
+  description?: string;
+  parentCategoryId?: number;
+  sortOrder?: number;
+  isEnabled?: number;
+  isDeleted?: number;
+  createdAt?: number;
+  updatedAt?: number;
+  deletedAt?: number | null;
+}
+
+export interface UOMAttributes {
+  id?: number;
+  hostId: number;
+  uomCode: string;
+  uomName: string;
+  description?: string;
+  parentCategoryId?: number;
+  sortOrder?: number;
+  isEnabled?: number;
+  isDeleted?: number;
+  createdAt?: number;
+  updatedAt?: number;
+  deletedAt?: number | null;
+}
+
+export interface ProductAttributeAttributes {
+  id?: number;
+  hostId: number;
+  productId: number;
+  attributeGroup: string;
+  attributeName: string;
+  attributeValue: string;
+  attributeType: 'TEXT' | 'NUMBER' | 'DECIMAL' | 'DATE' | 'BOOLEAN' | 'JSON';
+  attributeUomId?: number;
+  sortOrder?: number;
+  isEnabled?: number;
+  isDeleted?: number;
+  createdAt?: number;
+  updatedAt?: number;
+  deletedAt?: number | null;
+}
+
+export interface ProductBrandAttributes {
+  id?: number;
+  hostId: number;
+  brandName: string;
+  description?: string;
+  parentCategoryId?: number;
+  sortOrder?: number;
+  isEnabled?: number;
+  isDeleted?: number;
+  createdAt?: number;
+  updatedAt?: number;
+  deletedAt?: number | null;
+}
+
+export interface ProductMediaAttributes {
+  id?: number;
+  hostId: number;
+  productId: number;
+  mediaUrl: string;
+  mediaType: 'IMAGE' | 'VIDEO' | 'PDF' | 'DOCUMENT' | 'BROCHURE' | 'CERTIFICATE' | 'LABEL' | 'MANUAL';
+  thumbnailUrl?: string;
+  publicId?: string;
+  fileName?: string;
+  fileSizeInBytes?: number;
+  mimeType?: string;
+  isPrimary?: number;
+  sortOrder?: number;
+  isEnabled?: number;
+  isDeleted?: number;
+  createdAt?: number;
+  updatedAt?: number;
+  deletedAt?: number | null;
 }
