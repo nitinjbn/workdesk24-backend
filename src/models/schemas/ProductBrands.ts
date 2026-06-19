@@ -1,13 +1,13 @@
 import { Model, DataTypes, Sequelize, Optional } from 'sequelize';
 import { ProductBrandAttributes } from '../../types';
 
-interface ProductBrandCreationAttributes extends Optional<ProductBrandAttributes, 'id' | 'brandName' | 'description' | 'isEnabled' | 'isDeleted' | 'createdAt' | 'updatedAt' | 'deletedAt'> {}
+interface ProductBrandCreationAttributes extends Optional<ProductBrandAttributes, 'id' | 'brandName' | 'remarks' | 'isEnabled' | 'isDeleted' | 'createdAt' | 'updatedAt' | 'deletedAt'> {}
 
 class ProductBrand extends Model<ProductBrandAttributes, ProductBrandCreationAttributes> implements ProductBrandAttributes {
   public id!: number;
   public hostId!: number;
   public brandName!: string;
-  public description?: string;
+  public remarks?: string;
   public parentCategoryId?: number;
   public sortOrder?: number;
   public isEnabled?: number;
@@ -40,7 +40,7 @@ export function initProductBrand(sequelize: Sequelize): typeof ProductBrand {
         type: DataTypes.STRING(50),
         allowNull: false,
       },
-      description: {
+      remarks: {
         type: DataTypes.STRING(255),
         allowNull: true,
       },

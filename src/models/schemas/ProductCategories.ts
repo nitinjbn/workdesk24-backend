@@ -1,13 +1,13 @@
 import { Model, DataTypes, Sequelize, Optional } from 'sequelize';
 import { ProductCategoryAttributes } from '../../types';
 
-interface ProductCategoryCreationAttributes extends Optional<ProductCategoryAttributes, 'id' | 'categoryName' | 'description' | 'parentCategoryId' | 'sortOrder' | 'isEnabled' | 'isDeleted' | 'createdAt' | 'updatedAt' | 'deletedAt'> {}
+interface ProductCategoryCreationAttributes extends Optional<ProductCategoryAttributes, 'id' | 'categoryName' | 'remarks' | 'parentCategoryId' | 'sortOrder' | 'isEnabled' | 'isDeleted' | 'createdAt' | 'updatedAt' | 'deletedAt'> {}
 
 class ProductCategory extends Model<ProductCategoryAttributes, ProductCategoryCreationAttributes> implements ProductCategoryAttributes {
   public id!: number;
   public hostId!: number;
   public categoryName!: string;
-  public description?: string;
+  public remarks?: string;
   public parentCategoryId?: number;
   public sortOrder?: number;
   public isEnabled?: number;
@@ -40,7 +40,7 @@ export function initProductCategory(sequelize: Sequelize): typeof ProductCategor
         type: DataTypes.STRING(50),
         allowNull: false,
       },
-      description: {
+      remarks: {
         type: DataTypes.STRING(255),
         allowNull: true,
       },

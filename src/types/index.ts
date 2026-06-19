@@ -355,7 +355,7 @@ export interface ProductCategoryAttributes {
   id?: number;
   hostId: number;
   categoryName: string;
-  description?: string;
+  remarks?: string;
   parentCategoryId?: number;
   sortOrder?: number;
   isEnabled?: number;
@@ -370,7 +370,7 @@ export interface UOMAttributes {
   hostId: number;
   uomCode: string;
   uomName: string;
-  description?: string;
+  remarks?: string;
   parentCategoryId?: number;
   sortOrder?: number;
   isEnabled?: number;
@@ -401,7 +401,7 @@ export interface ProductBrandAttributes {
   id?: number;
   hostId: number;
   brandName: string;
-  description?: string;
+  remarks?: string;
   parentCategoryId?: number;
   sortOrder?: number;
   isEnabled?: number;

@@ -1,14 +1,14 @@
 import { Model, DataTypes, Sequelize, Optional } from 'sequelize';
 import { UOMAttributes } from '../../types';
 
-interface UOMCreationAttributes extends Optional<UOMAttributes, 'id' | 'uomCode' | 'uomName' | 'description' | 'isEnabled' | 'isDeleted' | 'createdAt' | 'updatedAt' | 'deletedAt'> {}
+interface UOMCreationAttributes extends Optional<UOMAttributes, 'id' | 'uomCode' | 'uomName' | 'remarks' | 'isEnabled' | 'isDeleted' | 'createdAt' | 'updatedAt' | 'deletedAt'> {}
 
 class UOM extends Model<UOMAttributes, UOMCreationAttributes> implements UOMAttributes {
   public id!: number;
   public hostId!: number;
   public uomCode!: string;
   public uomName!: string;
-  public description?: string;
+  public remarks?: string;
   public parentCategoryId?: number;
   public sortOrder?: number;
   public isEnabled?: number;
@@ -45,7 +45,7 @@ export function initUOM(sequelize: Sequelize): typeof UOM {
         type: DataTypes.STRING(50),
         allowNull: false,
       },
-      description: {
+      remarks: {
         type: DataTypes.STRING(255),
         allowNull: true,
       },
