@@ -1,15 +1,13 @@
 import { Model, DataTypes, Sequelize, Optional } from 'sequelize';
-import { ProductCategoryAttributes } from '../../types';
+import { SubscriptionCycleFeaturesAttributes } from '../../types';
 
-interface ProductCategoryCreationAttributes extends Optional<ProductCategoryAttributes, 'id' | 'categoryName' | 'remarks' | 'parentCategoryId' | 'sortOrder' | 'isEnabled' | 'isDeleted' | 'createdAt' | 'updatedAt' | 'deletedAt'> {}
+interface SubscriptionCycleFeatureCreationAttributes extends Optional<SubscriptionCycleFeaturesAttributes, 'id' | 'isEnabled' | 'isDeleted' | 'createdAt' | 'updatedAt' | 'deletedAt'> {}
 
-class ProductCategory extends Model<ProductCategoryAttributes, ProductCategoryCreationAttributes> implements ProductCategoryAttributes {
+class SubscriptionCycleFeature extends Model<SubscriptionCycleFeaturesAttributes , SubscriptionCycleFeatureCreationAttributes > implements SubscriptionCycleFeaturesAttributes {
   public id!: number;
-  public hostId!: number;
-  public categoryName!: string;
+  public subscriptionCycleId!: number;
+  public featureId!: number;
   public remarks?: string;
-  public parentCategoryId?: number;
-  public sortOrder?: number;
   public isEnabled?: number;
   public isDeleted?: number;
   public createdAt?: number;
@@ -17,39 +15,35 @@ class ProductCategory extends Model<ProductCategoryAttributes, ProductCategoryCr
   public deletedAt?: number | null;
 
   public static associate(models: any): void {
-    ProductCategory.belongsTo(models.User, {
-      foreignKey: 'hostId',
-      as: 'host',
+    SubscriptionCycleFeature.belongsTo(models.SubscriptionCycle, {
+      foreignKey: 'subscriptionCycleId',
+      as: 'subscriptionCycle',
+    });
+    SubscriptionCycleFeature.belongsTo(models.Feature, {
+      foreignKey: 'featureId',
+      as: 'feature',
     });
   }
 }
 
-export function initProductCategory(sequelize: Sequelize): typeof ProductCategory {
-  ProductCategory.init(
+export function initSubscriptionCycleFeature(sequelize: Sequelize): typeof SubscriptionCycleFeature {
+  SubscriptionCycleFeature.init(
     {
       id: {
         type: DataTypes.BIGINT,
         autoIncrement: true,
         primaryKey: true,
       },
-      hostId: {
+      subscriptionCycleId: {
         type: DataTypes.BIGINT,
         allowNull: false,
       },
-      categoryName: {
-        type: DataTypes.STRING(50),
+      featureId: {
+        type: DataTypes.BIGINT,
         allowNull: false,
       },
       remarks: {
         type: DataTypes.STRING(255),
-        allowNull: true,
-      },
-      parentCategoryId: {
-        type: DataTypes.BIGINT,
-        allowNull: true,
-      },
-      sortOrder: {
-        type: DataTypes.TINYINT,
         allowNull: true,
       },
       isEnabled: {
@@ -78,20 +72,18 @@ export function initProductCategory(sequelize: Sequelize): typeof ProductCategor
     },
     {
       sequelize,
-      tableName: 'wd_product_categories',
+      tableName: 'wd_subscription_cycles_features',
       timestamps: false,
       indexes: [
-        { fields: ['hostId'] },
-        { fields: ['categoryName'] },
-        { fields: ['parentCategoryId'] },
-        { fields: ['sortOrder'] },
+        { fields: ['subscriptionCycleId'] },
+        { fields: ['featureId'] },
         { fields: ['isEnabled'] },
         { fields: ['isDeleted'] },
       ],
     }
   );
 
-  return ProductCategory;
+  return SubscriptionCycleFeature;
 }
 
-export default ProductCategory;
+export default SubscriptionCycleFeature;

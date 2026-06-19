@@ -1,15 +1,15 @@
 import { Model, DataTypes, Sequelize, Optional } from 'sequelize';
-import { ProductCategoryAttributes } from '../../types';
+import { RoleAttributes } from '../../types';
 
-interface ProductCategoryCreationAttributes extends Optional<ProductCategoryAttributes, 'id' | 'categoryName' | 'remarks' | 'parentCategoryId' | 'sortOrder' | 'isEnabled' | 'isDeleted' | 'createdAt' | 'updatedAt' | 'deletedAt'> {}
+interface RoleCreationAttributes extends Optional<RoleAttributes, 'id' | 'roleCode' | 'roleName' | 'remarks' | 'isSystemRole' | 'isEnabled' | 'isDeleted' | 'createdAt' | 'updatedAt' | 'deletedAt'> {}
 
-class ProductCategory extends Model<ProductCategoryAttributes, ProductCategoryCreationAttributes> implements ProductCategoryAttributes {
+class Role extends Model<RoleAttributes, RoleCreationAttributes> implements RoleAttributes {
   public id!: number;
   public hostId!: number;
-  public categoryName!: string;
+  public roleCode!: string;
+  public roleName!: string;
   public remarks?: string;
-  public parentCategoryId?: number;
-  public sortOrder?: number;
+  public isSystemRole?: number;
   public isEnabled?: number;
   public isDeleted?: number;
   public createdAt?: number;
@@ -17,15 +17,15 @@ class ProductCategory extends Model<ProductCategoryAttributes, ProductCategoryCr
   public deletedAt?: number | null;
 
   public static associate(models: any): void {
-    ProductCategory.belongsTo(models.User, {
+    Role.belongsTo(models.Host, {
       foreignKey: 'hostId',
       as: 'host',
     });
   }
 }
 
-export function initProductCategory(sequelize: Sequelize): typeof ProductCategory {
-  ProductCategory.init(
+export function initRole(sequelize: Sequelize): typeof Role {
+  Role.init(
     {
       id: {
         type: DataTypes.BIGINT,
@@ -36,7 +36,11 @@ export function initProductCategory(sequelize: Sequelize): typeof ProductCategor
         type: DataTypes.BIGINT,
         allowNull: false,
       },
-      categoryName: {
+      roleCode: {
+        type: DataTypes.STRING(20),
+        allowNull: false,
+      },
+      roleName: {
         type: DataTypes.STRING(50),
         allowNull: false,
       },
@@ -44,13 +48,10 @@ export function initProductCategory(sequelize: Sequelize): typeof ProductCategor
         type: DataTypes.STRING(255),
         allowNull: true,
       },
-      parentCategoryId: {
-        type: DataTypes.BIGINT,
-        allowNull: true,
-      },
-      sortOrder: {
+      isSystemRole: {
         type: DataTypes.TINYINT,
-        allowNull: true,
+        allowNull: false,
+        defaultValue: 0,
       },
       isEnabled: {
         type: DataTypes.TINYINT,
@@ -78,20 +79,20 @@ export function initProductCategory(sequelize: Sequelize): typeof ProductCategor
     },
     {
       sequelize,
-      tableName: 'wd_product_categories',
+      tableName: 'wd_roles',
       timestamps: false,
       indexes: [
         { fields: ['hostId'] },
-        { fields: ['categoryName'] },
-        { fields: ['parentCategoryId'] },
-        { fields: ['sortOrder'] },
+        { fields: ['roleCode'] },
+        { fields: ['roleName'] },
+        { fields: ['isSystemRole'] },
         { fields: ['isEnabled'] },
         { fields: ['isDeleted'] },
       ],
     }
   );
 
-  return ProductCategory;
+  return Role;
 }
 
-export default ProductCategory;
+export default Role;

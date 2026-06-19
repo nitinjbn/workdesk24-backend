@@ -1,55 +1,45 @@
 import { Model, DataTypes, Sequelize, Optional } from 'sequelize';
-import { ProductCategoryAttributes } from '../../types';
+import { PermissionAttributes } from '../../types';
 
-interface ProductCategoryCreationAttributes extends Optional<ProductCategoryAttributes, 'id' | 'categoryName' | 'remarks' | 'parentCategoryId' | 'sortOrder' | 'isEnabled' | 'isDeleted' | 'createdAt' | 'updatedAt' | 'deletedAt'> {}
+interface PermissionCreationAttributes extends Optional<PermissionAttributes, 'id' | 'permissionCode' | 'permissionName' | 'moduleName' | 'remarks' | 'isEnabled' | 'isDeleted' | 'createdAt' | 'updatedAt' | 'deletedAt'> {}
 
-class ProductCategory extends Model<ProductCategoryAttributes, ProductCategoryCreationAttributes> implements ProductCategoryAttributes {
+class Permission extends Model<PermissionAttributes, PermissionCreationAttributes> implements PermissionAttributes {
   public id!: number;
   public hostId!: number;
-  public categoryName!: string;
+  public permissionCode!: string;
+  public permissionName!: string;
+  public moduleName!: string;
   public remarks?: string;
-  public parentCategoryId?: number;
-  public sortOrder?: number;
+  public isSystemRole?: number;
   public isEnabled?: number;
   public isDeleted?: number;
   public createdAt?: number;
   public updatedAt?: number;
   public deletedAt?: number | null;
-
-  public static associate(models: any): void {
-    ProductCategory.belongsTo(models.User, {
-      foreignKey: 'hostId',
-      as: 'host',
-    });
-  }
 }
 
-export function initProductCategory(sequelize: Sequelize): typeof ProductCategory {
-  ProductCategory.init(
+export function initPermission(sequelize: Sequelize): typeof Permission {
+  Permission.init(
     {
       id: {
         type: DataTypes.BIGINT,
         autoIncrement: true,
         primaryKey: true,
       },
-      hostId: {
-        type: DataTypes.BIGINT,
+      permissionCode: {
+        type: DataTypes.STRING(20),
         allowNull: false,
       },
-      categoryName: {
+      permissionName: {
+        type: DataTypes.STRING(50),
+        allowNull: false,
+      },
+      moduleName: {
         type: DataTypes.STRING(50),
         allowNull: false,
       },
       remarks: {
         type: DataTypes.STRING(255),
-        allowNull: true,
-      },
-      parentCategoryId: {
-        type: DataTypes.BIGINT,
-        allowNull: true,
-      },
-      sortOrder: {
-        type: DataTypes.TINYINT,
         allowNull: true,
       },
       isEnabled: {
@@ -78,20 +68,20 @@ export function initProductCategory(sequelize: Sequelize): typeof ProductCategor
     },
     {
       sequelize,
-      tableName: 'wd_product_categories',
+      tableName: 'wd_permissions',
       timestamps: false,
       indexes: [
-        { fields: ['hostId'] },
-        { fields: ['categoryName'] },
-        { fields: ['parentCategoryId'] },
-        { fields: ['sortOrder'] },
+        { fields: ['permissionCode'] },
+        { fields: ['permissionName'] },
+        { fields: ['moduleName'] },
+        { fields: ['isSystemRole'] },
         { fields: ['isEnabled'] },
         { fields: ['isDeleted'] },
       ],
     }
   );
 
-  return ProductCategory;
+  return Permission;
 }
 
-export default ProductCategory;
+export default Permission;

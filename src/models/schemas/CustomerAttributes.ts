@@ -1,12 +1,12 @@
 import { Model, DataTypes, Sequelize, Optional } from 'sequelize';
-import { ProductAttributeAttributes, ProductAttributes } from '../../types';
+import { CustomerAttributeAttributes } from '../../types';
 
-interface ProductAttributeCreationAttributes extends Optional<ProductAttributeAttributes, 'id' | 'hostId' | 'productId' | 'attributeGroup' | 'attributeName' | 'attributeValue' | 'attributeType' | 'attributeUomId' | 'sortOrder' | 'isEnabled' | 'isDeleted' | 'createdAt' | 'updatedAt' | 'deletedAt'> {}
+interface CustomerAttributeCreationAttributes extends Optional<CustomerAttributeAttributes, 'id' | 'hostId' | 'customerId' | 'attributeGroup' | 'attributeName' | 'attributeValue' | 'attributeType' | 'attributeUomId' | 'sortOrder' | 'isEnabled' | 'isDeleted' | 'createdAt' | 'updatedAt' | 'deletedAt'> {}
 
-class ProductAttribute extends Model<ProductAttributeAttributes, ProductAttributeCreationAttributes> implements ProductAttributeAttributes {
+class CustomerAttribute extends Model<CustomerAttributeAttributes, CustomerAttributeCreationAttributes> implements CustomerAttributeAttributes {
   public id!: number;
   public hostId!: number;
-  public productId!: number;
+  public customerId!: number;
   public attributeGroup!: string;
   public attributeName!: string;
   public attributeValue!: string;
@@ -20,19 +20,15 @@ class ProductAttribute extends Model<ProductAttributeAttributes, ProductAttribut
   public deletedAt?: number | null;
 
   public static associate(models: any): void {
-    ProductAttribute.belongsTo(models.Product, {
-      foreignKey: 'productId',
-      as: 'product',
-    });
-    ProductAttribute.belongsTo(models.Host, {
+    CustomerAttribute.belongsTo(models.Host, {
       foreignKey: 'hostId',
       as: 'host',
     });
   }
 }
 
-export function initProductAttribute(sequelize: Sequelize): typeof ProductAttribute {
-  ProductAttribute.init(
+export function initCustomerAttribute(sequelize: Sequelize): typeof CustomerAttribute {
+  CustomerAttribute.init(
     {
       id: {
         type: DataTypes.BIGINT,
@@ -43,7 +39,7 @@ export function initProductAttribute(sequelize: Sequelize): typeof ProductAttrib
         type: DataTypes.BIGINT,
         allowNull: false,
       },
-      productId: {
+      customerId: {
         type: DataTypes.BIGINT,
         allowNull: false,
       },
@@ -97,11 +93,11 @@ export function initProductAttribute(sequelize: Sequelize): typeof ProductAttrib
     },
     {
       sequelize,
-      tableName: 'wd_product_attributes',
+      tableName: 'wd_customer_attributes',
       timestamps: false,
       indexes: [
         { fields: ['hostId'] },
-        { fields: ['productId'] },
+        { fields: ['customerId'] },
         { fields: ['attributeGroup'] },
         { fields: ['attributeName'] },
         { fields: ['attributeValue'] },
@@ -114,7 +110,7 @@ export function initProductAttribute(sequelize: Sequelize): typeof ProductAttrib
     }
   );
 
-  return ProductAttribute;
+  return CustomerAttribute;
 }
 
-export default ProductAttribute;
+export default CustomerAttribute;

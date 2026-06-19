@@ -1,195 +1,135 @@
 import { Model, DataTypes, Sequelize, Optional } from 'sequelize';
-import { VisitAttributes } from '../../types';
+import { CustomerAttributes } from '../../types';
 
-interface VisitCreationAttributes extends Optional<VisitAttributes, 'id' | 'localId' | 'customerPhone' | 'customerEmail' | 'customerAddress' | 'checkInLatitude' | 'checkInLongitude' | 'purpose' | 'remarks' | 'checkOutTime' | 'visitDuration' | 'syncedAt' | 'createdAt' | 'updatedAt'> {}
+interface CustomerCreationAttributes extends Optional<CustomerAttributes, 'id' | 'hostId' | 'customerCode' | 'customerName' | 'customerTypeId' | 'contactPerson' | 'mobile' | 'alternateMobile' | 'email' | 'gstNumber' | 'panNumber' | 'city' | 'state' | 'postalCode' | 'country' | 'isEnabled' | 'isDeleted' | 'createdAt' | 'updatedAt' | 'deletedAt'> {}
 
-class Visit extends Model<VisitAttributes, VisitCreationAttributes> implements VisitAttributes {
+class Customer extends Model<CustomerAttributes, CustomerCreationAttributes> implements CustomerAttributes {
   public id!: number;
-  public userId!: number;
-  public localId?: string;
-  public customerId!: number;
+  public hostId!: number;
+  public customerCode?: string;
   public customerName!: string;
-  public customerPhone?: string;
-  public customerEmail?: string;
-  public customerAddress?: string;
-  public checkInLatitude?: number;
-  public checkOutLatitude?: number;
-  public checkInLocationAccuracy?: number;
-  public checkOutLocationAccuracy?: number;
-  public checkInLocationAltitude?: number;
-  public checkOutLocationAltitude?: number;
-  public checkInLocationSpeed?: number;
-  public checkOutLocationSpeed?: number;
-  public checkInLocationProvider?: string;
-  public checkOutLocationProvider?: string;
-  public checkInBatteryPercentage?: number;
-  public checkOutBatteryPercentage?: number;
-  public isChargingOnCheckIn?: number;
-  public isChargingOnCheckOut?: number;
-  public purpose?: string;
+  public customerTypeId?: number;
+  public contactPerson?: string;
+  public mobile?: string;
+  public alternateMobile?: string;
+  public email?: string;
+  public gstNumber?: string;
+  public panNumber?: string;
+  public addressLine1?: string;
+  public addressLine2?: string;
+  public city?: string;
+  public state?: string;
+  public postalCode?: string;
+  public country?: string;
   public remarks?: string;
-  public checkInTime!: number;
-  public checkOutTime?: number;
-  public visitDuration?: number;
-  public syncedAt?: number;
-  public createdAt?: number;
+  public isEnabled!: number;
+  public isDeleted!: number;
+  public createdAt!: number;
   public updatedAt?: number;
-  public isDeleted?: number;
-  public deletedAt?: number;
+  public deletedAt?: number | null;
 
   public static associate(models: any): void {
-    Visit.belongsTo(models.User, {
-      foreignKey: 'userId',
-      as: 'user',
-    });
-    Visit.hasMany(models.Image, {
-      foreignKey: 'visitId',
-      as: 'images',
+    Customer.belongsTo(models.Host, {
+      foreignKey: 'hostId',
+      as: 'host',
     });
   }
 }
 
-export function initVisit(sequelize: Sequelize): typeof Visit {
-  Visit.init(
+export function initCustomer(sequelize: Sequelize): typeof Customer {
+  Customer.init(
     {
       id: {
         type: DataTypes.BIGINT,
         autoIncrement: true,
         primaryKey: true,
       },
-      userId: {
+      hostId: {
         type: DataTypes.BIGINT,
-        allowNull: false
-      },
-      localId: {
-        type: DataTypes.STRING(100),
-        allowNull: true
-      },
-      customerId: {
-        type: DataTypes.BIGINT,
-        allowNull: false
-      },
-      customerName: {
-        type: DataTypes.STRING(200),
         allowNull: false
       },
       customerCode: {
         type: DataTypes.STRING(50),
         allowNull: true
       },
+      customerName: {
+        type: DataTypes.STRING(100),
+        allowNull: false
+      },
+      customerTypeId: {
+        type: DataTypes.BIGINT,
+        allowNull: true
+      },
       contactPerson: {
         type: DataTypes.STRING(100),
         allowNull: true
       },
-      customerPhone: {
+      mobile: {
         type: DataTypes.STRING(20),
         allowNull: true
       },
-      customerEmail: {
+      alternateMobile: {
+        type: DataTypes.STRING(20),
+        allowNull: true
+      },
+      email: {
         type: DataTypes.STRING(255),
         allowNull: true
       },
-      customerAddress: {
-        type: DataTypes.TEXT,
+      gstNumber: {
+        type: DataTypes.STRING(20),
+        allowNull: true
+       },
+      panNumber: {
+        type: DataTypes.STRING(20),
         allowNull: true
       },
-      customerType: {
-        type: DataTypes.STRING(50),
+      addressLine1: {
+        type: DataTypes.STRING(255),
         allowNull: true
       },
-      purpose: {
-        type: DataTypes.STRING(50),
-        allowNull: true,
+      addressLine2: {
+        type: DataTypes.STRING(255),
+        allowNull: true
+      },
+      city: {
+        type: DataTypes.STRING(100),
+        allowNull: true
+      },
+      state: {
+        type: DataTypes.STRING(100),
+        allowNull: true
+      },
+      postalCode: {
+        type: DataTypes.STRING(20),
+        allowNull: true
+      },
+      country: {
+        type: DataTypes.STRING(100),
+        allowNull: true
       },
       remarks: {
         type: DataTypes.TEXT,
         allowNull: true,
       },
-      checkInTime: {
-        type: DataTypes.BIGINT,
-        allowNull: false
-      },
-      checkOutTime: {
-        type: DataTypes.BIGINT,
-        allowNull: true
-      },
-      visitDuration: {
-        type: DataTypes.FLOAT,
-        allowNull: true,
-      },
-      checkInLatitude: {
+      latitude: {
         type: DataTypes.DECIMAL(10, 8),
         allowNull: true,
       },
-      checkInLongitude: {
+      longitude: {
         type: DataTypes.DECIMAL(11, 8),
         allowNull: true,
       },
-      checkInLocationAccuracy: {
-        type: DataTypes.FLOAT,
-        allowNull: true
-      },
-      checkInLocationAltitude: {
-        type: DataTypes.FLOAT,
-        allowNull: true
-      },
-      checkInLocationSpeed: {
-        type: DataTypes.FLOAT,
-        allowNull: true
-      },
-      checkInLocationProvider: {
-        type: DataTypes.STRING(100),
-        allowNull: true
-      },
-      checkInBatteryPercentage: {
+      isEnabled: {
         type: DataTypes.TINYINT,
-        allowNull: true
-      },
-      isChargingOnCheckIn: {
-        type: DataTypes.TINYINT,
-        allowNull: true
-      },
-      checkOutLatitude: {
-        type: DataTypes.DECIMAL(10, 8),
-        allowNull: true,
-      },
-      checkOutLongitude: {
-        type: DataTypes.DECIMAL(11, 8),
-        allowNull: true,
-      },
-      checkOutLocationAccuracy: {
-        type: DataTypes.FLOAT,
-        allowNull: true
-      },
-      checkOutLocationAltitude: {
-        type: DataTypes.FLOAT,
-        allowNull: true
-      },
-      checkOutLocationSpeed: {
-        type: DataTypes.FLOAT,
-        allowNull: true
-      },
-      checkOutLocationProvider: {
-        type: DataTypes.STRING(100),
-        allowNull: true
-      },
-      checkOutBatteryPercentage: {
-        type: DataTypes.TINYINT,
-        allowNull: true
-      },
-      isChargingOnCheckOut: {
-        type: DataTypes.TINYINT,
-        allowNull: true
+        allowNull: false,
+        defaultValue: 1,
       },
       createdAt: {
         type: DataTypes.BIGINT,
         allowNull: false,
       },
       updatedAt: {
-        type: DataTypes.BIGINT,
-        allowNull: true,
-      },
-      syncedAt: {
         type: DataTypes.BIGINT,
         allowNull: true,
       },
@@ -206,20 +146,26 @@ export function initVisit(sequelize: Sequelize): typeof Visit {
     },
     {
       sequelize,
-      tableName: 'wd_visits',
+      tableName: 'wd_customers',
       timestamps: false,
       indexes: [
-        { fields: ['userId'] },
-        { fields: ['localId'] },
-        { fields: ['customerId'] },
-        { fields: ['checkInTime'] },
-        { fields: ['checkOutTime'] },
-        { fields: ['visitDuration'] },
+        { fields: ['hostId'] },
+        { fields: ['customerCode'] },
+        { fields: ['customerName'] },
+        { fields: ['mobile'] },
+        { fields: ['alternateMobile'] },
+        { fields: ['email'] },
+        { fields: ['gstNumber'] },
+        { fields: ['panNumber'] },
+        { fields: ['city'] },
+        { fields: ['state'] },
+        { fields: ['postalCode'] },
+        { fields: ['country'] },
       ],
     }
   );
 
-  return Visit;
+  return Customer;
 }
 
-export default Visit;
+export default Customer;

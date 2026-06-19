@@ -4,27 +4,39 @@ import { BaseModel } from '../../shared/types/base.types';
 
 interface UserAttributes extends BaseModel {
   email: string;
+  hostId: number;
   password: string;
   name?: string;
-  role?: 'admin' | 'staff' | 'user';
+  roleId: number;
+  employeeId?: number;
+  mobile: string;
+  reportingManagerId?: number;
+  profileImageUrl?: string;
+  joiningDate?: number;
+  lastLoginAt?: number;
   isActive?: number;
-  lastLoginAt?: number | null;
 }
 
-interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'name' | 'role' | 'isActive' | 'lastLoginAt' | 'createdAt' | 'updatedAt' | 'isDeleted' | 'deletedAt'> {}
+interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'hostId' | 'name' | 'roleId' | 'employeeId' | 'mobile' | 'reportingManagerId' | 'profileImageUrl' | 'joiningDate' | 'lastLoginAt' | 'isActive' | 'createdAt' | 'updatedAt' | 'isDeleted' | 'deletedAt'> {}
 
 class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
   public id!: number;
+  public hostId!: number;
   public email!: string;
-  public password!: string;
+  public roleId!: number;
+  public employeeId?: number;
   public name?: string;
-  public role?: 'admin' | 'staff' | 'user';
-  public isActive?: number;
+  public password!: string;
+  public mobile!: string;
+  public reportingManagerId?: number;
+  public profileImageUrl?: string;
+  public joiningDate?: number;
   public lastLoginAt?: number | null;
+  public isActive?: number;
   public createdAt!: number;
   public updatedAt!: number;
   public isDeleted!: number;
-  public deletedAt!: number | null;
+  public deletedAt?: number | null;
 
   // Instance method to compare password
   public async comparePassword(candidatePassword: string): Promise<boolean> {
@@ -43,63 +55,79 @@ export function initUser(sequelize: Sequelize): typeof User {
   User.init(
     {
       id: {
-        type: DataTypes.INTEGER.UNSIGNED,
+        type: DataTypes.BIGINT,
         autoIncrement: true,
         primaryKey: true,
+      },
+      hostId: {
+        type: DataTypes.BIGINT,
+        allowNull: false,
+      },
+      roleId: {
+        type: DataTypes.BIGINT,
+        allowNull: false,
+      },
+      employeeId: {
+        type: DataTypes.BIGINT,
+        allowNull: true,
+      },
+      name: {
+        type: DataTypes.STRING(100),
+        allowNull: false,
       },
       email: {
         type: DataTypes.STRING(255),
         allowNull: false,
-        unique: true,
+        unique: false,
         validate: { isEmail: true },
+      },
+      mobile: {
+        type: DataTypes.STRING(20),
+        allowNull: false,
       },
       password: {
         type: DataTypes.STRING(255),
         allowNull: false,
       },
-      name: {
-        type: DataTypes.STRING(100),
+      reportingManagerId: {
+        type: DataTypes.BIGINT,
         allowNull: true,
       },
-      role: {
-        type: DataTypes.ENUM('admin', 'staff', 'user'),
-        allowNull: false,
-        defaultValue: 'user',
-        field: 'role',
+      profileImageUrl: {
+        type: DataTypes.STRING(255),
+        allowNull: true,
       },
-      isActive: {
-        type: DataTypes.TINYINT,
-        allowNull: false,
-        defaultValue: 1,
-        field: 'isActive',
+      joiningDate: {
+        type: DataTypes.BIGINT,
+        allowNull: true,
       },
       lastLoginAt: {
         type: DataTypes.BIGINT,
         allowNull: true,
         defaultValue: null,
-        field: 'lastLoginAt',
+      },
+      isActive: {
+        type: DataTypes.TINYINT,
+        allowNull: false,
+        defaultValue: 1
       },
       createdAt: {
         type: DataTypes.BIGINT,
-        allowNull: false,
-        field: 'createdAt',
+        allowNull: false
       },
       updatedAt: {
         type: DataTypes.BIGINT,
-        allowNull: false,
-        field: 'updatedAt',
+        allowNull: false
       },
       isDeleted: {
         type: DataTypes.TINYINT,
         allowNull: false,
-        defaultValue: 0,
-        field: 'isDeleted',
+        defaultValue: 0
       },
       deletedAt: {
         type: DataTypes.BIGINT,
         allowNull: true,
-        defaultValue: null,
-        field: 'deletedAt',
+        defaultValue: null
       },
     },
     {
@@ -114,7 +142,6 @@ export function initUser(sequelize: Sequelize): typeof User {
           user.updatedAt = now;
           user.isDeleted = 0;
           user.deletedAt = null;
-          if (!user.role) user.role = 'user';
           if (user.isActive === undefined) user.isActive = 1;
           if (user.password) {
             user.password = await bcrypt.hash(user.password, 10);

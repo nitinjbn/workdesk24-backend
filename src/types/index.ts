@@ -180,7 +180,7 @@ export interface ProductAttributes {
   productCode?: string;
   productName: string;
   shortName?: string;
-  description?: string;
+  remarks?: string;
   categoryId?: number;
   brandId?: number;
   uomId?: number;
@@ -280,11 +280,22 @@ export interface ImageAttributes {
 // User attributes
 export interface UserAttributes {
   id?: number;
+  hostId: number;
+  roleId: number;
+  employeeId?: number;
+  mobile: string;
   email: string;
   password: string;
   name?: string;
+  reportingManagerId?: number;
+  lastLoginAt?: number;
+  profileImageUrl?: string;
+  joiningDate?: number;
+  isActive?: number;
   createdAt?: number;
   updatedAt?: number;
+  isDeleted?: number;
+  deletedAt?: number | null;
 }
 
 // Inquiry attributes
@@ -429,4 +440,256 @@ export interface ProductMediaAttributes {
   createdAt?: number;
   updatedAt?: number;
   deletedAt?: number | null;
+}
+
+export interface RoleAttributes {
+  id?: number;
+  hostId: number;
+  roleCode: string;
+  roleName: string;
+  remarks?: string;
+  isSystemRole?: number;
+  isEnabled?: number;
+  isDeleted?: number;
+  createdAt?: number;
+  updatedAt?: number;
+  deletedAt?: number | null;
+}
+
+export interface PermissionAttributes {
+  id?: number;
+  permissionCode: string;
+  permissionName: string;
+  moduleName: string;
+  remarks?: string;
+  isEnabled?: number;
+  isDeleted?: number;
+  createdAt?: number;
+  updatedAt?: number;
+  deletedAt?: number | null;
+}
+
+export interface RolePermissionAttributes {
+  id?: number;
+  hostId: number;
+  roleId: number;
+  permissionId: number;
+  isEnabled?: number;
+  isDeleted?: number;
+  createdAt?: number;
+  updatedAt?: number;
+  deletedAt?: number | null;
+}
+
+export interface HostAttributes {
+  id?: number;
+  companyName: string;
+  companyLogoUrl?: string;
+  websiteUrl?: string;
+  contactPerson?: string;
+  mobile?: string;
+  email?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  country?: string;
+  latitude?: number;
+  longitude?: number;
+  gstNumber?: string;
+  panNumber?: string;
+  password: string;
+  isActive?: number;
+  lastLoginAt?: number;
+  isDeleted?: number;
+  createdAt?: number;
+  updatedAt?: number;
+  deletedAt?: number | null;
+}
+
+export interface CustomerTypeAttributes {
+  id?: number;
+  hostId: number;
+  customerTypeName: string;
+  sortOrder: number;
+  remarks?: string;
+  isEnabled?: number;
+  isDeleted?: number;
+  createdAt?: number;
+  updatedAt?: number;
+  deletedAt?: number | null;
+}
+
+export interface CustomerAttributes {
+  id?: number;
+  hostId: number;
+  customerCode?: string;
+  customerName: string;
+  customerTypeId?: number;
+  contactPerson?: string;
+  mobile?: string;
+  alternateMobile?: string;
+  email?: string;
+  gstNumber?: string;
+  panNumber?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  country?: string;
+  latitude?: number;
+  longitude?: number;
+  remarks?: string;
+  isEnabled?: number;
+  isDeleted?: number;
+  createdAt?: number;
+  updatedAt?: number;
+  deletedAt?: number | null;
+}
+
+export interface CustomerAttributeAttributes {
+  id?: number;
+  hostId: number;
+  customerId: number;
+  attributeGroup: string;
+  attributeName: string;
+  attributeValue: string;
+  attributeType: 'TEXT' | 'NUMBER' | 'DECIMAL' | 'DATE' | 'BOOLEAN' | 'JSON';
+  attributeUomId?: number;
+  sortOrder?: number;
+  isEnabled?: number;
+  isDeleted?: number;
+  createdAt?: number;
+  updatedAt?: number;
+  deletedAt?: number | null;
+}
+
+export interface CustomerMediaAttributes {
+  id?: number;
+  hostId: number;
+  customerId: number;
+  mediaUrl: string;
+  mediaType: 'IMAGE' | 'VIDEO' | 'PDF' | 'DOCUMENT' | 'BROCHURE' | 'CERTIFICATE' | 'LABEL' | 'MANUAL';
+  thumbnailUrl?: string;
+  publicId?: string;
+  fileName?: string;
+  fileSizeInBytes?: number;
+  mimeType?: string;
+  isPrimary?: number;
+  sortOrder?: number;
+  isEnabled?: number;
+  isDeleted?: number;
+  createdAt?: number;
+  updatedAt?: number;
+  deletedAt?: number | null;
+}
+
+export interface SubscriptionPlanAttributes {
+  id?: number;
+  planName: string;
+  planCode: string;
+  description?: string;
+  price: number;
+  durationInDays: number;
+  isEnabled?: number;
+  isDeleted?: number;
+  createdAt?: number;
+  updatedAt?: number;
+  deletedAt?: number | null;
+}
+
+export interface SubscriptionCycleAttributes {
+  id?: number;
+  cycleCode: string;
+  cycleName: string;
+  validityInMonths: number;
+  perUserMonthlyPrice: number;
+  perUserSetupPrice: number;
+  minimumUsers: number;
+  isPopular: number;
+  remarks?: string;
+  sortOrder?: number;
+  isEnabled?: number;
+  isDeleted?: number;
+  createdAt?: number;
+  updatedAt?: number;
+  deletedAt?: number | null;
+}
+
+export interface FeatureAttributes {
+  id?: number;
+  featureCode: string;
+  featureName: string;
+  remarks?: string;
+  sortOrder?: number;
+  isEnabled?: number;
+  isDeleted?: number;
+  createdAt?: number;
+  updatedAt?: number;
+  deletedAt?: number | null;
+}
+
+export interface SubscriptionCycleFeaturesAttributes {
+  id?: number;
+  subscriptionCycleId: number;
+  featureId: number;
+  remarks?: string;
+  isEnabled?: number;
+  isDeleted?: number;
+  createdAt?: number;
+  updatedAt?: number;
+  deletedAt?: number | null;
+}
+
+export interface HostSubscriptionAttributes {
+  id?: number;
+  hostId: number;
+  subscriptionCycleId: number;
+  licensedUserCount: number;
+  validityInMonths: number;
+  perUserMonthlyPrice: number;
+  perUserSetupPrice: number;
+  discountType?: 'PERCENTAGE' | 'FIXED';
+  discountValue?: number;
+  grossAmount: number;
+  discountAmount: number;
+  netAmount: number;
+  planStartDate: number;
+  planEndDate: number;
+  paymentStatus: 'PENDING' | 'PAID';
+  paymentReference?: string;
+  remarks?: string;
+  isEnabled?: number;
+  isDeleted?: number;
+  createdAt?: number;
+  updatedAt?: number;
+  deletedAt?: number | null;
+}
+
+export interface HostSettingsAttributes {
+  id?: number;
+  hostId: number;
+  settingName: string;
+  settingValue: string;
+  remarks?: string;
+  isEnabled?: number;
+  createdAt?: number;
+  updatedAt?: number;
+  deletedAt?: number | null;
+  isDeleted?: number;
+}
+
+export interface UserSettingsAttributes {
+  id?: number;
+  userId: number;
+  settingName: string;
+  settingValue: string;
+  remarks?: string;
+  isEnabled?: number;
+  createdAt?: number;
+  updatedAt?: number;
+  deletedAt?: number | null;
+  isDeleted?: number;
 }

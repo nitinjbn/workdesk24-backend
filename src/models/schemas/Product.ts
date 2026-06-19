@@ -1,7 +1,7 @@
 import { Model, DataTypes, Sequelize, Optional } from 'sequelize';
 import { ProductAttributes } from '../../types';
 
-interface ProductCreationAttributes extends Optional<ProductAttributes, 'id' | 'productCode' | 'shortName' | 'description' | 'categoryId' | 'brandId' | 'uomId' | 'sku' | 'barcode' | 'hsnCode' | 'purchasePrice' | 'sellingPrice' | 'mrp' | 'taxPercentage' | 'isEnabled' | 'isDeleted' | 'createdAt' | 'updatedAt' | 'deletedAt'> {}
+interface ProductCreationAttributes extends Optional<ProductAttributes, 'id' | 'productCode' | 'shortName' | 'remarks' | 'categoryId' | 'brandId' | 'uomId' | 'sku' | 'barcode' | 'hsnCode' | 'purchasePrice' | 'sellingPrice' | 'mrp' | 'taxPercentage' | 'isEnabled' | 'isDeleted' | 'createdAt' | 'updatedAt' | 'deletedAt'> {}
 
 class Product extends Model<ProductAttributes, ProductCreationAttributes> implements ProductAttributes {
   public id!: number;
@@ -9,7 +9,7 @@ class Product extends Model<ProductAttributes, ProductCreationAttributes> implem
   public productCode?: string;
   public productName!: string;
   public shortName?: string;
-  public description?: string;
+  public remarks?: string;
   public categoryId?: number;
   public brandId?: number;
   public uomId?: number;
@@ -27,7 +27,7 @@ class Product extends Model<ProductAttributes, ProductCreationAttributes> implem
   public deletedAt?: number | null;
 
   public static associate(models: any): void {
-    Product.belongsTo(models.User, {
+    Product.belongsTo(models.Host, {
       foreignKey: 'hostId',
       as: 'host',
     });
@@ -58,20 +58,20 @@ export function initProduct(sequelize: Sequelize): typeof Product {
         type: DataTypes.STRING(50),
         allowNull: true,
       },
-      description: {
+      remarks: {
         type: DataTypes.TEXT,
         allowNull: true,
       },
       categoryId: {
-        type: DataTypes.INTEGER,
+        type: DataTypes.BIGINT,
         allowNull: true,
       },
       brandId: {
-        type: DataTypes.INTEGER,
+        type: DataTypes.BIGINT,
         allowNull: true,
       },
       uomId: {
-        type: DataTypes.INTEGER,
+        type: DataTypes.BIGINT,
         allowNull: true,
       },
       sku: {

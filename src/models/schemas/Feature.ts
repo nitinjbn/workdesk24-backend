@@ -1,14 +1,13 @@
 import { Model, DataTypes, Sequelize, Optional } from 'sequelize';
-import { ProductCategoryAttributes } from '../../types';
+import { FeatureAttributes } from '../../types';
 
-interface ProductCategoryCreationAttributes extends Optional<ProductCategoryAttributes, 'id' | 'categoryName' | 'remarks' | 'parentCategoryId' | 'sortOrder' | 'isEnabled' | 'isDeleted' | 'createdAt' | 'updatedAt' | 'deletedAt'> {}
+interface FeatureCreationAttributes extends Optional<FeatureAttributes, 'id' | 'featureCode' | 'featureName' | 'isEnabled' | 'isDeleted' | 'createdAt' | 'updatedAt' | 'deletedAt'> {}
 
-class ProductCategory extends Model<ProductCategoryAttributes, ProductCategoryCreationAttributes> implements ProductCategoryAttributes {
+class Feature extends Model<FeatureAttributes , FeatureCreationAttributes > implements FeatureAttributes {
   public id!: number;
-  public hostId!: number;
-  public categoryName!: string;
+  public featureCode!: string;
+  public featureName!: string;
   public remarks?: string;
-  public parentCategoryId?: number;
   public sortOrder?: number;
   public isEnabled?: number;
   public isDeleted?: number;
@@ -17,26 +16,26 @@ class ProductCategory extends Model<ProductCategoryAttributes, ProductCategoryCr
   public deletedAt?: number | null;
 
   public static associate(models: any): void {
-    ProductCategory.belongsTo(models.User, {
+    Feature.belongsTo(models.Host, {
       foreignKey: 'hostId',
       as: 'host',
     });
   }
 }
 
-export function initProductCategory(sequelize: Sequelize): typeof ProductCategory {
-  ProductCategory.init(
+export function initFeature(sequelize: Sequelize): typeof Feature {
+  Feature.init(
     {
       id: {
         type: DataTypes.BIGINT,
         autoIncrement: true,
         primaryKey: true,
       },
-      hostId: {
-        type: DataTypes.BIGINT,
+      featureCode: {
+        type: DataTypes.STRING(20),
         allowNull: false,
       },
-      categoryName: {
+      featureName: {
         type: DataTypes.STRING(50),
         allowNull: false,
       },
@@ -44,13 +43,10 @@ export function initProductCategory(sequelize: Sequelize): typeof ProductCategor
         type: DataTypes.STRING(255),
         allowNull: true,
       },
-      parentCategoryId: {
-        type: DataTypes.BIGINT,
-        allowNull: true,
-      },
       sortOrder: {
         type: DataTypes.TINYINT,
-        allowNull: true,
+        allowNull: false,
+        defaultValue: 0,
       },
       isEnabled: {
         type: DataTypes.TINYINT,
@@ -78,20 +74,18 @@ export function initProductCategory(sequelize: Sequelize): typeof ProductCategor
     },
     {
       sequelize,
-      tableName: 'wd_product_categories',
+      tableName: 'wd_features',
       timestamps: false,
       indexes: [
-        { fields: ['hostId'] },
-        { fields: ['categoryName'] },
-        { fields: ['parentCategoryId'] },
-        { fields: ['sortOrder'] },
+        { fields: ['featureCode'] },
+        { fields: ['featureName'] },
         { fields: ['isEnabled'] },
         { fields: ['isDeleted'] },
       ],
     }
   );
 
-  return ProductCategory;
+  return Feature;
 }
 
-export default ProductCategory;
+export default Feature;
