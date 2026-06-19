@@ -5,7 +5,6 @@ interface PermissionCreationAttributes extends Optional<PermissionAttributes, 'i
 
 class Permission extends Model<PermissionAttributes, PermissionCreationAttributes> implements PermissionAttributes {
   public id!: number;
-  public hostId!: number;
   public permissionCode!: string;
   public permissionName!: string;
   public moduleName!: string;

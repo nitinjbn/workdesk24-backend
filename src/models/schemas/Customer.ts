@@ -6,6 +6,7 @@ interface CustomerCreationAttributes extends Optional<CustomerAttributes, 'id' |
 class Customer extends Model<CustomerAttributes, CustomerCreationAttributes> implements CustomerAttributes {
   public id!: number;
   public hostId!: number;
+  public parentCustomerId?: number;
   public customerCode?: string;
   public customerName!: string;
   public customerTypeId?: number;
@@ -47,6 +48,10 @@ export function initCustomer(sequelize: Sequelize): typeof Customer {
       hostId: {
         type: DataTypes.BIGINT,
         allowNull: false
+      },
+      parentCustomerId: {
+        type: DataTypes.BIGINT,
+        allowNull: true
       },
       customerCode: {
         type: DataTypes.STRING(50),
@@ -150,6 +155,7 @@ export function initCustomer(sequelize: Sequelize): typeof Customer {
       timestamps: false,
       indexes: [
         { fields: ['hostId'] },
+        { fields: ['parentCustomerId'] },
         { fields: ['customerCode'] },
         { fields: ['customerName'] },
         { fields: ['mobile'] },

@@ -524,6 +524,7 @@ export interface CustomerTypeAttributes {
 export interface CustomerAttributes {
   id?: number;
   hostId: number;
+  parentCustomerId?: number;
   customerCode?: string;
   customerName: string;
   customerTypeId?: number;
