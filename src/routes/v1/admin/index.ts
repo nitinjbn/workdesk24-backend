@@ -1,11 +1,21 @@
 import { Router } from 'express';
-import { authMiddleware } from '../../../shared/middleware/auth.middleware';
+import rateLimitConfig from '../../../config/rateLimit';
+import { authMiddleware, requireAdminRole } from '../../../shared/middleware/auth.middleware';
+import { requireAdminCsrfToken } from '../../../shared/middleware/csrf.middleware';
+import adminAuthController from '../../../modules/admin/controllers/auth.controller';
 import userController from '../../../modules/admin/controllers/user.controller';
 import inquiryController from '../../../modules/public/controllers/inquiry.controller';
+import { User, Inquiry } from '../../../models/index';
 
 const router = Router();
 
+router.post('/login', rateLimitConfig.auth, adminAuthController.login.bind(adminAuthController));
+router.post('/refresh', rateLimitConfig.auth, requireAdminCsrfToken, adminAuthController.refresh.bind(adminAuthController));
+router.post('/logout', requireAdminCsrfToken, adminAuthController.logout.bind(adminAuthController));
+
 router.use(authMiddleware);
+router.use(requireAdminRole);
+router.use(requireAdminCsrfToken);
 
 router.post('/users/list', userController.getAllUsers.bind(userController));
 router.post('/users/get', userController.getUserById.bind(userController));
@@ -21,9 +31,6 @@ router.post('/inquiries/delete', inquiryController.deleteInquiry.bind(inquiryCon
 
 router.post('/dashboard/stats', async (req, res, next) => {
   try {
-    const User = (await import('../../../models')).User;
-    const Inquiry = (await import('../../../models')).Inquiry;
-
     const [totalUsers, totalInquiries, pendingInquiries, resolvedInquiries] = await Promise.all([
       User.count(),
       Inquiry.count(),
@@ -50,8 +57,6 @@ router.post('/dashboard/stats', async (req, res, next) => {
 router.post('/dashboard/recent-inquiries', async (req, res, next) => {
   try {
     const { limit = 5 } = req.body;
-    const Inquiry = (await import('../../../models')).Inquiry;
-    const User = (await import('../../../models')).User;
 
     const inquiries = await Inquiry.findAll({
       limit: parseInt(String(limit)),

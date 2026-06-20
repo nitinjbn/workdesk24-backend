@@ -10,9 +10,11 @@ export const errorHandler = (
 
   const statusCode = error.statusCode || 500;
   const message = error.message || 'Internal server error';
+  const code = error.code;
 
   res.status(statusCode).json({
     success: false,
+    ...(code && { code }),
     message,
     ...(process.env.NODE_ENV === 'development' && { stack: error.stack }),
   });

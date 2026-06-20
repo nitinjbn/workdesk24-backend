@@ -1,6 +1,6 @@
 import app from './app';
-import { initializeDatabase, getDatabaseStatus } from './models/index.production';
-import { logger } from './config/database.production';
+import { initializeDatabase, getDatabaseStatus } from './models/index';
+import { logger } from './config/database';
 
 const PORT = process.env.PORT || 3000;
 const NODE_ENV = process.env.NODE_ENV || 'development';

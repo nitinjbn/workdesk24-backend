@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { getDatabaseStatus, getDatabaseMetrics, performHealthCheck } from '../models/index.production';
+import { getDatabaseStatus, getDatabaseMetrics, performHealthCheck } from '../models/index';
 
 const router = Router();
 

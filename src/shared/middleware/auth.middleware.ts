@@ -2,6 +2,21 @@ import { Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { AuthRequest, JwtPayload } from '../types/auth.types';
 import userRepository from '../../modules/auth/repositories/user.repository';
+import { isAdminRole, getJwtSecret } from '../utils/jwt.util';
+import { getAdminAuthCookieName } from '../utils/auth-cookie.util';
+
+const getBearerToken = (authorizationHeader: string | undefined): string | null => {
+  if (!authorizationHeader) {
+    return null;
+  }
+
+  const [scheme, token] = authorizationHeader.trim().split(' ');
+  if (scheme !== 'Bearer' || !token) {
+    return null;
+  }
+
+  return token;
+};
 
 export const authMiddleware = async (
   req: AuthRequest,
@@ -9,7 +24,9 @@ export const authMiddleware = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
+    const tokenFromHeader = getBearerToken(req.headers.authorization);
+    const tokenFromCookie = req.cookies?.[getAdminAuthCookieName()] as string | undefined;
+    const token = tokenFromHeader || tokenFromCookie;
 
     if (!token) {
       res.status(401).json({
@@ -19,7 +36,7 @@ export const authMiddleware = async (
       return;
     }
 
-    const secret = process.env.JWT_SECRET || 'your-secret-key';
+    const secret = getJwtSecret();
     const decoded = jwt.verify(token, secret) as JwtPayload;
 
     const user = await userRepository.findById(decoded.userId);
@@ -34,15 +51,56 @@ export const authMiddleware = async (
 
     req.user = {
       id: user.id,
+      hostId: user.hostId,
       email: user.email,
       name: user.name,
+      roleId: user.roleId,
     };
 
     next();
-  } catch (error) {
+  } catch (error: unknown) {
+    if (
+      error instanceof jwt.TokenExpiredError ||
+      error instanceof jwt.JsonWebTokenError ||
+      error instanceof jwt.NotBeforeError
+    ) {
+      res.status(401).json({
+        success: false,
+        message: 'Invalid or expired token',
+      });
+      return;
+    }
+
+    next(error);
+  }
+};
+
+export const requireAdminRole = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  if (!req.user) {
     res.status(401).json({
       success: false,
-      message: 'Invalid or expired token',
+      message: 'Authentication required',
     });
+    return;
+  }
+
+  try {
+    const isAdmin = await isAdminRole(req.user.hostId, req.user.roleId);
+
+    if (!isAdmin) {
+      res.status(403).json({
+        success: false,
+        message: 'Admin access is required',
+      });
+      return;
+    }
+
+    next();
+  } catch (error) {
+    next(error);
   }
 };

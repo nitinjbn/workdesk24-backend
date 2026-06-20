@@ -1,6 +1,8 @@
 import { Sequelize } from 'sequelize';
 import dotenv from 'dotenv';
 import { initUser } from './schemas/User';
+import { initHost } from './schemas/Host';
+import { initRole } from './schemas/Role';
 import { initInquiry } from './schemas/Inquiry';
 import { initAttendance } from './schemas/Attendance';
 import { initGpsHistory } from './schemas/GpsHistory';
@@ -10,7 +12,8 @@ import { initOrderProduct } from './schemas/OrderProduct';
 import { initPayment } from './schemas/Payment';
 import { initFeedback } from './schemas/Feedback';
 import { initImage } from './schemas/Image';
-import config, { logger } from '../config/database.production';
+import { initAdminRefreshToken } from './schemas/AdminRefreshToken';
+import config, { logger } from '../config/database';
 import { DatabaseConnectionManager, type ConnectionMetrics, type HealthCheckResult } from '../shared/database/connection-manager';
 
 dotenv.config();
@@ -31,18 +34,16 @@ dotenv.config();
 const env = process.env.NODE_ENV || 'development';
 const dbConfig = config[env];
 
-// Validate required environment variables in production
-if (env === 'production') {
-  const requiredVars = ['DB_USER', 'DB_PASSWORD', 'DB_NAME', 'DB_HOST'];
-  const missing = requiredVars.filter(varName => !process.env[varName]);
+// Validate required environment variables for all environments
+const requiredVars = ['DB_USER', 'DB_PASSWORD', 'DB_NAME', 'DB_HOST'];
+const missing = requiredVars.filter((varName) => !process.env[varName]);
 
-  if (missing.length > 0) {
-    logger.error('Missing required environment variables', {
-      missing,
-      env,
-    });
-    throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
-  }
+if (missing.length > 0) {
+  logger.error('Missing required environment variables', {
+    missing,
+    env,
+  });
+  throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
 }
 
 // Log configuration (without sensitive data)
@@ -70,6 +71,8 @@ const sequelize = new Sequelize(
 const connectionManager = new DatabaseConnectionManager(sequelize);
 
 // Initialize all models
+const Host = initHost(sequelize);
+const Role = initRole(sequelize);
 const User = initUser(sequelize);
 const Inquiry = initInquiry(sequelize);
 const Attendance = initAttendance(sequelize);
@@ -80,9 +83,12 @@ const OrderProduct = initOrderProduct(sequelize);
 const Payment = initPayment(sequelize);
 const Feedback = initFeedback(sequelize);
 const Image = initImage(sequelize);
+const AdminRefreshToken = initAdminRefreshToken(sequelize);
 
 // Store models in an object
 const db: any = {
+  Host,
+  Role,
   User,
   Inquiry,
   Attendance,
@@ -93,6 +99,7 @@ const db: any = {
   Payment,
   Feedback,
   Image,
+  AdminRefreshToken,
   sequelize,
   Sequelize,
   connectionManager,
@@ -146,6 +153,8 @@ export async function performHealthCheck(): Promise<HealthCheckResult> {
 export {
   sequelize,
   Sequelize,
+  Host,
+  Role,
   User,
   Inquiry,
   Attendance,
@@ -156,6 +165,7 @@ export {
   Payment,
   Feedback,
   Image,
+  AdminRefreshToken,
   connectionManager,
 };
 

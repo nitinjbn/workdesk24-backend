@@ -3,6 +3,11 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
+    const tableExists = await queryInterface.describeTable('wd_orders_products').then(() => true).catch(() => false);
+    if (tableExists) {
+      return;
+    }
+
     await queryInterface.createTable('wd_orders_products', {
       id: {
         type: Sequelize.BIGINT,
@@ -88,6 +93,11 @@ module.exports = {
   },
 
   async down(queryInterface) {
+    const tableExists = await queryInterface.describeTable('wd_orders_products').then(() => true).catch(() => false);
+    if (!tableExists) {
+      return;
+    }
+
     await queryInterface.dropTable('wd_orders_products');
   },
 };

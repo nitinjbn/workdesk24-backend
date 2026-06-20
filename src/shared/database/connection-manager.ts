@@ -1,5 +1,5 @@
 import { Sequelize } from 'sequelize';
-import { logger } from '../../config/database.production';
+import { logger } from '../../config/database';
 
 /**
  * Production-Grade Database Connection Manager

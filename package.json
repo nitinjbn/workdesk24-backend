@@ -2,10 +2,10 @@
   "name": "workdesk24",
   "version": "1.0.0",
   "description": "Node.js backend with Express, Sequelize, MySQL, and JWT auth - TypeScript",
-  "main": "dist/server.js",
+  "main": "dist/server.production.js",
   "scripts": {
-    "start": "npm run build && node dist/server.js",
-    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+    "start": "npm run build && node dist/server.production.js",
+    "dev": "ts-node-dev --respawn --transpile-only src/server.production.ts",
     "build": "tsc",
     "build:watch": "tsc --watch",
     "prestart": "npm run build",
@@ -15,7 +15,8 @@
     "db:seed:undo": "sequelize-cli db:seed:undo:all",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
-    "test": "jest"
+    "test": "jest",
+    "manualRun": "nodemon dist/server.production.js"
   },
   "keywords": [
     "express",
@@ -29,6 +30,7 @@
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "cloudinary": "^2.10.0",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
     "express": "^4.21.0",
@@ -42,6 +44,7 @@
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
+    "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
     "@types/jsonwebtoken": "^9.0.7",
