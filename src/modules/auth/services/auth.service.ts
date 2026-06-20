@@ -3,9 +3,16 @@ import userRepository from '../repositories/user.repository';
 import bcrypt from 'bcryptjs';
 
 interface RegisterDto {
+  hostId?: number;
   email: string;
   password: string;
   name?: string;
+  roleId?: number;
+  mobile?: string;
+  employeeId?: string;
+  reportingManagerId?: number;
+  profileImageUrl?: string;
+  joiningDate?: number;
 }
 
 interface LoginDto {
@@ -20,7 +27,7 @@ interface AuthResponse {
 
 export class AuthService {
   async register(data: RegisterDto): Promise<AuthResponse> {
-    const { email, password, name } = data;
+    const { hostId, email, password, name, roleId, mobile, employeeId, reportingManagerId, profileImageUrl, joiningDate } = data;
 
     const exists = await userRepository.existsByEmail(email);
     if (exists) {
@@ -28,9 +35,16 @@ export class AuthService {
     }
 
     const user = await userRepository.create({
+      hostId,
       email,
       password,
       name,
+      roleId,
+      mobile,
+      employeeId,
+      reportingManagerId,
+      profileImageUrl,
+      joiningDate,
     } as any);
 
     const token = this.generateToken(user.id);

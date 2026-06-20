@@ -5,7 +5,7 @@ import { ApiResponse } from '../../../shared/types/base.types';
 export class AuthController {
   async register(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { email, password, name } = req.body;
+      const { hostId, email, password, name, roleId, mobile, employeeId, reportingManagerId, profileImageUrl, joiningDate } = req.body;
 
       if (!email || !password) {
         res.status(400).json({
@@ -15,7 +15,7 @@ export class AuthController {
         return;
       }
 
-      const result = await authService.register({ email, password, name });
+      const result = await authService.register({ hostId, email, password, name, roleId, mobile, employeeId, reportingManagerId, profileImageUrl, joiningDate });
 
       res.status(201).json({
         success: true,
