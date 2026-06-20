@@ -1,7 +1,42 @@
 {
+    "APP_LOGIN_ACCESS_DENIED": {
+        "code": "APP_LOGIN_ACCESS_DENIED",
+        "status": 403,
+        "message": "You are not authorized to access the application. Please contact your administrator or WorkDesk24 support."
+    },
     "ADMIN_PORTAL_ACCESS_DENIED": {
         "code": "ADMIN_PORTAL_ACCESS_DENIED",
         "status": 403,
-        "message": "You do not have permission to access the admin portal, please contact your administrator or workdesk24 support."
+        "message": "You are not authorized to access the admin portal. Please contact your administrator or WorkDesk24 support."
+    },
+    "INVALID_CREDENTIALS": {
+        "code": "INVALID_CREDENTIALS",
+        "status": 401,
+        "message": "Invalid login credentials."
+    },
+    "ACCESS_DENIED": {
+        "code": "ACCESS_DENIED",
+        "status": 403,
+        "message": "You are not authorized to perform this action."
+    },
+    "ACCOUNT_INACTIVE": {
+        "code": "ACCOUNT_INACTIVE",
+        "status": 403,
+        "message": "Your account is inactive. Please contact your administrator or WorkDesk24 support."
+    },
+    "INVALID_REFRESH_TOKEN": {
+        "code": "INVALID_REFRESH_TOKEN",
+        "status": 401,
+        "message": "Invalid refresh token. Please login again."
+    },
+    "REFRESH_TOKEN_REUSE_DETECTED": {
+        "code": "REFRESH_TOKEN_REUSE_DETECTED",
+        "status": 401,
+        "message": "Refresh token reuse detected. Please login again."
+    },
+    "REFRESH_TOKEN_EXPIRED": {
+        "code": "REFRESH_TOKEN_EXPIRED",
+        "status": 401,
+        "message": "Refresh token has expired. Please login again."
     }
 }

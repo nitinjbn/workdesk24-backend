@@ -9,6 +9,7 @@ import {
   getJwtRefreshExpiresIn,
   getJwtRefreshSecret,
   getJwtSecret,
+  isAppLoginRole,
   isAdminRole,
 } from '../../../shared/utils/jwt.util';
 import { createConfiguredError } from '../../../shared/utils/error.util';
@@ -97,6 +98,11 @@ export class AuthService {
 
   async login(data: LoginDto): Promise<AuthResponse> {
     const user = await this.validateCredentials(data);
+    const isAllowedAppLogin = await isAppLoginRole(user.hostId, user.roleId);
+    if (!isAllowedAppLogin) {
+      throw createConfiguredError('APP_LOGIN_ACCESS_DENIED', 'APP_LOGIN_ACCESS_DENIED');
+    }
+
     const token = this.generateAccessToken(user.id);
 
     return {
@@ -135,33 +141,33 @@ export class AuthService {
     const tokenRecord = await adminRefreshTokenRepository.findByTokenHash(tokenHash);
 
     if (!tokenRecord) {
-      throw this.createHttpError('Invalid refresh token', 401);
+      throw createConfiguredError('INVALID_REFRESH_TOKEN', 'INVALID_REFRESH_TOKEN');
     }
 
     if (tokenRecord.isRevoked === 1) {
       await adminRefreshTokenRepository.revokeAllActiveForUser(tokenRecord.userId);
-      throw this.createHttpError('Refresh token reuse detected. Please login again.', 401);
+      throw createConfiguredError('REFRESH_TOKEN_REUSE_DETECTED', 'REFRESH_TOKEN_REUSE_DETECTED');
     }
 
     if (tokenRecord.expiresAt <= now) {
       await adminRefreshTokenRepository.revokeTokenById(tokenRecord.id);
-      throw this.createHttpError('Refresh token has expired', 401);
+      throw createConfiguredError('REFRESH_TOKEN_EXPIRED', 'REFRESH_TOKEN_EXPIRED');
     }
 
     if (tokenRecord.userId !== payload.userId || tokenRecord.tokenFamily !== payload.tokenFamily) {
       await adminRefreshTokenRepository.revokeAllActiveForUser(tokenRecord.userId);
-      throw this.createHttpError('Invalid refresh token', 401);
+      throw createConfiguredError('INVALID_REFRESH_TOKEN', 'INVALID_REFRESH_TOKEN');
     }
 
     const user = await userRepository.findById(payload.userId);
     if (!user) {
       await adminRefreshTokenRepository.revokeAllActiveForUser(payload.userId);
-      throw this.createHttpError('Invalid refresh token', 401);
+      throw createConfiguredError('INVALID_REFRESH_TOKEN', 'INVALID_REFRESH_TOKEN');
     }
 
     if (user.isActive === 0) {
       await adminRefreshTokenRepository.revokeAllActiveForUser(payload.userId);
-      throw this.createHttpError('Account is inactive', 403);
+      throw createConfiguredError('ACCOUNT_INACTIVE', 'ACCOUNT_INACTIVE');
     }
 
     const isAdmin = await isAdminRole(user.hostId, user.roleId);
@@ -215,16 +221,16 @@ export class AuthService {
 
     const user = await userRepository.findWithPassword(email);
     if (!user) {
-      throw new Error('Invalid credentials');
+      throw createConfiguredError('INVALID_CREDENTIALS', 'INVALID_CREDENTIALS');
     }
 
     const isValid = await bcrypt.compare(password, user.password);
     if (!isValid) {
-      throw new Error('Invalid credentials');
+      throw createConfiguredError('INVALID_CREDENTIALS', 'INVALID_CREDENTIALS');
     }
 
     if (user.isActive === 0) {
-      throw new Error('Account is inactive');
+      throw createConfiguredError('ACCOUNT_INACTIVE', 'ACCOUNT_INACTIVE');
     }
 
     return user;

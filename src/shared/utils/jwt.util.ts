@@ -57,11 +57,32 @@ export const hasAnyRoleCode = async (
   return roleRepository.hasAnyRoleCode(hostId, roleId, roleCodes);
 };
 
+const hasAllowedRouteRole = async (
+  hostId: number,
+  roleId: number,
+  allowedRoleCodes: string[]
+): Promise<boolean> => {
+  if (!allowedRoleCodes || allowedRoleCodes.length === 0) {
+    return false;
+  }
+
+  const normalizedRoleCodes = allowedRoleCodes
+    .map((code: string) => code.trim().toUpperCase())
+    .filter((code: string) => code.length > 0);
+
+  if (normalizedRoleCodes.length === 0) {
+    return false;
+  }
+
+  return hasAnyRoleCode(hostId, roleId, normalizedRoleCodes);
+};
+
+export const isAppLoginRole = async (hostId: number, roleId: number): Promise<boolean> => {
+  const allowedAppLoginRoles = CONFIG.AUTH.APP.LOGIN.ALLOWED_ROLES;
+  return hasAllowedRouteRole(hostId, roleId, allowedAppLoginRoles);
+};
+
 export const isAdminRole = async (hostId: number, roleId: number): Promise<boolean> => {
   const allowedAdminPanelRoles = CONFIG.AUTH.ADMIN_PANEL.LOGIN.ALLOWED_ROLES;
-  //console.log('########## Allowed Admin Panel Roles:', allowedAdminPanelRoles);
-  if (allowedAdminPanelRoles && allowedAdminPanelRoles.length > 0) {
-    return hasAnyRoleCode(hostId, roleId, allowedAdminPanelRoles.map((code: string) => code.trim().toUpperCase()));
-  }
-  return false;
+  return hasAllowedRouteRole(hostId, roleId, allowedAdminPanelRoles);
 };
