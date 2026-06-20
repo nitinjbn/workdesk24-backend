@@ -22,18 +22,12 @@ class Host extends Model<HostAttributes, HostCreationAttributes> implements Host
   public gstNumber?: string;
   public panNumber?: string;
   public email!: string;
-  public password!: string;
   public isActive?: number;
   public lastLoginAt?: number | null;
   public createdAt!: number;
   public updatedAt!: number;
   public isDeleted!: number;
   public deletedAt!: number | null;
-
-  // Instance method to compare password
-  public async comparePassword(candidatePassword: string): Promise<boolean> {
-    return bcrypt.compare(candidatePassword, this.password);
-  }
 
   // Override toJSON to exclude password
   public toJSON(): Partial<HostAttributes> {
@@ -64,10 +58,6 @@ export function initHost(sequelize: Sequelize): typeof Host {
         allowNull: false,
         unique: true,
         validate: { isEmail: true },
-      },
-      password: {
-        type: DataTypes.STRING(255),
-        allowNull: false,
       },
       companyName: {
         type: DataTypes.STRING(100),
@@ -159,26 +149,7 @@ export function initHost(sequelize: Sequelize): typeof Host {
       sequelize,
       tableName: 'wd_hosts',
       timestamps: false,
-      underscored: false,
-      hooks: {
-        beforeCreate: async (host: Host) => {
-          const now = Math.floor(Date.now() / 1000);
-          host.createdAt = now;
-          host.updatedAt = now;
-          host.isDeleted = 0;
-          host.deletedAt = null;
-          if (host.isActive === undefined) host.isActive = 1;
-          if (host.password) {
-            host.password = await bcrypt.hash(host.password, 10);
-          }
-        },
-        beforeUpdate: async (host: Host) => {
-          host.updatedAt = Math.floor(Date.now() / 1000);
-          if (host.changed('password')) {
-            host.password = await bcrypt.hash(host.password, 10);
-          }
-        },
-      },
+      underscored: false
     }
   );
 

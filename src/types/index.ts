@@ -499,7 +499,6 @@ export interface HostAttributes {
   longitude?: number;
   gstNumber?: string;
   panNumber?: string;
-  password: string;
   isActive?: number;
   lastLoginAt?: number;
   isDeleted?: number;

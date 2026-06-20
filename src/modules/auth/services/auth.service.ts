@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import userRepository from '../repositories/user.repository';
 import bcrypt from 'bcryptjs';
 import adminRefreshTokenRepository from '../repositories/admin-refresh-token.repository';
+import rolePermissionRepository, { RolePermissionView } from '../repositories/role-permission.repository';
 import {
   getJwtExpiresIn,
   getJwtRefreshExpiresIn,
@@ -37,6 +38,11 @@ interface AuthResponse {
 
 interface AdminAuthResponse {
   user: unknown;
+  //permissions: RolePermissionView[];
+  permissionsByModule: Array<{
+    moduleName: string;
+    actions: RolePermissionView[];
+  }>;
   accessToken: string;
   refreshToken: string;
   csrfToken: string;
@@ -109,9 +115,13 @@ export class AuthService {
     }
 
     const sessionTokens = await this.createAdminSessionTokens(user.id);
+    const permissions = await rolePermissionRepository.getEnabledPermissionsByRole(user.hostId, user.roleId);
+    const permissionsByModule = this.groupPermissionsByModule(permissions);
 
     return {
       user: user.toJSON(),
+      //permissions,
+      permissionsByModule,
       accessToken: sessionTokens.accessToken,
       refreshToken: sessionTokens.refreshToken,
       csrfToken: sessionTokens.csrfToken,
@@ -162,9 +172,13 @@ export class AuthService {
 
     const rotatedTokens = await this.createAdminSessionTokens(user.id, payload.tokenFamily);
     await adminRefreshTokenRepository.revokeTokenById(tokenRecord.id, rotatedTokens.refreshTokenHash);
+    const permissions = await rolePermissionRepository.getEnabledPermissionsByRole(user.hostId, user.roleId);
+    const permissionsByModule = this.groupPermissionsByModule(permissions);
 
     return {
       user: user.toJSON(),
+      //permissions,
+      permissionsByModule,
       accessToken: rotatedTokens.accessToken,
       refreshToken: rotatedTokens.refreshToken,
       csrfToken: rotatedTokens.csrfToken,
@@ -289,6 +303,23 @@ export class AuthService {
 
   private hashToken(token: string): string {
     return crypto.createHash('sha256').update(token).digest('hex');
+  }
+
+  private groupPermissionsByModule(
+    permissions: RolePermissionView[]
+  ): Array<{ moduleName: string; actions: RolePermissionView[] }> {
+    const grouped = new Map<string, RolePermissionView[]>();
+
+    permissions.forEach((permission) => {
+      const existing = grouped.get(permission.moduleName) || [];
+      existing.push(permission);
+      grouped.set(permission.moduleName, existing);
+    });
+
+    return Array.from(grouped.entries()).map(([moduleName, modulePermissions]) => ({
+      moduleName,
+      actions: modulePermissions,
+    }));
   }
 
   private createHttpError(message: string, statusCode: number): Error & { statusCode: number } {

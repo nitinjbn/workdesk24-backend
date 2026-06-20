@@ -41,6 +41,8 @@ export class AdminAuthController {
         message: 'Admin login successful',
         data: {
           user: result.user,
+          //permissions: result.permissions,
+          permissions: result.permissionsByModule,
           csrfToken: result.csrfToken,
         },
       } as ApiResponse);
@@ -76,6 +78,8 @@ export class AdminAuthController {
         message: 'Admin session refreshed successfully',
         data: {
           user: result.user,
+          //permissions: result.permissions,
+          permissions: result.permissionsByModule,
           csrfToken: result.csrfToken,
         },
       } as ApiResponse);

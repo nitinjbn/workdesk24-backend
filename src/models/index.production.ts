@@ -3,6 +3,8 @@ import dotenv from 'dotenv';
 import { initUser } from './schemas/User';
 import { initHost } from './schemas/Host';
 import { initRole } from './schemas/Role';
+import { initPermission } from './schemas/Permission';
+import { initRolePermission } from './schemas/RolePermission';
 import { initInquiry } from './schemas/Inquiry';
 import { initAttendance } from './schemas/Attendance';
 import { initGpsHistory } from './schemas/GpsHistory';
@@ -73,6 +75,8 @@ const connectionManager = new DatabaseConnectionManager(sequelize);
 // Initialize all models
 const Host = initHost(sequelize);
 const Role = initRole(sequelize);
+const Permission = initPermission(sequelize);
+const RolePermission = initRolePermission(sequelize);
 const User = initUser(sequelize);
 const Inquiry = initInquiry(sequelize);
 const Attendance = initAttendance(sequelize);
@@ -89,6 +93,8 @@ const AdminRefreshToken = initAdminRefreshToken(sequelize);
 const db: any = {
   Host,
   Role,
+  Permission,
+  RolePermission,
   User,
   Inquiry,
   Attendance,
@@ -155,6 +161,8 @@ export {
   Sequelize,
   Host,
   Role,
+  Permission,
+  RolePermission,
   User,
   Inquiry,
   Attendance,
