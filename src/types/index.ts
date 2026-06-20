@@ -481,6 +481,18 @@ export interface RolePermissionAttributes {
   deletedAt?: number | null;
 }
 
+export interface UserPermissionAttributes {
+  id?: number;
+  hostId: number;
+  userId: number;
+  permissionId: number;
+  isEnabled?: number;
+  isDeleted?: number;
+  createdAt?: number;
+  updatedAt?: number;
+  deletedAt?: number | null;
+}
+
 export interface HostAttributes {
   id?: number;
   companyName: string;

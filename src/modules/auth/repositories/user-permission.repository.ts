@@ -1,23 +1,20 @@
-import RolePermission from '../../../models/schemas/RolePermission';
+import UserPermission from '../../../models/schemas/UserPermission';
 import Permission from '../../../models/schemas/Permission';
 
-export interface RolePermissionView {
+export interface UserPermissionAssignmentView {
   id: number;
   permissionCode: string;
   permissionName: string;
   moduleName: string;
-}
-
-export interface RolePermissionAssignmentView extends RolePermissionView {
   isEnabled: number;
 }
 
-export class RolePermissionRepository {
-  async getPermissionsByRole(hostId: number, roleId: number): Promise<RolePermissionAssignmentView[]> {
-    const rows = await RolePermission.findAll({
+export class UserPermissionRepository {
+  async getPermissionsByUser(hostId: number, userId: number): Promise<UserPermissionAssignmentView[]> {
+    const rows = await UserPermission.findAll({
       where: {
         hostId,
-        roleId,
+        userId,
         isDeleted: 0,
       },
       include: [
@@ -52,15 +49,8 @@ export class RolePermissionRepository {
           isEnabled: isEnabled === 1 ? 1 : 0,
         };
       })
-      .filter((item): item is RolePermissionAssignmentView => item !== null);
-  }
-
-  async getEnabledPermissionsByRole(hostId: number, roleId: number): Promise<RolePermissionView[]> {
-    const permissions = await this.getPermissionsByRole(hostId, roleId);
-    return permissions
-      .filter((permission) => permission.isEnabled === 1)
-      .map(({ isEnabled: _isEnabled, ...permission }) => permission);
+      .filter((item): item is UserPermissionAssignmentView => item !== null);
   }
 }
 
-export default new RolePermissionRepository();
+export default new UserPermissionRepository();

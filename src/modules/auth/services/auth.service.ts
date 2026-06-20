@@ -3,7 +3,8 @@ import crypto from 'crypto';
 import userRepository from '../repositories/user.repository';
 import bcrypt from 'bcryptjs';
 import adminRefreshTokenRepository from '../repositories/admin-refresh-token.repository';
-import rolePermissionRepository, { RolePermissionView } from '../repositories/role-permission.repository';
+import rolePermissionRepository, { RolePermissionAssignmentView, RolePermissionView } from '../repositories/role-permission.repository';
+import userPermissionRepository, { UserPermissionAssignmentView } from '../repositories/user-permission.repository';
 import {
   getJwtExpiresIn,
   getJwtRefreshExpiresIn,
@@ -35,6 +36,10 @@ interface LoginDto {
 interface AuthResponse {
   user: unknown;
   token: string;
+  permissionsByModule: Array<{
+    moduleName: string;
+    actions: RolePermissionView[];
+  }>;
 }
 
 interface AdminAuthResponse {
@@ -89,10 +94,12 @@ export class AuthService {
     } as any);
 
     const token = this.generateAccessToken(user.id);
+    const permissionsByModule = await this.getPermissionsByModuleForUser(user.hostId, user.roleId, user.id);
 
     return {
       user: user.toJSON(),
       token,
+      permissionsByModule,
     };
   }
 
@@ -104,10 +111,12 @@ export class AuthService {
     }
 
     const token = this.generateAccessToken(user.id);
+    const permissionsByModule = await this.getPermissionsByModuleForUser(user.hostId, user.roleId, user.id);
 
     return {
       user: user.toJSON(),
       token,
+      permissionsByModule,
     };
   }
 
@@ -121,8 +130,7 @@ export class AuthService {
     }
 
     const sessionTokens = await this.createAdminSessionTokens(user.id);
-    const permissions = await rolePermissionRepository.getEnabledPermissionsByRole(user.hostId, user.roleId);
-    const permissionsByModule = this.groupPermissionsByModule(permissions);
+    const permissionsByModule = await this.getPermissionsByModuleForUser(user.hostId, user.roleId, user.id);
 
     return {
       user: user.toJSON(),
@@ -178,8 +186,7 @@ export class AuthService {
 
     const rotatedTokens = await this.createAdminSessionTokens(user.id, payload.tokenFamily);
     await adminRefreshTokenRepository.revokeTokenById(tokenRecord.id, rotatedTokens.refreshTokenHash);
-    const permissions = await rolePermissionRepository.getEnabledPermissionsByRole(user.hostId, user.roleId);
-    const permissionsByModule = this.groupPermissionsByModule(permissions);
+    const permissionsByModule = await this.getPermissionsByModuleForUser(user.hostId, user.roleId, user.id);
 
     return {
       user: user.toJSON(),
@@ -326,6 +333,70 @@ export class AuthService {
       moduleName,
       actions: modulePermissions,
     }));
+  }
+
+  private async getEffectiveEnabledPermissions(
+    hostId: number,
+    roleId: number,
+    userId: number
+  ): Promise<RolePermissionView[]> {
+    const [rolePermissions, userPermissions] = await Promise.all([
+      rolePermissionRepository.getPermissionsByRole(hostId, roleId),
+      userPermissionRepository.getPermissionsByUser(hostId, userId),
+    ]);
+
+    const permissionMap = new Map<number, RolePermissionAssignmentView>();
+
+    rolePermissions.forEach((permission) => {
+      permissionMap.set(permission.id, permission);
+    });
+
+    userPermissions.forEach((userPermission) => {
+      const existing = permissionMap.get(userPermission.id);
+
+      if (existing) {
+        permissionMap.set(userPermission.id, {
+          ...existing,
+          isEnabled: userPermission.isEnabled,
+        });
+        return;
+      }
+
+      permissionMap.set(userPermission.id, this.toRolePermissionAssignmentView(userPermission));
+    });
+
+    return Array.from(permissionMap.values())
+      .filter((permission) => permission.isEnabled === 1)
+      .map(({ isEnabled: _isEnabled, ...permission }) => permission)
+      .sort((a, b) => {
+        const moduleCompare = a.moduleName.localeCompare(b.moduleName);
+        if (moduleCompare !== 0) {
+          return moduleCompare;
+        }
+
+        return a.permissionCode.localeCompare(b.permissionCode);
+      });
+  }
+
+  private async getPermissionsByModuleForUser(
+    hostId: number,
+    roleId: number,
+    userId: number
+  ): Promise<Array<{ moduleName: string; actions: RolePermissionView[] }>> {
+    const permissions = await this.getEffectiveEnabledPermissions(hostId, roleId, userId);
+    return this.groupPermissionsByModule(permissions);
+  }
+
+  private toRolePermissionAssignmentView(
+    permission: UserPermissionAssignmentView
+  ): RolePermissionAssignmentView {
+    return {
+      id: permission.id,
+      permissionCode: permission.permissionCode,
+      permissionName: permission.permissionName,
+      moduleName: permission.moduleName,
+      isEnabled: permission.isEnabled,
+    };
   }
 
   private createHttpError(message: string, statusCode: number): Error & { statusCode: number } {

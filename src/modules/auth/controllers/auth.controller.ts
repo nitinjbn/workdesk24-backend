@@ -44,7 +44,11 @@ export class AuthController {
       res.json({
         success: true,
         message: 'Login successful',
-        data: result,
+        data: {
+          user: result.user,
+          token: result.token,
+          permissions: result.permissionsByModule,
+        },
       } as ApiResponse);
     } catch (error: any) {
       next(error);
