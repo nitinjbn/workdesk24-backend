@@ -2,6 +2,7 @@ import { Model, DataTypes, Sequelize, Optional } from 'sequelize';
 import { BaseModel } from '../../shared/types/base.types';
 
 interface AttendanceAttributes extends BaseModel {
+  hostId: number;
   userId: number;
   localId?: string;
   attendanceStatus?: string;
@@ -39,6 +40,7 @@ interface AttendanceCreationAttributes extends Optional<AttendanceAttributes, 'i
 
 class Attendance extends Model<AttendanceAttributes, AttendanceCreationAttributes> implements AttendanceAttributes {
   public id!: number;
+  public hostId!: number;
   public userId!: number;
   public localId?: string;
   public attendanceStatus?: string;
@@ -81,6 +83,10 @@ class Attendance extends Model<AttendanceAttributes, AttendanceCreationAttribute
       foreignKey: 'userId',
       as: 'user',
     });
+    Attendance.belongsTo(models.Host, {
+      foreignKey: 'hostId',
+      as: 'host',
+    });
   }
 }
 
@@ -91,6 +97,10 @@ export function initAttendance(sequelize: Sequelize): typeof Attendance {
         type: DataTypes.BIGINT,
         autoIncrement: true,
         primaryKey: true,
+      },
+      hostId: {
+        type: DataTypes.BIGINT,
+        allowNull: false
       },
       userId: {
         type: DataTypes.BIGINT,
@@ -240,6 +250,7 @@ export function initAttendance(sequelize: Sequelize): typeof Attendance {
       tableName: 'wd_attendance',
       timestamps: false,
       indexes: [
+        { fields: ['hostId'] },
         { fields: ['userId'] },
         { fields: ['localId'] },
         { fields: ['attendanceStatus'] },

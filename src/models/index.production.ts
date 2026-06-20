@@ -2,6 +2,7 @@ import { Sequelize } from 'sequelize';
 import dotenv from 'dotenv';
 import { initUser } from './schemas/User';
 import { initHost } from './schemas/Host';
+import { initHostSettings } from './schemas/HostSettings';
 import { initRole } from './schemas/Role';
 import { initPermission } from './schemas/Permission';
 import { initRolePermission } from './schemas/RolePermission';
@@ -75,6 +76,7 @@ const connectionManager = new DatabaseConnectionManager(sequelize);
 
 // Initialize all models
 const Host = initHost(sequelize);
+const HostSettings = initHostSettings(sequelize);
 const Role = initRole(sequelize);
 const Permission = initPermission(sequelize);
 const RolePermission = initRolePermission(sequelize);
@@ -94,6 +96,7 @@ const AdminRefreshToken = initAdminRefreshToken(sequelize);
 // Store models in an object
 const db: any = {
   Host,
+  HostSettings,
   Role,
   Permission,
   RolePermission,
@@ -163,6 +166,7 @@ export {
   sequelize,
   Sequelize,
   Host,
+  HostSettings,
   Role,
   Permission,
   RolePermission,

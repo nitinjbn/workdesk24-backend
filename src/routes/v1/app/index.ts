@@ -4,6 +4,7 @@ import { authMiddleware } from '../../../shared/middleware/auth.middleware';
 import { resolveVisitLocalId } from '../../../shared/middleware/resolve-visit-local-id.middleware';
 import { AuthRequest } from '../../../types';
 import syncController from '../../../modules/sync/controllers/sync.controller';
+import reportController from '../../../modules/reporting/controllers/report.controller';
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -20,6 +21,8 @@ router.post('/sync/images', resolveVisitLocalId(), syncController.syncImages.bin
 router.post('/sync/all', syncController.syncAll.bind(syncController));
 router.post('/sync/get-updates', syncController.getUpdates.bind(syncController));
 router.post('/sync/status', syncController.getSyncStatus.bind(syncController));
+router.post('/reports/getGPSHistory', reportController.getAppGpsHistory.bind(reportController));
+router.post('/reports/getAttendance', reportController.getAppAttendance.bind(reportController));
 
 router.post('/sync/uploadMedia', upload.single('media'), syncController.uploadMedia.bind(syncController));
 router.post('/sync/uploadMultipleMedia', upload.array('media', 10), syncController.uploadMultipleMedia.bind(syncController));

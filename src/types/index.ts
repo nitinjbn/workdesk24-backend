@@ -60,6 +60,7 @@ export interface AttendanceAttributes {
 // GPS History attributes
 export interface GpsHistoryAttributes {
   id?: number;
+  hostId: number;
   userId: number;
   localId?: string;
   latitude: number;

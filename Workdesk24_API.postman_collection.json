@@ -565,6 +565,64 @@
               }
             }
           ]
+        },
+        {
+          "name": "Reports",
+          "description": "Report endpoints for app users",
+          "item": [
+            {
+              "name": "Get GPS History Report",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{TOKEN}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"hostId\": 1,\n  \"page\": 1,\n  \"limit\": 10,\n  \"sortBy\": \"createdAt\",\n  \"sortOrder\": \"DESC\",\n  \"createdAt\": {\n    \"from\": 1717000000,\n    \"to\": 1717086400\n  }\n}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/app/reports/getGPSHistory",
+                  "host": ["{{BASE_URL}}"],
+                  "path": ["api", "v1", "app", "reports", "getGPSHistory"]
+                }
+              }
+            },
+            {
+              "name": "Get Attendance Report",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{TOKEN}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"hostId\": 1,\n  \"page\": 1,\n  \"limit\": 10,\n  \"sortBy\": \"createdAt\",\n  \"sortOrder\": \"DESC\",\n  \"createdAt\": {\n    \"from\": 1717000000,\n    \"to\": 1717086400\n  }\n}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/app/reports/getAttendance",
+                  "host": ["{{BASE_URL}}"],
+                  "path": ["api", "v1", "app", "reports", "getAttendance"]
+                }
+              }
+            }
+          ]
         }
       ]
     },
@@ -894,6 +952,63 @@
                   "raw": "{{BASE_URL}}/api/v1/admin/dashboard/recent-inquiries",
                   "host": ["{{BASE_URL}}"],
                   "path": ["api", "v1", "admin", "dashboard", "recent-inquiries"]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reports",
+          "item": [
+            {
+              "name": "Get GPS History Report",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{TOKEN}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"hostId\": 1,\n  \"page\": 1,\n  \"limit\": 10,\n  \"sort\": {\n    \"by\": \"userName\",\n    \"order\": \"ASC\"\n  },\n  \"filter\": {\n    \"userId\": 1,\n    \"createdAt\": {\n      \"from\": 1717000000,\n      \"to\": 1717086400\n    }\n  }\n}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/admin/reports/getGPSHistory",
+                  "host": ["{{BASE_URL}}"],
+                  "path": ["api", "v1", "admin", "reports", "getGPSHistory"]
+                }
+              }
+            },
+            {
+              "name": "Get Attendance Report",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{TOKEN}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"hostId\": 1,\n  \"page\": 1,\n  \"limit\": 10,\n  \"sort\": {\n    \"by\": \"userName\",\n    \"order\": \"ASC\"\n  },\n  \"filter\": {\n    \"userId\": 1,\n    \"createdAt\": {\n      \"from\": 1717000000,\n      \"to\": 1717086400\n    }\n  }\n}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/admin/reports/getAttendance",
+                  "host": ["{{BASE_URL}}"],
+                  "path": ["api", "v1", "admin", "reports", "getAttendance"]
                 }
               }
             }

@@ -5,6 +5,7 @@ interface GpsHistoryCreationAttributes extends Optional<GpsHistoryAttributes, 'i
 
 class GpsHistory extends Model<GpsHistoryAttributes, GpsHistoryCreationAttributes> implements GpsHistoryAttributes {
   public id!: number;
+  public hostId!: number;
   public userId!: number;
   public localId?: string;
   public latitude!: number;
@@ -33,12 +34,16 @@ export function initGpsHistory(sequelize: Sequelize): typeof GpsHistory {
   GpsHistory.init(
     {
       id: {
-        type: DataTypes.INTEGER.UNSIGNED,
+        type: DataTypes.BIGINT,
         autoIncrement: true,
         primaryKey: true,
       },
+      hostId: {
+        type: DataTypes.BIGINT,
+        allowNull: false
+      },
       userId: {
-        type: DataTypes.INTEGER.UNSIGNED,
+        type: DataTypes.BIGINT,
         allowNull: false
       },
       localId: {
@@ -104,6 +109,7 @@ export function initGpsHistory(sequelize: Sequelize): typeof GpsHistory {
       tableName: 'wd_gps_history',
       timestamps: false,
       indexes: [
+        { fields: ['hostId'] },
         { fields: ['userId'] },
         { fields: ['localId'] },
       ],

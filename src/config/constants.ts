@@ -1,4 +1,10 @@
 export const CONFIG = {
+  REPORTING: {
+    TIMEZONE: 'Asia/Kolkata',
+    DATE_FORMAT: 'DD-MMM-YYYY',
+    TIME_FORMAT: 'hh:mm A',
+    DATE_TIME_FORMAT: 'DD-MMM-YYYY hh:mm A',
+  },
   AUTH: {
     APP: {
       LOGIN: {

@@ -5,6 +5,7 @@ import { requireAdminCsrfToken } from '../../../shared/middleware/csrf.middlewar
 import adminAuthController from '../../../modules/admin/controllers/auth.controller';
 import userController from '../../../modules/admin/controllers/user.controller';
 import inquiryController from '../../../modules/public/controllers/inquiry.controller';
+import reportController from '../../../modules/reporting/controllers/report.controller';
 import { User, Inquiry } from '../../../models/index';
 
 const router = Router();
@@ -28,6 +29,10 @@ router.post('/inquiries/update', inquiryController.updateInquiry.bind(inquiryCon
 router.post('/inquiries/status', inquiryController.updateInquiryStatus.bind(inquiryController));
 router.post('/inquiries/assign', inquiryController.assignInquiry.bind(inquiryController));
 router.post('/inquiries/delete', inquiryController.deleteInquiry.bind(inquiryController));
+
+router.post('/reports/getGPSHistory', reportController.getAdminGpsHistory.bind(reportController));
+router.post('/reports/getAttendance', reportController.getAdminAttendance.bind(reportController));
+
 
 router.post('/dashboard/stats', async (req, res, next) => {
   try {

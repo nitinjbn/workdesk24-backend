@@ -38,5 +38,15 @@
         "code": "REFRESH_TOKEN_EXPIRED",
         "status": 401,
         "message": "Refresh token has expired. Please login again."
+    },
+    "REPORT_HOST_SCOPE_REQUIRED": {
+        "code": "REPORT_HOST_SCOPE_REQUIRED",
+        "status": 400,
+        "message": "Host scope is required for this report."
+    },
+    "REPORT_USER_SCOPE_REQUIRED": {
+        "code": "REPORT_USER_SCOPE_REQUIRED",
+        "status": 400,
+        "message": "User scope is required for this report."
     }
 }
