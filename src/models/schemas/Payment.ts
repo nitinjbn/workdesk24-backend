@@ -5,6 +5,7 @@ interface PaymentCreationAttributes extends Optional<PaymentAttributes, 'id' | '
 
 class Payment extends Model<PaymentAttributes, PaymentCreationAttributes> implements PaymentAttributes {
   public id!: number;
+  public hostId!: number;
   public userId!: number;
   public localId?: string;
   public visitId!: number;
@@ -39,6 +40,10 @@ class Payment extends Model<PaymentAttributes, PaymentCreationAttributes> implem
       foreignKey: 'visitId',
       as: 'visit',
     });
+    Payment.belongsTo(models.Host, {
+      foreignKey: 'hostId',
+      as: 'host',
+    });
   }
 }
 
@@ -49,6 +54,10 @@ export function initPayment(sequelize: Sequelize): typeof Payment {
         type: DataTypes.BIGINT,
         autoIncrement: true,
         primaryKey: true,
+      },
+      hostId: {
+        type: DataTypes.BIGINT,
+        allowNull: false
       },
       userId: {
         type: DataTypes.BIGINT,
@@ -154,6 +163,7 @@ export function initPayment(sequelize: Sequelize): typeof Payment {
       tableName: 'wd_payments',
       timestamps: false,
       indexes: [
+        { fields: ['hostId'] },
         { fields: ['userId'] },
         { fields: ['localId'] },
         { fields: ['visitId'] },

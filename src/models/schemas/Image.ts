@@ -5,6 +5,7 @@ interface ImageCreationAttributes extends Optional<ImageAttributes, 'id' | 'loca
 
 class Image extends Model<ImageAttributes, ImageCreationAttributes> implements ImageAttributes {
   public id!: number;
+  public hostId!: number;
   public userId!: number;
   public localId?: string;
   public visitId?: number;
@@ -27,6 +28,10 @@ class Image extends Model<ImageAttributes, ImageCreationAttributes> implements I
       foreignKey: 'visitId',
       as: 'visit',
     });
+    Image.belongsTo(models.Host, {
+      foreignKey: 'hostId',
+      as: 'host',
+    });
   }
 }
 
@@ -37,6 +42,10 @@ export function initImage(sequelize: Sequelize): typeof Image {
         type: DataTypes.BIGINT,
         autoIncrement: true,
         primaryKey: true,
+      },
+      hostId: {
+        type: DataTypes.BIGINT,
+        allowNull: false
       },
       userId: {
         type: DataTypes.BIGINT,
@@ -126,6 +135,7 @@ export function initImage(sequelize: Sequelize): typeof Image {
       tableName: 'wd_images',
       timestamps: false,
       indexes: [
+        { fields: ['hostId'] },
         { fields: ['userId'] },
         { fields: ['localId'] },
         { fields: ['visitId'] },

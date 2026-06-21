@@ -5,6 +5,7 @@ interface OrderCreationAttributes extends Optional<OrderAttributes, 'id' | 'loca
 
 class Order extends Model<OrderAttributes, OrderCreationAttributes> implements OrderAttributes {
   public id!: number;
+  public hostId!: number;
   public userId!: number;
   public localId?: string;
   public visitId!: number;
@@ -28,6 +29,10 @@ class Order extends Model<OrderAttributes, OrderCreationAttributes> implements O
       foreignKey: 'visitId',
       as: 'visit',
     });
+    Order.belongsTo(models.Host, {
+      foreignKey: 'hostId',
+      as: 'host',
+    });
     Order.hasMany(models.OrderProduct, {
       foreignKey: 'orderId',
       as: 'products',
@@ -42,6 +47,10 @@ export function initOrder(sequelize: Sequelize): typeof Order {
         type: DataTypes.BIGINT,
         autoIncrement: true,
         primaryKey: true,
+      },
+      hostId: {
+        type: DataTypes.BIGINT,
+        allowNull: false
       },
       userId: {
         type: DataTypes.BIGINT,
@@ -162,6 +171,7 @@ export function initOrder(sequelize: Sequelize): typeof Order {
         { fields: ['visitId'] },
         { fields: ['orderNumber'] },
         { fields: ['orderTime'] },
+        { fields: ['hostId'] },
       ],
     }
   );

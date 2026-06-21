@@ -16,6 +16,7 @@ import { initOrderProduct } from './schemas/OrderProduct';
 import { initPayment } from './schemas/Payment';
 import { initFeedback } from './schemas/Feedback';
 import { initImage } from './schemas/Image';
+import { initCustomer } from './schemas/Customer';
 import { initAdminRefreshToken } from './schemas/AdminRefreshToken';
 import config, { logger } from '../config/database';
 import { DatabaseConnectionManager, type ConnectionMetrics, type HealthCheckResult } from '../shared/database/connection-manager';
@@ -91,6 +92,7 @@ const OrderProduct = initOrderProduct(sequelize);
 const Payment = initPayment(sequelize);
 const Feedback = initFeedback(sequelize);
 const Image = initImage(sequelize);
+const Customer = initCustomer(sequelize);
 const AdminRefreshToken = initAdminRefreshToken(sequelize);
 
 // Store models in an object
@@ -111,6 +113,7 @@ const db: any = {
   Payment,
   Feedback,
   Image,
+  Customer,
   AdminRefreshToken,
   sequelize,
   Sequelize,
@@ -181,6 +184,7 @@ export {
   Payment,
   Feedback,
   Image,
+  Customer,
   AdminRefreshToken,
   connectionManager,
 };

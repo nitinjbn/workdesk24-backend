@@ -81,6 +81,7 @@ export interface GpsHistoryAttributes {
 // Visit attributes
 export interface VisitAttributes {
   id?: number;
+  hostId: number;
   userId: number;
   localId?: string;
   customerName: string;
@@ -122,6 +123,7 @@ export interface VisitAttributes {
 // Order attributes
 export interface OrderAttributes {
   id?: number;
+  hostId: number;
   userId: number;
   localId?: string;
   orderNumber?: string;
@@ -154,6 +156,7 @@ export interface OrderProductAttributes {
   id?: number;
   orderId: number;
   userId: number;
+  hostId: number;
   localId?: string;
   visitId?: number;
   customerId?: number;
@@ -202,6 +205,7 @@ export interface ProductAttributes {
 // Payment attributes
 export interface PaymentAttributes {
   id?: number;
+  hostId: number;
   userId: number;
   localId?: string;
   visitId?: number;
@@ -231,6 +235,7 @@ export interface PaymentAttributes {
 // Feedback attributes
 export interface FeedbackAttributes {
   id?: number;
+  hostId: number;
   userId: number;
   localId?: string;
   visitId?: number;
@@ -256,6 +261,7 @@ export interface FeedbackAttributes {
 // Image attributes
 export interface ImageAttributes {
   id?: number;
+  hostId: number;
   userId: number;
   localId?: string;
   visitId?: number;

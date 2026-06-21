@@ -5,6 +5,7 @@ interface VisitCreationAttributes extends Optional<VisitAttributes, 'id' | 'loca
 
 class Visit extends Model<VisitAttributes, VisitCreationAttributes> implements VisitAttributes {
   public id!: number;
+  public hostId!: number;
   public userId!: number;
   public localId?: string;
   public customerId!: number;
@@ -42,9 +43,28 @@ class Visit extends Model<VisitAttributes, VisitCreationAttributes> implements V
       foreignKey: 'userId',
       as: 'user',
     });
+    Visit.belongsTo(models.Customer, {
+      foreignKey: 'customerId',
+      as: 'customer',
+    });
+    Visit.belongsTo(models.Host, {
+      foreignKey: 'hostId',
+      as: 'host',
+    });
+    Visit.hasMany(models.Order, {
+      foreignKey: 'visitId',
+      as: 'orders',
+    });
+    Visit.hasMany(models.Feedback, {
+      foreignKey: 'visitId',
+      as: 'feedbacks',
+    });
     Visit.hasMany(models.Image, {
       foreignKey: 'visitId',
-      as: 'images',
+    });
+    Visit.hasMany(models.Payment, {
+      foreignKey: 'visitId',
+      as: 'payments',
     });
   }
 }
@@ -56,6 +76,10 @@ export function initVisit(sequelize: Sequelize): typeof Visit {
         type: DataTypes.BIGINT,
         autoIncrement: true,
         primaryKey: true,
+      },
+      hostId: {
+        type: DataTypes.BIGINT,
+        allowNull: false
       },
       userId: {
         type: DataTypes.BIGINT,
@@ -209,6 +233,7 @@ export function initVisit(sequelize: Sequelize): typeof Visit {
       tableName: 'wd_visits',
       timestamps: false,
       indexes: [
+        { fields: ['hostId'] },
         { fields: ['userId'] },
         { fields: ['localId'] },
         { fields: ['customerId'] },

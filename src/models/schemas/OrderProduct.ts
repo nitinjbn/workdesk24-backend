@@ -7,6 +7,7 @@ class OrderProduct extends Model<OrderProductAttributes, OrderProductCreationAtt
   public id!: number;
   public orderId!: number;
   public userId!: number;
+  public hostId!: number;
   public localId?: string;
   public productId?: number;
   public productName!: string;
@@ -32,6 +33,10 @@ class OrderProduct extends Model<OrderProductAttributes, OrderProductCreationAtt
       foreignKey: 'userId',
       as: 'user',
     });
+    OrderProduct.belongsTo(models.Host, {
+      foreignKey: 'hostId',
+      as: 'host',
+    });
   }
 }
 
@@ -46,6 +51,10 @@ export function initOrderProduct(sequelize: Sequelize): typeof OrderProduct {
       orderId: {
         type: DataTypes.BIGINT,
         allowNull: false,
+      },
+      hostId: {
+        type: DataTypes.BIGINT,
+        allowNull: false
       },
       userId: {
         type: DataTypes.BIGINT,
@@ -128,6 +137,7 @@ export function initOrderProduct(sequelize: Sequelize): typeof OrderProduct {
       timestamps: false,
       indexes: [
         { fields: ['orderId'] },
+        { fields: ['hostId'] },
         { fields: ['userId'] },
         { fields: ['localId'] },
         { fields: ['productId'] },

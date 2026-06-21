@@ -5,6 +5,7 @@ interface FeedbackCreationAttributes extends Optional<FeedbackAttributes, 'id' |
 
 class Feedback extends Model<FeedbackAttributes, FeedbackCreationAttributes> implements FeedbackAttributes {
   public id!: number;
+  public hostId!: number;
   public userId!: number;
   public localId?: string;
   public visitId?: number;
@@ -25,6 +26,10 @@ class Feedback extends Model<FeedbackAttributes, FeedbackCreationAttributes> imp
       foreignKey: 'visitId',
       as: 'visit',
     });
+    Feedback.belongsTo(models.Host, {
+      foreignKey: 'hostId',
+      as: 'host',
+    });
   }
 }
 
@@ -35,6 +40,10 @@ export function initFeedback(sequelize: Sequelize): typeof Feedback {
         type: DataTypes.BIGINT,
         autoIncrement: true,
         primaryKey: true,
+      },
+      hostId: {
+        type: DataTypes.BIGINT,
+        allowNull: false
       },
       userId: {
         type: DataTypes.BIGINT,
@@ -127,6 +136,7 @@ export function initFeedback(sequelize: Sequelize): typeof Feedback {
         { fields: ['userId'] },
         { fields: ['localId'] },
         { fields: ['visitId'] },
+        { fields: ['hostId'] },
         { fields: ['feedbackTime'] }
       ],
     }
