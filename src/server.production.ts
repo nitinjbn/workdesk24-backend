@@ -4,6 +4,7 @@ import { logger } from './config/database';
 
 const PORT = process.env.PORT || 3000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
+const DB_RETRY_DELAY_MS = parseInt(process.env.DB_RETRY_DELAY_MS || '30000', 10);
 
 /**
  * Production-Grade Server Startup
@@ -25,21 +26,32 @@ async function startServer() {
       nodeVersion: process.version,
     });
 
-    // Step 1: Initialize database connection with health monitoring
-    logger.info('Initializing database connection...');
-    await initializeDatabase();
+    const initializeDatabaseInBackground = async (): Promise<void> => {
+      try {
+        logger.info('Initializing database connection...');
+        await initializeDatabase();
 
-    // Step 2: Verify database health
-    const dbStatus = getDatabaseStatus();
-    if (!dbStatus.isHealthy) {
-      throw new Error('Database health check failed');
-    }
+        const dbStatus = getDatabaseStatus();
+        if (!dbStatus.isHealthy) {
+          throw new Error('Database health check failed');
+        }
 
-    logger.info('Database connection healthy', {
-      metrics: dbStatus.metrics,
-    });
+        logger.info('Database connection healthy', {
+          metrics: dbStatus.metrics,
+        });
+      } catch (error: any) {
+        logger.error('Database initialization failed; continuing in degraded mode', {
+          error: error.message,
+          stack: error.stack,
+          retryInMs: DB_RETRY_DELAY_MS,
+        });
 
-    // Step 3: Start HTTP server
+        setTimeout(() => {
+          void initializeDatabaseInBackground();
+        }, DB_RETRY_DELAY_MS);
+      }
+    };
+
     const server = app.listen(PORT, () => {
       logger.info('Server started successfully', {
         port: PORT,
@@ -47,12 +59,7 @@ async function startServer() {
         timestamp: new Date().toISOString(),
       });
 
-      // Log database pool configuration
-      logger.info('Database pool configuration', {
-        min: dbStatus.metrics.totalConnections,
-        active: dbStatus.metrics.activeConnections,
-        idle: dbStatus.metrics.idleConnections,
-      });
+      void initializeDatabaseInBackground();
     });
 
     // Setup server error handlers

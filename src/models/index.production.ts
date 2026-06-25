@@ -39,16 +39,17 @@ dotenv.config();
 const env = process.env.NODE_ENV || 'development';
 const dbConfig = config[env];
 
-// Validate required environment variables for all environments
-const requiredVars = ['DB_USER', 'DB_PASSWORD', 'DB_NAME', 'DB_HOST'];
-const missing = requiredVars.filter((varName) => !process.env[varName]);
+function validateRequiredEnv(): void {
+  const requiredVars = ['DB_USER', 'DB_PASSWORD', 'DB_NAME', 'DB_HOST'];
+  const missing = requiredVars.filter((varName) => !process.env[varName]);
 
-if (missing.length > 0) {
-  logger.error('Missing required environment variables', {
-    missing,
-    env,
-  });
-  throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
+  if (missing.length > 0) {
+    logger.error('Missing required environment variables', {
+      missing,
+      env,
+    });
+    throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
+  }
 }
 
 // Log configuration (without sensitive data)
@@ -133,6 +134,7 @@ Object.keys(db).forEach((modelName) => {
  */
 export async function initializeDatabase(): Promise<void> {
   try {
+    validateRequiredEnv();
     await connectionManager.initialize();
     logger.info('Database initialized successfully');
   } catch (error: any) {
