@@ -50,7 +50,7 @@ export class SyncService {
           });
         } else {
 
-          console.log('Creating new record with data:', { ...data, userId, localId, syncedAt: now });
+          //console.log('Creating new record with data:', { ...data, userId, localId, syncedAt: now });
 
           const newRecord = await repository.create({
             ...data,
