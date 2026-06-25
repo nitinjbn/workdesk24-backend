@@ -70,6 +70,40 @@ function calculatePoolSize(): { min: number; max: number } {
   }
 }
 
+function parseBooleanEnv(value: string | undefined): boolean | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (value === 'true') {
+    return true;
+  }
+
+  if (value === 'false') {
+    return false;
+  }
+
+  return undefined;
+}
+
+function buildSslOptions() {
+  if (process.env.DB_SSL !== 'true') {
+    return false;
+  }
+
+  const ca = process.env.DB_SSL_CA?.trim();
+  const cert = process.env.DB_SSL_CERT?.trim();
+  const key = process.env.DB_SSL_KEY?.trim();
+  const rejectUnauthorized = parseBooleanEnv(process.env.DB_SSL_REJECT_UNAUTHORIZED) ?? Boolean(ca);
+
+  return {
+    rejectUnauthorized,
+    ...(ca ? { ca } : {}),
+    ...(cert ? { cert } : {}),
+    ...(key ? { key } : {}),
+  };
+}
+
 /**
  * Production-safe query logger
  * Logs slow queries and errors without exposing sensitive data
@@ -256,9 +290,7 @@ const config: Config = {
     // SSL configuration for cloud databases
     dialectOptions: {
       connectTimeout: 30000,
-      ssl: process.env.DB_SSL === 'true' ? {
-        rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false',
-      } : false,
+      ssl: buildSslOptions(),
       decimalNumbers: true,
       dateStrings: true,
       typeCast: true,
@@ -321,12 +353,7 @@ const config: Config = {
     dialectOptions: {
       connectTimeout: 30000,
       // SSL configuration for production databases
-      ssl: process.env.DB_SSL === 'true' ? {
-        rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false',
-        ca: process.env.DB_SSL_CA,
-        cert: process.env.DB_SSL_CERT,
-        key: process.env.DB_SSL_KEY,
-      } : false,
+      ssl: buildSslOptions(),
       decimalNumbers: true,
       dateStrings: true,
       typeCast: true,
