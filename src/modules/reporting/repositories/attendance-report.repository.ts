@@ -30,6 +30,7 @@ export class AttendanceReportRepository {
       batteryPercentage: 'attendanceBatteryPercentage',
       speed: 'attendanceLocationSpeed',
     });
+    console.log("################## AttendanceReportRepository.getReport: where, userInclude, order", where, userInclude, order);
 
     const query: FindAndCountOptions<AttendanceInstance> = {
       attributes: {

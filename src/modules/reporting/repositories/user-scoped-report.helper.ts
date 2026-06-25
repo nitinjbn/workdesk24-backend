@@ -52,7 +52,9 @@ export const buildUserInclude = (
 
   const userWhere: Record<string, unknown> = {
     hostId,
-    isDeleted: 0,
+    isDeleted: {
+      [Op.or]: [0, null],
+    },
     ...dynamicUserWhere,
   };
 
@@ -61,7 +63,9 @@ export const buildUserInclude = (
   }
 
   if (enforceActiveUsersOnly) {
-    userWhere.isActive = 1;
+    userWhere.isActive = {
+      [Op.or]: [1, null],
+    };
   }
 
   return {
