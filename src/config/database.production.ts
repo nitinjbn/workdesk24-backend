@@ -94,7 +94,12 @@ function buildSslOptions() {
   const ca = process.env.DB_SSL_CA?.trim();
   const cert = process.env.DB_SSL_CERT?.trim();
   const key = process.env.DB_SSL_KEY?.trim();
-  const rejectUnauthorized = parseBooleanEnv(process.env.DB_SSL_REJECT_UNAUTHORIZED) ?? Boolean(ca);
+  const requestedRejectUnauthorized = parseBooleanEnv(process.env.DB_SSL_REJECT_UNAUTHORIZED);
+  const rejectUnauthorized = ca ? (requestedRejectUnauthorized ?? true) : false;
+
+  if (requestedRejectUnauthorized === true && !ca) {
+    logger.warn('DB_SSL_REJECT_UNAUTHORIZED=true ignored because DB_SSL_CA is not configured');
+  }
 
   return {
     rejectUnauthorized,
