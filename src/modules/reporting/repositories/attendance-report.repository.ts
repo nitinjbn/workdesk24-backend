@@ -42,6 +42,7 @@ export class AttendanceReportRepository {
       offset,
       order,
       distinct: true,
+      logging: console.log, // Enable logging for debugging
     };
 
     const { rows, count } = await Attendance.findAndCountAll(query);

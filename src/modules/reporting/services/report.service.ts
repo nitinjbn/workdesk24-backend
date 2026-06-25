@@ -77,11 +77,13 @@ export class ReportService {
       sortBy: sorting.sortBy,
       sortOrder: sorting.sortOrder,
     });
+    console.log("################## ReportService.getAttendanceReport: report", report);
 
     const dateTimeSettings = await getHostDateTimeSettings(hostId);
     const plainData = report.data.map((item: any) =>
       item && typeof item.toJSON === 'function' ? item.toJSON() : item
     );
+    console.log("################## ReportService.getAttendanceReport: plainData", plainData);
 
     return {
       ...report,
