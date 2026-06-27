@@ -43,6 +43,8 @@ export class GpsHistoryReportRepository {
     };
 
     const { rows, count } = await GpsHistory.findAndCountAll(query);
+    //console.log("############################ rows:", rows);
+    console.log("############################ count:", count);
 
     return {
       data: rows,

@@ -24,6 +24,7 @@ export class BaseReportHelper {
   }
 
   buildPagination(total: number, page: number, limit: number): ReportPaginationMeta {
+    console.log("################## ", total, page, limit);
     const totalPages = total === 0 ? 0 : Math.ceil(total / limit);
     const hasNextPage = page < totalPages;
     const hasPreviousPage = page > 1 && total > 0;
