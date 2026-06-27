@@ -40,6 +40,7 @@ export class GpsHistoryReportRepository {
       offset,
       order,
       distinct: true,
+      logging: console.log
     };
 
     console.log("############## query:", query);
