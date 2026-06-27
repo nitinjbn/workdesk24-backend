@@ -5,9 +5,7 @@ import { logger } from './config/database';
 import sequelizePkg from 'sequelize/package.json';
 import mysql2Pkg from 'mysql2/package.json';
 
-console.log('Node:', process.version);
-console.log('Sequelize:', sequelizePkg.version);
-console.log('mysql2:', mysql2Pkg.version);
+console.log('Versions info:', {'Node:':process.version, 'Sequelize:': sequelizePkg.version, 'mysql2:': mysql2Pkg.version});
 
 const PORT = process.env.PORT || 3000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
