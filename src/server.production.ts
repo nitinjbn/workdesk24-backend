@@ -2,6 +2,13 @@ import app from './app';
 import { initializeDatabase, getDatabaseStatus } from './models/index';
 import { logger } from './config/database';
 
+import sequelizePkg from 'sequelize/package.json';
+import mysql2Pkg from 'mysql2/package.json';
+
+console.log('Node:', process.version);
+console.log('Sequelize:', sequelizePkg.version);
+console.log('mysql2:', mysql2Pkg.version);
+
 const PORT = process.env.PORT || 3000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const DB_RETRY_DELAY_MS = parseInt(process.env.DB_RETRY_DELAY_MS || '30000', 10);
