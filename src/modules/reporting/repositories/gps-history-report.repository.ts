@@ -40,27 +40,9 @@ export class GpsHistoryReportRepository {
       offset,
       order,
       distinct: true,
-      logging: console.log
     };
 
-    const count2 = await GpsHistory.count({
-      where: query.where,
-      include: query.include,
-      distinct: true,
-      col: 'id',
-      logging: console.log,
-    });
-
-    console.log('count2 =', count2);
-    console.log('type =', typeof count2);
-
-    console.log("############## query:", query);
-
-    const result = await GpsHistory.findAndCountAll(query);
-    console.log("#################### result:", result);
-    const { rows, count } = result;
-    //console.log("############################ rows:", rows);
-    console.log("############################ count:", count);
+    const { rows, count } = await GpsHistory.findAndCountAll(query);
 
     return {
       data: rows,

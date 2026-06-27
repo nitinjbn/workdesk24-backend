@@ -393,7 +393,7 @@ const config: Config = {
     },
 
     // Performance optimization
-    minifyAliases: true,
+    //minifyAliases: true,           // THIS WAS CREATING ISSUES TO NOT RETURN USERS DATA OBJECT INSIDE REPORTS AND PAGINATION CORRECTLY ON PRODUCTION SERVER
 
     // Hooks for monitoring
     hooks: {
