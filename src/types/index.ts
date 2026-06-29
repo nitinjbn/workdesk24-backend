@@ -289,7 +289,7 @@ export interface UserAttributes {
   id?: number;
   hostId: number;
   roleId: number;
-  employeeId?: number;
+  employeeId?: string;
   mobile: string;
   email: string;
   password: string;
@@ -442,6 +442,18 @@ export interface ProductMediaAttributes {
   mimeType?: string;
   isPrimary?: number;
   sortOrder?: number;
+  isEnabled?: number;
+  isDeleted?: number;
+  createdAt?: number;
+  updatedAt?: number;
+  deletedAt?: number | null;
+}
+
+export interface DesignationAttributes {
+  id?: number;
+  hostId: number;
+  name: string;
+  remarks?: string;
   isEnabled?: number;
   isDeleted?: number;
   createdAt?: number;

@@ -2,7 +2,7 @@ import { Response, NextFunction } from 'express';
 import reportService from '../services/report.service';
 import { ApiResponse } from '../../../shared/types/base.types';
 import { AuthRequest } from '../../../shared/types/auth.types';
-import { AttendanceReportPayload, GpsHistoryReportPayload } from '../types/report.types';
+import { AttendanceReportPayload, GpsHistoryReportPayload, GetUsersPayload } from '../types/report.types';
 
 export class ReportController {
   async getAdminGpsHistory(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
@@ -44,6 +44,16 @@ export class ReportController {
       (payload, scope) => reportService.getAttendanceReport(payload as AttendanceReportPayload, scope),
       'Attendance report retrieved successfully',
       true
+    );
+  }
+
+  async getAppUsers(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    await this.executeUserScopedReport(
+      req,
+      res,
+      next,
+      (payload, scope) => reportService.getAppUsers(payload as GetUsersPayload, scope),
+      'Users retrieved successfully'
     );
   }
 

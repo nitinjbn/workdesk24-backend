@@ -1,5 +1,6 @@
 import gpsHistoryReportRepository from '../repositories/gps-history-report.repository';
 import attendanceReportRepository from '../repositories/attendance-report.repository';
+import usersRepository from '../repositories/users-report.repository';
 import {
   AttendanceReportFilter,
   AttendanceReportPayload,
@@ -11,16 +12,18 @@ import {
   ReportScope,
   UserScopedReportFilter,
   UserScopedReportPayload,
+  GetUsersPayload
 } from '../types/report.types';
-import GpsHistory from '../../../models/schemas/GpsHistory';
-import Attendance from '../../../models/schemas/Attendance';
+import { GpsHistory, Attendance, User } from '../../../models/schemas';
 import baseReportHelper from '../helpers/base-report.helper';
 import { createConfiguredError } from '../../../shared/utils/error.util';
 import { getHostDateTimeSettings } from '../../../shared/utils/host-settings.util';
 import { formatDateTimeFieldsBySettings } from '../../../shared/utils/date-time-format.util';
+import { CONFIG } from '../../../config/constants';
 
 type GpsHistoryInstance = typeof GpsHistory.prototype;
 type AttendanceInstance = typeof Attendance.prototype;
+type UserInstance = typeof User.prototype;
 
 export class ReportService {
   async getGpsHistoryReport(
@@ -77,18 +80,51 @@ export class ReportService {
       sortBy: sorting.sortBy,
       sortOrder: sorting.sortOrder,
     });
-    console.log("################## ReportService.getAttendanceReport: report", report);
 
     const dateTimeSettings = await getHostDateTimeSettings(hostId);
     const plainData = report.data.map((item: any) =>
       item && typeof item.toJSON === 'function' ? item.toJSON() : item
     );
-    console.log("################## ReportService.getAttendanceReport: plainData", plainData);
 
     return {
       ...report,
       data: formatDateTimeFieldsBySettings(plainData, dateTimeSettings),
     } as ReportResponse<AttendanceInstance>;
+  }
+
+  async getAppUsers(
+    payload: GetUsersPayload,
+    scope: ReportScope
+  ): Promise<ReportResponse<UserInstance>> {
+    const { page, limit } = baseReportHelper.normalizePagination(payload);
+    //const filter = this.normalizeAttendanceFilter(payload);
+    //const hostId = this.resolveRequiredHostId(payload.hostId, scope.hostId);
+    //const userId = this.resolveEffectiveUserId(filter, scope);
+    const sorting = this.normalizeCommonSorting(payload as any);
+    let { hostId, filter } = payload;
+    filter = {
+      ...filter,
+      roleCode: CONFIG.AUTH.APP.LOGIN.ALLOWED_ROLES
+    }
+
+    const report = await usersRepository.getUsers({
+      hostId,
+      page,
+      limit,
+      filter,
+      sortBy: sorting.sortBy,
+      sortOrder: sorting.sortOrder,
+    });
+
+    const dateTimeSettings = await getHostDateTimeSettings(hostId);
+    const plainData = report.data.map((item: any) =>
+      item && typeof item.toJSON === 'function' ? item.toJSON() : item
+    );
+
+    return {
+      ...report,
+      data: formatDateTimeFieldsBySettings(plainData, dateTimeSettings),
+    } as ReportResponse<UserInstance>;
   }
 
   private normalizeGpsHistoryFilter(payload: GpsHistoryReportPayload): GpsHistoryReportFilter {

@@ -28,7 +28,11 @@ export interface ReportPaginationMeta {
 
 export interface ReportResponse<T> {
   data: T[];
-  pagination: ReportPaginationMeta;
+  pagination?: ReportPaginationMeta;
+}
+
+export interface SingleRecordResponse<T> {
+  data: {};
 }
 
 export interface CreatedAtRangeFilter {
@@ -68,6 +72,42 @@ export interface GpsHistoryReportPayload extends UserScopedReportPayload {}
 export type AttendanceReportFilter = UserScopedReportFilter;
 
 export interface AttendanceReportPayload extends UserScopedReportPayload {}
+
+export interface GetUsersPayload extends ReportPaginationParams, ReportSortParams {
+  hostId?: number;
+  filter?: GetUsersFilter;
+}
+
+export interface GetUsersFilter {
+  id?: number,
+  userId?: number,
+  employeeId?: string,
+  name?: string,
+  email?: string,
+  mobile?: number,
+  isActive?: boolean,
+  roleCode?: string[],
+  searchKey?: string
+}
+
+export interface GetRolesPayload {
+  hostId: number;
+  page?: number;
+  limit?: number;
+  filter?: {
+    id?: number;
+    roleId?: number;
+    roleCode?: string;
+    roleName?: string;
+  };
+  sortBy: CommonReportSortBy;
+  sortOrder: ReportSortDirection;
+}
+
+export interface GetRoleDetailsByIdPayload {
+  hostId: number;
+  roleId: number;
+} 
 
 export interface ReportScope {
   hostId: number;

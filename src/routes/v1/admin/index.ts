@@ -32,7 +32,7 @@ router.post('/inquiries/delete', inquiryController.deleteInquiry.bind(inquiryCon
 
 router.post('/reports/getGPSHistory', reportController.getAdminGpsHistory.bind(reportController));
 router.post('/reports/getAttendance', reportController.getAdminAttendance.bind(reportController));
-
+router.post('/reports/getUsers', reportController.getAppUsers.bind(reportController));
 
 router.post('/dashboard/stats', async (req, res, next) => {
   try {

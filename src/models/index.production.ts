@@ -18,6 +18,7 @@ import { initFeedback } from './schemas/Feedback';
 import { initImage } from './schemas/Image';
 import { initCustomer } from './schemas/Customer';
 import { initAdminRefreshToken } from './schemas/AdminRefreshToken';
+import { initDesignation } from './schemas/Designation';
 import config, { logger } from '../config/database';
 import { DatabaseConnectionManager, type ConnectionMetrics, type HealthCheckResult } from '../shared/database/connection-manager';
 
@@ -95,6 +96,7 @@ const Feedback = initFeedback(sequelize);
 const Image = initImage(sequelize);
 const Customer = initCustomer(sequelize);
 const AdminRefreshToken = initAdminRefreshToken(sequelize);
+const Designation = initDesignation(sequelize);
 
 // Store models in an object
 const db: any = {
@@ -116,6 +118,7 @@ const db: any = {
   Image,
   Customer,
   AdminRefreshToken,
+  Designation,
   sequelize,
   Sequelize,
   connectionManager,
@@ -188,6 +191,7 @@ export {
   Image,
   Customer,
   AdminRefreshToken,
+  Designation,
   connectionManager,
 };
 

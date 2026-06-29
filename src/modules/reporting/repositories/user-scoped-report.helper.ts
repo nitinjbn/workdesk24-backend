@@ -89,10 +89,10 @@ export const extractUserFilter = (filter: Record<string, unknown>): Record<strin
 export const buildCommonReportOrder = (
   sortBy: CommonReportSortBy,
   sortOrder: ReportSortDirection,
-  fieldMap: {
-    createdAt: string;
-    batteryPercentage: string;
-    speed: string;
+  fieldMap?: {
+    createdAt?: string;
+    batteryPercentage?: string;
+    speed?: string;
   }
 ): Order => {
   if (sortBy === 'userName') {

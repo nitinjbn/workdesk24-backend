@@ -8,7 +8,8 @@ interface UserAttributes extends BaseModel {
   password: string;
   name?: string;
   roleId: number;
-  employeeId?: number;
+  designationId: number;
+  employeeId?: string;
   mobile: string;
   reportingManagerId?: number;
   profileImageUrl?: string;
@@ -17,14 +18,15 @@ interface UserAttributes extends BaseModel {
   isActive?: number;
 }
 
-interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'hostId' | 'name' | 'roleId' | 'employeeId' | 'mobile' | 'reportingManagerId' | 'profileImageUrl' | 'joiningDate' | 'lastLoginAt' | 'isActive' | 'createdAt' | 'updatedAt' | 'isDeleted' | 'deletedAt'> {}
+interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'hostId' | 'name' | 'roleId' | 'designationId' | 'employeeId' | 'mobile' | 'reportingManagerId' | 'profileImageUrl' | 'joiningDate' | 'lastLoginAt' | 'isActive' | 'createdAt' | 'updatedAt' | 'isDeleted' | 'deletedAt'> {}
 
 class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
   public id!: number;
   public hostId!: number;
   public email!: string;
   public roleId!: number;
-  public employeeId?: number;
+  public designationId!: number;
+  public employeeId?: string;
   public name?: string;
   public password!: string;
   public mobile!: string;
@@ -49,6 +51,23 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
     delete values.password;
     return values;
   }
+
+  public static associate(models: any): void {
+    User.belongsTo(models.Host, {
+      foreignKey: 'hostId',
+      as: 'host',
+    });
+
+    User.belongsTo(models.Role, {
+      foreignKey: 'roleId',
+      as: 'role',
+    });
+
+    User.belongsTo(models.Designation, {
+      foreignKey: 'designationId',
+      as: 'designation',
+    });
+  }
 }
 
 export function initUser(sequelize: Sequelize): typeof User {
@@ -67,8 +86,12 @@ export function initUser(sequelize: Sequelize): typeof User {
         type: DataTypes.BIGINT,
         allowNull: false,
       },
-      employeeId: {
+      designationId: {
         type: DataTypes.BIGINT,
+        allowNull: false,
+      },
+      employeeId: {
+        type: DataTypes.STRING(20),
         allowNull: true,
       },
       name: {
