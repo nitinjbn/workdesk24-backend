@@ -53,6 +53,28 @@ export class usersRepository {
       }
     }
 
+    if (filter.searchKey?.trim()) {
+      const searchKey = filter.searchKey.trim();
+
+      where[Op.or] = [
+        {
+          name: {
+            [Op.like]: `%${searchKey}%`,
+          },
+        },
+        {
+          email: {
+            [Op.like]: `%${searchKey}%`,
+          },
+        },
+        {
+          mobile: {
+            [Op.like]: `%${searchKey}%`,
+          },
+        },
+      ];
+    }
+
     const roleFilter:any = {
       isDeleted: 0
     }
