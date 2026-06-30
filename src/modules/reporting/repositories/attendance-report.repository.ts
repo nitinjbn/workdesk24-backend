@@ -1,5 +1,5 @@
 import { FindAndCountOptions, Includeable } from 'sequelize';
-import { Attendance } from '../../../models';
+import db, { Attendance } from '../../../models';
 import { AttendanceReportFilter, CommonReportSortBy, ReportResponse, ReportSortDirection } from '../types/report.types';
 import baseReportHelper from '../helpers/base-report.helper';
 import { buildCommonReportOrder, buildDynamicModelFilters, buildUserInclude, buildUserScopedWhere, extractUserFilter } from './user-scoped-report.helper';
@@ -35,6 +35,10 @@ export class AttendanceReportRepository {
     const query: FindAndCountOptions<AttendanceInstance> = {
       attributes: {
         exclude: ['localId', 'isDeleted', 'deletedAt'],
+        include: [
+          [db.Sequelize.col('user.name'), 'employeeName'],
+          [db.Sequelize.col('user.employeeId'), 'employeeId']
+        ]
       },
       where,
       include: [userInclude as Includeable],

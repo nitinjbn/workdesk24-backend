@@ -3,20 +3,7 @@ import User from '../../../models/schemas/User';
 import { CommonReportSortBy, ReportSortDirection, UserScopedReportFilter } from '../types/report.types';
 import baseReportHelper from '../helpers/base-report.helper';
 
-export const USER_REPORT_ATTRIBUTES = [
-  'id',
-  'hostId',
-  'roleId',
-  'employeeId',
-  'name',
-  'email',
-  'mobile',
-  'reportingManagerId',
-  'profileImageUrl',
-  'joiningDate',
-  'lastLoginAt',
-  'isActive',
-] as const;
+export const USER_REPORT_ATTRIBUTES = [] as const;
 
 const USER_COLUMNS = Object.keys(((User as any).getAttributes?.() || (User as any).rawAttributes || {}) as Record<string, unknown>);
 

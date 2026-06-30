@@ -1,5 +1,5 @@
 import { FindAndCountOptions, Includeable } from 'sequelize';
-import { GpsHistory } from '../../../models';
+import db, { GpsHistory } from '../../../models';
 import { CommonReportSortBy, GpsHistoryReportFilter, ReportResponse, ReportSortDirection } from '../types/report.types';
 import baseReportHelper from '../helpers/base-report.helper';
 import { buildCommonReportOrder, buildUserInclude, buildUserScopedWhere, extractUserFilter } from './user-scoped-report.helper';
@@ -33,6 +33,10 @@ export class GpsHistoryReportRepository {
     const query: FindAndCountOptions<GpsHistoryInstance> = {
       attributes: {
         exclude: ['localId', 'isDeleted', 'deletedAt'],
+        include: [
+          [db.Sequelize.col('user.name'), 'employeeName'],
+          [db.Sequelize.col('user.employeeId'), 'employeeId']
+        ]
       },
       where,
       include: [userInclude as Includeable],

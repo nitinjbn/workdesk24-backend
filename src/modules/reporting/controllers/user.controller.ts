@@ -2,51 +2,10 @@ import { Response, NextFunction } from 'express';
 import reportService from '../services/report.service';
 import { ApiResponse } from '../../../shared/types/base.types';
 import { AuthRequest } from '../../../shared/types/auth.types';
-import { AttendanceReportPayload, GpsHistoryReportPayload, GetUsersPayload } from '../types/report.types';
+import { GetUsersPayload } from '../types/report.types';
 import userService from '../services/user.service';
 
 export class ReportController {
-  async getAdminGpsHistory(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
-    await this.executeUserScopedReport(
-      req,
-      res,
-      next,
-      (payload, scope) => reportService.getGpsHistoryReport(payload as GpsHistoryReportPayload, scope),
-      'GPS history report retrieved successfully'
-    );
-  }
-
-  async getAppGpsHistory(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
-    await this.executeUserScopedReport(
-      req,
-      res,
-      next,
-      (payload, scope) => reportService.getGpsHistoryReport(payload as GpsHistoryReportPayload, scope),
-      'GPS history report retrieved successfully',
-      true
-    );
-  }
-
-  async getAdminAttendance(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
-    await this.executeUserScopedReport(
-      req,
-      res,
-      next,
-      (payload, scope) => reportService.getAttendanceReport(payload as AttendanceReportPayload, scope),
-      'Attendance report retrieved successfully'
-    );
-  }
-
-  async getAppAttendance(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
-    await this.executeUserScopedReport(
-      req,
-      res,
-      next,
-      (payload, scope) => reportService.getAttendanceReport(payload as AttendanceReportPayload, scope),
-      'Attendance report retrieved successfully',
-      true
-    );
-  }
 
   async getAppUsers(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     await this.executeUserScopedReport(

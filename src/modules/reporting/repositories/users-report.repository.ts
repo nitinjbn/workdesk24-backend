@@ -1,6 +1,6 @@
 import { FindAndCountOptions, Includeable , Op} from 'sequelize';
 import db, { User, Role, Designation } from '../../../models';
-import { CommonReportSortBy, GetUsersFilter, ReportResponse, ReportSortDirection } from '../types/report.types';
+import { CommonReportSortBy, GetUsersFilter, ReportResponse, ReportSortDirection, SingleRecordResponse } from '../types/report.types';
 import baseReportHelper from '../helpers/base-report.helper';
 import { buildCommonReportOrder } from './user-scoped-report.helper';
 
@@ -84,8 +84,9 @@ export class usersRepository {
    
     const query: FindAndCountOptions<UserInstance> = {
       attributes: {
-        exclude: ['roleId', 'designationId', 'password', 'reportingManagerId', 'isActive', 'isDeleted', 'deletedAt'],
+        exclude: ['id', 'roleId', 'designationId', 'password', 'reportingManagerId', 'isActive', 'isDeleted', 'deletedAt'],
         include: [
+          [db.Sequelize.col('user.id'), 'userId'],
           [db.Sequelize.col('role.roleName'), 'role'],
           [db.Sequelize.col('designation.name'), 'designation']
         ]
@@ -131,6 +132,54 @@ export class usersRepository {
         data: rows
       };
     }
+  }
+
+
+  async getUserById(params: {hostId: number, userId: number}): Promise<any> {
+    const { hostId, userId } = params;
+
+    const where:any = {
+      hostId,
+      id: userId,
+      isDeleted:0
+    }
+   
+    const query: FindAndCountOptions<UserInstance> = {
+      attributes: {
+        exclude: ['id', 'roleId', 'designationId', 'password', 'reportingManagerId', 'isDeleted', 'deletedAt'],
+        include: [
+          [db.Sequelize.col('user.id'), 'userId'],
+          [db.Sequelize.col('role.roleName'), 'role'],
+          [db.Sequelize.col('designation.name'), 'designation']
+        ]
+      },
+      where,
+      include: [
+        {
+          attributes:[],
+          model: Role,
+          where: {
+            isDeleted: 0
+          },
+          as: "role",
+          required: true
+        },
+        {
+          attributes:[],
+          model: Designation,
+          where: {
+            isDeleted: 0
+          },
+          as: "designation",
+          required: true
+        }
+      ],
+      raw: true,
+      logging: console.log, // Enable logging for debugging
+    };
+
+    const data = await User.findOne(query);
+    return data || {};
   }
 }
 

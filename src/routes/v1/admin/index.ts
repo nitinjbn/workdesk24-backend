@@ -18,10 +18,10 @@ router.use(authMiddleware);
 router.use(requireAdminRole);
 router.use(requireAdminCsrfToken);
 
-router.post('/users/list', userController.getAllUsers.bind(userController));
-router.post('/users/get', userController.getUserById.bind(userController));
-router.post('/users/update', userController.updateUser.bind(userController));
-router.post('/users/delete', userController.deleteUser.bind(userController));
+// router.post('/users/list', userController.getAllUsers.bind(userController));
+// router.post('/users/get', userController.getUserById.bind(userController));
+// router.post('/users/update', userController.updateUser.bind(userController));
+// router.post('/users/delete', userController.deleteUser.bind(userController));
 
 router.post('/inquiries/list', inquiryController.getAllInquiries.bind(inquiryController));
 router.post('/inquiries/get', inquiryController.getInquiryById.bind(inquiryController));
@@ -33,6 +33,7 @@ router.post('/inquiries/delete', inquiryController.deleteInquiry.bind(inquiryCon
 router.post('/reports/getGPSHistory', reportController.getAdminGpsHistory.bind(reportController));
 router.post('/reports/getAttendance', reportController.getAdminAttendance.bind(reportController));
 router.post('/reports/getUsers', reportController.getAppUsers.bind(reportController));
+router.post('/reports/getUserDetails', reportController.getUserDetails.bind(reportController));
 
 router.post('/dashboard/stats', async (req, res, next) => {
   try {
