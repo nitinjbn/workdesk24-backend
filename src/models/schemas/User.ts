@@ -9,7 +9,7 @@ interface UserAttributes extends BaseModel {
   name?: string;
   roleId: number;
   designationId: number;
-  employeeId?: string;
+  employeeCode?: string;
   mobile: string;
   reportingManagerId?: number;
   profileImageUrl?: string;
@@ -18,7 +18,7 @@ interface UserAttributes extends BaseModel {
   isActive?: number;
 }
 
-interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'hostId' | 'name' | 'roleId' | 'designationId' | 'employeeId' | 'mobile' | 'reportingManagerId' | 'profileImageUrl' | 'joiningDate' | 'lastLoginAt' | 'isActive' | 'createdAt' | 'updatedAt' | 'isDeleted' | 'deletedAt'> {}
+interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'hostId' | 'name' | 'roleId' | 'designationId' | 'employeeCode' | 'mobile' | 'reportingManagerId' | 'profileImageUrl' | 'joiningDate' | 'lastLoginAt' | 'isActive' | 'createdAt' | 'updatedAt' | 'isDeleted' | 'deletedAt'> {}
 
 class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
   public id!: number;
@@ -26,7 +26,7 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
   public email!: string;
   public roleId!: number;
   public designationId!: number;
-  public employeeId?: string;
+  public employeeCode?: string;
   public name?: string;
   public password!: string;
   public mobile!: string;
@@ -90,7 +90,7 @@ export function initUser(sequelize: Sequelize): typeof User {
         type: DataTypes.BIGINT,
         allowNull: false,
       },
-      employeeId: {
+      employeeCode: {
         type: DataTypes.STRING(20),
         allowNull: true,
       },

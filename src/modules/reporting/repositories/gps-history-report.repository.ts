@@ -35,7 +35,7 @@ export class GpsHistoryReportRepository {
         exclude: ['localId', 'isDeleted', 'deletedAt'],
         include: [
           [db.Sequelize.col('user.name'), 'employeeName'],
-          [db.Sequelize.col('user.employeeId'), 'employeeId']
+          [db.Sequelize.col('user.employeeCode'), 'employeeCode']
         ]
       },
       where,
