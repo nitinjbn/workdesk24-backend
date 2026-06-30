@@ -86,7 +86,7 @@ export class usersRepository {
       attributes: {
         exclude: ['id', 'roleId', 'designationId', 'password', 'reportingManagerId', 'isActive', 'isDeleted', 'deletedAt'],
         include: [
-          [db.Sequelize.col('id'), 'userId'],
+          [db.Sequelize.col('User.id'), 'userId'],
           [db.Sequelize.col('role.roleName'), 'role'],
           [db.Sequelize.col('designation.name'), 'designation']
         ]
@@ -148,7 +148,7 @@ export class usersRepository {
       attributes: {
         exclude: ['id', 'roleId', 'designationId', 'password', 'reportingManagerId', 'isDeleted', 'deletedAt'],
         include: [
-          [db.Sequelize.col('id'), 'userId'],
+          [db.Sequelize.col('User.id'), 'userId'],
           [db.Sequelize.col('role.roleName'), 'role'],
           [db.Sequelize.col('designation.name'), 'designation']
         ]
