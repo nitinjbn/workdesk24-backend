@@ -31,6 +31,31 @@ class Product extends Model<ProductAttributes, ProductCreationAttributes> implem
       foreignKey: 'hostId',
       as: 'host',
     });
+
+    Product.belongsTo(models.ProductCategory, {
+      foreignKey: 'categoryId',
+      as: 'productCategoryDetails',
+    });
+
+    Product.belongsTo(models.ProductBrand, {
+      foreignKey: 'brandId',
+      as: 'productBrandDetails',
+    });
+
+    Product.belongsTo(models.UOM, {
+      foreignKey: 'uomId',
+      as: 'productUOMDetails',
+    });
+
+    Product.hasMany(models.ProductMedia, {
+      foreignKey: 'productId',
+      as: 'productMedia',
+    })
+
+    Product.hasMany(models.ProductAttribute, {
+      foreignKey: 'productId',
+      as: 'productAttribute',
+    })
   }
 }
 

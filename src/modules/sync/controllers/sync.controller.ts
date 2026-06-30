@@ -353,6 +353,40 @@ export class SyncController {
       } as ApiResponse);
     }
   }
+
+  async getCustomers(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user!.id;
+      const { hostId } = req.body;
+
+      const result = await syncService.getCustomers({hostId, userId});
+
+      res.json({
+        success: true,
+        message: 'Customers retrieved successfully',
+        data: result,
+      } as ApiResponse);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getProducts(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user!.id;
+      const { hostId } = req.body;
+
+      const result = await syncService.getProducts({hostId, userId});
+
+      res.json({
+        success: true,
+        message: 'Products retrieved successfully',
+        data: result,
+      } as ApiResponse);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default new SyncController();

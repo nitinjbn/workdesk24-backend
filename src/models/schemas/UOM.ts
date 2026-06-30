@@ -18,7 +18,7 @@ class UOM extends Model<UOMAttributes, UOMCreationAttributes> implements UOMAttr
   public deletedAt?: number | null;
 
   public static associate(models: any): void {
-    UOM.belongsTo(models.User, {
+    UOM.belongsTo(models.Host, {
       foreignKey: 'hostId',
       as: 'host',
     });

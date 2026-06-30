@@ -6,6 +6,8 @@ import orderProductRepository from '../../staff/repositories/order-product.repos
 import paymentRepository from '../../staff/repositories/payment.repository';
 import feedbackRepository from '../../staff/repositories/feedback.repository';
 import imageRepository from '../../staff/repositories/image.repository';
+import customersRepository from '../../staff/repositories/customers.repository';
+import productsRepository from '../../staff/repositories/products.repository';
 import { resolveVisitLocalIdForRecord } from '../../../shared/utils/visit-local-id-resolver';
 
 interface SyncRecord {
@@ -275,6 +277,14 @@ export class SyncService {
       counts,
       lastSyncTime: Math.floor(Date.now() / 1000),
     };
+  }
+
+  async getCustomers(payload: {userId: number, hostId: number}): Promise<any> {
+    return await customersRepository.getCustomers(payload);
+  }
+
+  async getProducts(payload: {userId: number, hostId: number}): Promise<any> {
+    return await productsRepository.getProducts(payload);
   }
 }
 

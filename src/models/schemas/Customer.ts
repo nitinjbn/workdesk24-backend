@@ -34,6 +34,21 @@ class Customer extends Model<CustomerAttributes, CustomerCreationAttributes> imp
       foreignKey: 'hostId',
       as: 'host',
     });
+
+    Customer.belongsTo(models.CustomerType, {
+      foreignKey: 'customerTypeId',
+      as: 'customerTypeDetails',
+    });
+
+    Customer.hasMany(models.CustomerMedia, {
+      foreignKey: 'customerId',
+      as: 'customerMedia',
+    })
+
+    Customer.hasMany(models.CustomerAttribute, {
+      foreignKey: 'customerId',
+      as: 'customerAttribute',
+    })
   }
 }
 

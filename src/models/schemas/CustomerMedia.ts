@@ -23,9 +23,14 @@ class CustomerMedia extends Model<CustomerMediaAttributes, CustomerMediaCreation
   public deletedAt?: number | null;
 
   public static associate(models: any): void {
-    CustomerMedia.belongsTo(models.User, {
+    CustomerMedia.belongsTo(models.Host, {
       foreignKey: 'hostId',
       as: 'host',
+    });
+
+    CustomerMedia.belongsTo(models.Customer, {
+      foreignKey: 'customerId',
+      as: 'customerMedia',
     });
   }
 }

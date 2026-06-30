@@ -21,6 +21,15 @@ import { initAdminRefreshToken } from './schemas/AdminRefreshToken';
 import { initDesignation } from './schemas/Designation';
 import config, { logger } from '../config/database';
 import { DatabaseConnectionManager, type ConnectionMetrics, type HealthCheckResult } from '../shared/database/connection-manager';
+import { initCustomerMedia } from './schemas/CustomerMedia';
+import { initCustomerType } from './schemas/CustomerType';
+import { initCustomerAttribute } from './schemas/CustomerAttributes';
+import { initProduct } from './schemas/Product';
+import { initProductBrand } from './schemas/ProductBrands';
+import { initProductCategory } from './schemas/ProductCategories';
+import { initProductAttribute } from './schemas/ProductAttributes';
+import { initProductMedia } from './schemas/ProductMedia';
+import { initUOM } from './schemas/UOM';
 
 dotenv.config();
 
@@ -95,8 +104,17 @@ const Payment = initPayment(sequelize);
 const Feedback = initFeedback(sequelize);
 const Image = initImage(sequelize);
 const Customer = initCustomer(sequelize);
+const CustomerMedia = initCustomerMedia(sequelize);
+const CustomerType = initCustomerType(sequelize);
+const CustomerAttribute = initCustomerAttribute(sequelize);
 const AdminRefreshToken = initAdminRefreshToken(sequelize);
 const Designation = initDesignation(sequelize);
+const Product = initProduct(sequelize);
+const ProductCategory = initProductCategory(sequelize);
+const ProductBrand = initProductBrand(sequelize);
+const ProductAttribute = initProductAttribute(sequelize);
+const ProductMedia = initProductMedia(sequelize);
+const UOM = initUOM(sequelize);
 
 // Store models in an object
 const db: any = {
@@ -117,8 +135,17 @@ const db: any = {
   Feedback,
   Image,
   Customer,
+  CustomerMedia,
+  CustomerType,
+  CustomerAttribute,
   AdminRefreshToken,
   Designation,
+  Product,
+  ProductCategory,
+  ProductBrand,
+  ProductAttribute,
+  ProductMedia,
+  UOM,
   sequelize,
   Sequelize,
   connectionManager,
@@ -190,8 +217,17 @@ export {
   Feedback,
   Image,
   Customer,
+  CustomerMedia,
+  CustomerAttribute,
+  CustomerType,
   AdminRefreshToken,
   Designation,
+  Product,
+  ProductCategory,
+  ProductBrand,
+  ProductAttribute,
+  ProductMedia,
+  UOM,
   connectionManager,
 };
 

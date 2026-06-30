@@ -24,6 +24,9 @@ router.post('/sync/status', syncController.getSyncStatus.bind(syncController));
 router.post('/reports/getGPSHistory', reportController.getAppGpsHistory.bind(reportController));
 router.post('/reports/getAttendance', reportController.getAppAttendance.bind(reportController));
 
+router.post('/sync/getCustomers', syncController.getCustomers.bind(syncController));
+router.post('/sync/getProducts', syncController.getProducts.bind(syncController));
+
 router.post('/sync/uploadMedia', upload.single('media'), syncController.uploadMedia.bind(syncController));
 router.post('/sync/uploadMultipleMedia', upload.array('media', 10), syncController.uploadMultipleMedia.bind(syncController));
 
