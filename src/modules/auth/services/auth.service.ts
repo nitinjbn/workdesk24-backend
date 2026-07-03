@@ -21,8 +21,9 @@ interface RegisterDto {
   password: string;
   name?: string;
   roleId?: number;
+  designationId?: number;
   mobile?: string;
-  employeeId?: string;
+  employeeCode?: string;
   reportingManagerId?: number;
   profileImageUrl?: string;
   joiningDate?: number;
@@ -73,7 +74,7 @@ type AuthUser = NonNullable<Awaited<ReturnType<typeof userRepository.findById>>>
 
 export class AuthService {
   async register(data: RegisterDto): Promise<AuthResponse> {
-    const { hostId, email, password, name, roleId, mobile, employeeId, reportingManagerId, profileImageUrl, joiningDate } = data;
+    const { hostId, email, password, name, roleId, designationId, mobile, employeeCode, reportingManagerId, profileImageUrl, joiningDate } = data;
 
     const exists = await userRepository.existsByEmail(email);
     if (exists) {
@@ -86,8 +87,9 @@ export class AuthService {
       password,
       name,
       roleId,
+      designationId,
       mobile,
-      employeeId,
+      employeeCode,
       reportingManagerId,
       profileImageUrl,
       joiningDate,

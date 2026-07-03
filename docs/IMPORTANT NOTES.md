@@ -16,3 +16,4 @@ railway link (To link production railway project on local cli)
 railway run npm start (To run railway production app from local)
 railway run printenv (To print railway production app env variables on local)
 railway logs (To check production app logs on local)
+To check any route on server, search text in HTTP Logs: @path:/api/v1/app/sync/attendance
