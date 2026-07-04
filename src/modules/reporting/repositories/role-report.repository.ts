@@ -19,17 +19,19 @@ export class roleRepository {
       isDeleted:0
     }
 
-    if(filter.roleId || filter.id) {
-      filter.id = filter.roleId || filter.id;
-    }
-
-    if(filter.roleName) {
-      where.roleName = {
-        [Op.like]: `%${filter.roleName.trim()}%`,
+    if(filter) {
+      if(filter.roleId || filter.id) {
+        filter.id = filter.roleId || filter.id;
       }
-    }
-    if(filter.roleCode) {
-      where.roleCode = filter.roleCode;
+
+      if(filter.roleName) {
+        where.roleName = {
+          [Op.like]: `%${filter.roleName.trim()}%`,
+        }
+      }
+      if(filter.roleCode) {
+        where.roleCode = filter.roleCode;
+      }
     }
    
     const query: FindAndCountOptions<RoleInstance> = {

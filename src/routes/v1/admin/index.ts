@@ -7,6 +7,7 @@ import userController from '../../../modules/admin/controllers/user.controller';
 import inquiryController from '../../../modules/public/controllers/inquiry.controller';
 import reportController from '../../../modules/reporting/controllers/report.controller';
 import { User, Inquiry } from '../../../models/index';
+import productController from '../../../modules/reporting/controllers/product.controller';
 
 const router = Router();
 
@@ -32,8 +33,20 @@ router.post('/inquiries/delete', inquiryController.deleteInquiry.bind(inquiryCon
 
 router.post('/reports/getGPSHistory', reportController.getAdminGpsHistory.bind(reportController));
 router.post('/reports/getAttendance', reportController.getAdminAttendance.bind(reportController));
-router.post('/reports/getUsers', reportController.getAppUsers.bind(reportController));
-router.post('/reports/getUserDetails', reportController.getUserDetails.bind(reportController));
+
+router.post('/users/getUsers', reportController.getAppUsers.bind(reportController));
+router.post('/users/getUserDetails', reportController.getUserDetails.bind(reportController));
+
+router.post('/users/getDesignations', reportController.getDesignations.bind(reportController));
+router.post('/users/getRoles', reportController.getRoles.bind(reportController));
+
+// Product related routes
+router.post('/products/getCategories', productController.getCategories.bind(productController));
+router.post('/products/getBrands', productController.getBrands.bind(productController));
+router.post('/products/getProducts', productController.getProducts.bind(productController));
+router.post('/products/getProductDetails', productController.getProductDetails.bind(productController));
+router.post('/products/getProductMedia', productController.getProductMedia.bind(productController));
+router.post('/products/getProductAttributes', productController.getProductAttributes.bind(productController));
 
 router.post('/dashboard/stats', async (req, res, next) => {
   try {

@@ -236,12 +236,19 @@ Allowed sort directions:
 
 ## 10) Response Format
 
+The outer API envelope still uses `data`, but the inner report payload key now depends on the endpoint:
+- `gpsHistory` for GPS history reports
+- `attendance` for attendance reports
+- `users` for user list reports
+- `designations` for designations reports
+- `user` for user detail reports
+
 ```json
 {
   "success": true,
   "message": "...report retrieved successfully",
   "data": {
-    "data": [],
+    "gpsHistory": [],
     "pagination": {
       "total": 0,
       "page": 1,

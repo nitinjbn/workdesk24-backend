@@ -48,12 +48,23 @@ export class AttendanceReportRepository {
       logging: console.log, // Enable logging for debugging
     };
 
-    const { rows, count } = await Attendance.findAndCountAll(query);
+    if(page && limit) {
+      query.limit = limit;
+      query.offset = offset;
 
-    return {
-      data: rows,
-      pagination: baseReportHelper.buildPagination(count, page, limit),
-    };
+      const { rows, count } = await Attendance.findAndCountAll(query);
+
+      return {
+        data: rows,
+        pagination: baseReportHelper.buildPagination(count, page, limit),
+      };
+      
+    } else {
+      const rows = await Attendance.findAll(query);
+      return {
+        data: rows
+      };
+    }
   }
 
   private buildWhere(filter: AttendanceReportFilter, userId?: number): Record<string, unknown> {

@@ -181,6 +181,55 @@ export class usersRepository {
     const data = await User.findOne(query);
     return data || {};
   }
+
+  async getDesignations(params: {hostId: number, page?: number, limit?: number, filter?: any, sortBy: CommonReportSortBy, sortOrder: ReportSortDirection}): Promise<ReportResponse<any>> {
+    const { hostId, page, limit, filter={}, sortBy, sortOrder } = params;
+    const { offset } = baseReportHelper.normalizePagination({ page, limit });
+    const order = buildCommonReportOrder(sortBy, sortOrder, {
+      createdAt: 'createdAt'
+    });
+    const where:any = {
+      hostId,
+      isDeleted:0
+    }
+    if(filter.isEnabled!==undefined) {
+      where.isEnabled = filter.isEnabled;
+    } else {
+      where.isEnabled = 1;
+    }
+    if(filter.name) {
+      where.name = {
+        [Op.like]: `%${filter.name.trim()}%`,
+      }
+    }
+    const query: FindAndCountOptions<any> = {
+      attributes: {
+        exclude: ['isEnabled', 'isDeleted', 'deletedAt', 'createdAt', 'updatedAt'],
+      },
+      where,
+      order,
+      raw: true,
+      logging: console.log, // Enable logging for debugging
+    };
+
+    if(page && limit) {
+      query.limit = limit;
+      query.offset = offset;
+
+      const { rows, count } = await Designation.findAndCountAll(query);
+
+      return {
+        data: rows,
+        pagination: baseReportHelper.buildPagination(count, page, limit),
+      };
+
+    } else {
+      const rows = await Designation.findAll(query);
+      return {
+        data: rows
+      };
+    }
+  }
 }
 
 export default new usersRepository();

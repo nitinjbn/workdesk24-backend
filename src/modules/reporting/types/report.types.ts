@@ -26,14 +26,22 @@ export interface ReportPaginationMeta {
   previousPage: number | null;
 }
 
-export interface ReportResponse<T> {
-  data: T[];
+export type ReportResponse<T, K extends string = 'data'> = {
+  [P in K]: T[];
+} & {
   pagination?: ReportPaginationMeta;
-}
+};
 
-export interface SingleRecordResponse<T> {
-  data: {};
-}
+export type SingleRecordResponse<T, K extends string = 'data'> = {
+  [P in K]: T | Record<string, never>;
+};
+
+export type GpsHistoryReportResponse<T> = ReportResponse<T, 'gpsHistory'>;
+export type AttendanceReportResponse<T> = ReportResponse<T, 'attendance'>;
+export type UsersReportResponse<T> = ReportResponse<T, 'users'>;
+export type DesignationsReportResponse<T> = ReportResponse<T, 'designations'>;
+export type UserDetailsResponse<T> = SingleRecordResponse<T, 'user'>;
+export type RolesReportResponse<T> = ReportResponse<T, 'roles'>;
 
 export interface CreatedAtRangeFilter {
   from?: number | string;
@@ -112,4 +120,13 @@ export interface GetRoleDetailsByIdPayload {
 export interface ReportScope {
   hostId: number;
   requestUserId?: number;
+}
+
+export interface GetDesignationsPayload extends ReportPaginationParams, ReportSortParams {
+  hostId?: number;
+  filter?: {
+    id?: number;
+    name?: string;
+    isEnabled?: boolean;
+  };
 }

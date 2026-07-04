@@ -46,12 +46,23 @@ export class GpsHistoryReportRepository {
       distinct: true,
     };
 
-    const { rows, count } = await GpsHistory.findAndCountAll(query);
+    if(page && limit) {
+      query.limit = limit;
+      query.offset = offset;
 
-    return {
-      data: rows,
-      pagination: baseReportHelper.buildPagination(count, page, limit),
-    };
+      const { rows, count } = await GpsHistory.findAndCountAll(query);
+
+      return {
+        data: rows,
+        pagination: baseReportHelper.buildPagination(count, page, limit),
+      };
+      
+    } else {
+      const rows = await GpsHistory.findAll(query);
+      return {
+        data: rows,
+      };
+    }    
   }
 }
 

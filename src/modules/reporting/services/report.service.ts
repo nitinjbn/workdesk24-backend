@@ -1,10 +1,12 @@
 import gpsHistoryReportRepository from '../repositories/gps-history-report.repository';
 import attendanceReportRepository from '../repositories/attendance-report.repository';
 import {
+  AttendanceReportResponse,
   AttendanceReportFilter,
   AttendanceReportPayload,
   CommonReportSortBy,
   CommonReportSorting,
+  GpsHistoryReportResponse,
   GpsHistoryReportFilter,
   GpsHistoryReportPayload,
   ReportResponse,
@@ -27,13 +29,14 @@ export class ReportService {
   async getGpsHistoryReport(
     payload: GpsHistoryReportPayload,
     scope: ReportScope
-  ): Promise<ReportResponse<GpsHistoryInstance>> {
+  ): Promise<GpsHistoryReportResponse<GpsHistoryInstance>> {
     const { page, limit } = baseReportHelper.normalizePagination(payload);
     const filter = this.normalizeGpsHistoryFilter(payload);
     const hostId = this.resolveRequiredHostId(payload.hostId, scope.hostId);
     const userId = this.resolveEffectiveUserId(filter, scope);
     const enforceActiveUsersOnly = userId === undefined;
     const sorting = this.normalizeCommonSorting(payload);
+    //const { page, limit } = payload; // Commented because pagination is mandatory for this report and if not provided, it will default to page 1 and limit 10 in the repository.
 
     const report = await gpsHistoryReportRepository.getReport({
       hostId,
@@ -52,21 +55,22 @@ export class ReportService {
     );
 
     return {
-      ...report,
-      data: formatDateTimeFieldsBySettings(plainData, dateTimeSettings),
-    } as ReportResponse<GpsHistoryInstance>;
+      gpsHistory: formatDateTimeFieldsBySettings(plainData, dateTimeSettings),
+      pagination: report.pagination,
+    };
   }
 
   async getAttendanceReport(
     payload: AttendanceReportPayload,
     scope: ReportScope
-  ): Promise<ReportResponse<AttendanceInstance>> {
+  ): Promise<AttendanceReportResponse<AttendanceInstance>> {
     const { page, limit } = baseReportHelper.normalizePagination(payload);
     const filter = this.normalizeAttendanceFilter(payload);
     const hostId = this.resolveRequiredHostId(payload.hostId, scope.hostId);
     const userId = this.resolveEffectiveUserId(filter, scope);
     const enforceActiveUsersOnly = userId === undefined;
     const sorting = this.normalizeCommonSorting(payload);
+    //const { page, limit } = payload; // Commented because pagination is mandatory for this report and if not provided, it will default to page 1 and limit 10 in the repository.
 
     const report = await attendanceReportRepository.getReport({
       hostId,
@@ -85,9 +89,9 @@ export class ReportService {
     );
 
     return {
-      ...report,
-      data: formatDateTimeFieldsBySettings(plainData, dateTimeSettings),
-    } as ReportResponse<AttendanceInstance>;
+      attendance: formatDateTimeFieldsBySettings(plainData, dateTimeSettings),
+      pagination: report.pagination,
+    };
   }
 
   private normalizeGpsHistoryFilter(payload: GpsHistoryReportPayload): GpsHistoryReportFilter {

@@ -37,6 +37,26 @@ export class ReportController {
     );
   }
 
+  async getDesignations(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    await this.executeUserScopedReport(
+      req,
+      res,
+      next,
+      (payload, scope) => userService.getDesignations(payload as any, scope),
+      'Designations retrieved successfully'
+    );
+  }
+
+  async getRoles(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    await this.executeUserScopedReport(
+      req,
+      res,
+      next,
+      (payload, scope) => userService.getRoles(payload as any, scope),
+      'Roles retrieved successfully'
+    );
+  }
+
   async getAppAttendance(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     await this.executeUserScopedReport(
       req,
