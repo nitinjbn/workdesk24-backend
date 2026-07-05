@@ -1,6 +1,6 @@
 import { FindAndCountOptions, Op} from 'sequelize';
-import db, { Product, ProductAttribute, ProductBrand, ProductMedia, ProductCategory } from '../../../models';
-import { GetProductsPayload, GetProductDetailsByIdPayload, ReportResponse, SingleRecordResponse, ProductMediaResponse, GetProductMediaDetailsByIdPayload, GetProductAttributesDetailsByIdPayload, SaveProductMediaPayload} from '../types/product.types';
+import db, { Product, ProductAttribute, ProductBrand, ProductMedia, ProductCategory, UOM } from '../../../models';
+import { GetProductsPayload, GetProductDetailsByIdPayload, ReportResponse, SingleRecordResponse, ProductMediaResponse, GetProductMediaDetailsByIdPayload, GetProductAttributesDetailsByIdPayload, SaveProductMediaPayload, SaveProductAttributesPayload} from '../types/product.types';
 import baseReportHelper from '../helpers/base-report.helper';
 import { buildCommonReportOrder } from './user-scoped-report.helper';
 
@@ -34,7 +34,7 @@ export class productRepository {
     }
     const query: FindAndCountOptions<any> = {
       attributes: {
-        exclude: ['hostId', 'isDeleted', 'deletedAt'],
+        exclude: ['id', 'hostId', 'isDeleted', 'deletedAt'],
         include: [
           [db.Sequelize.col('ProductCategory.id'), 'categoryId']
         ]
@@ -89,7 +89,7 @@ export class productRepository {
     }
     const query: FindAndCountOptions<any> = {
       attributes: {
-        exclude: ['hostId', 'isDeleted', 'deletedAt'],
+        exclude: ['id', 'hostId', 'isDeleted', 'deletedAt'],
         include: [
           [db.Sequelize.col('ProductBrand.id'), 'brandId']
         ]
@@ -111,6 +111,75 @@ export class productRepository {
       };
     } else {
       const rows = await ProductBrand.findAll(query);
+      return {
+        data: rows
+      };
+    }
+  }
+
+  async getUOM(params: { hostId: number, filter?: Record<string, unknown>, page?: number, limit?: number, sortBy?: string, sortOrder?: 'ASC' | 'DESC' }): Promise<ReportResponse<any>> {
+    const { page, limit, filter, hostId, sortBy, sortOrder } = params;
+    const { offset } = baseReportHelper.normalizePagination({ page, limit });
+    // const order = buildCommonReportOrder(sortBy as any, sortOrder, {
+    //   createdAt: 'createdAt'
+    // });
+    let order=[];
+    if(sortBy && sortOrder) {
+      order = [[sortBy, sortOrder]]
+    }
+
+    const where:any = {
+      hostId: {
+        [Op.or]: [
+          { [Op.in]: [hostId, 0] },
+          { [Op.is]: null }
+        ] // Include UOMs with hostId 0 (global), specific hostId, and NULL hostId
+      },
+      isDeleted:0
+    }
+    if(filter?.isEnabled !== undefined) {
+      where.isEnabled = filter.isEnabled;
+    } else {
+      where.isEnabled = 1; // Default to only enabled UOMs if not specified
+    }
+    
+    if(filter) {
+      if(filter.id || filter.uomId) {
+        where.id = filter.uomId || filter.id;
+      }
+      if(filter.uomCode) {
+        where.uomCode = filter.uomCode;
+      }
+      if(filter.uomName) {
+        where.uomName = {
+          [Op.like]: `%${(filter.uomName as string).trim()}%`,
+        }
+      }
+    }
+    const query: FindAndCountOptions<any> = {
+      attributes: {
+        exclude: ['id', 'hostId', 'isDeleted', 'deletedAt'],
+        include: [
+          [db.Sequelize.col('UOM.id'), 'uomId']
+        ]
+      },
+      where,
+      order,
+      logging: console.log, // Enable logging for debugging
+    };
+
+    if(page && limit) {
+      query.limit = limit;
+      query.offset = offset;
+
+      const { rows, count } = await UOM.findAndCountAll(query);
+
+      return {
+        data: rows,
+        pagination: baseReportHelper.buildPagination(count, page, limit),
+      };
+    } else {
+      const rows = await UOM.findAll(query);
       return {
         data: rows
       };
@@ -169,7 +238,8 @@ export class productRepository {
         include: [
           [db.Sequelize.col('Product.id'), 'productId'],
           [db.Sequelize.col('productCategoryDetails.categoryName'), 'category'],
-          [db.Sequelize.col('productBrandDetails.brandName'), 'brand']
+          [db.Sequelize.col('productBrandDetails.brandName'), 'brand'],
+          [db.Sequelize.col('productUOMDetails.uomName'), 'uom']
         ]
       },
       where,
@@ -191,6 +261,15 @@ export class productRepository {
           },
           as: "productBrandDetails",
           required: true
+        },
+        {
+          attributes:[],
+          model: UOM,
+          where: {
+            isDeleted: 0
+          },
+          as: "productUOMDetails",
+          required: false
         },
         {
           attributes: {
@@ -408,6 +487,63 @@ export class productRepository {
     });
 
     return newMedia;
+  }
+
+  async updateProductMedia(params: any): Promise<any> {
+    const { updatePayload, where } = params;
+    const updateResult = await ProductMedia.update(updatePayload, {
+      where
+    });
+
+    return updateResult;
+  }
+
+  async saveProductAttributes(params: SaveProductAttributesPayload): Promise<any[]> {
+    const { hostId, productId, attributes, createdAt } = params;
+
+    if (!attributes?.length) {
+      return [];
+    }
+
+    const rows = attributes.map((attribute) => ({
+      hostId,
+      productId,
+      attributeGroup: attribute.attributeGroup,
+      attributeName: attribute.attributeName,
+      attributeValue: attribute.attributeValue,
+      attributeType: attribute.attributeType,
+      attributeUomId: attribute.attributeUomId,
+      sortOrder: attribute.sortOrder,
+      isEnabled: attribute.isEnabled,
+      createdAt,
+    }));
+
+    return ProductAttribute.bulkCreate(rows);
+  }
+
+  async createProduct(params: any): Promise<any> {
+    const { hostId, productCode, productName, shortName, categoryId, brandId, uomId, sku, barcode, hsnCode, purchasePrice, sellingPrice, mrp, taxPercentage, remarks, isEnabled, createdAt } = params;
+    const newProduct = await Product.create({
+      hostId,
+      productCode,
+      productName,
+      shortName,
+      categoryId,
+      brandId,
+      uomId,
+      sku,
+      barcode,
+      hsnCode,
+      purchasePrice,
+      sellingPrice,
+      mrp,
+      taxPercentage,
+      remarks,
+      isEnabled,
+      createdAt
+    });
+
+    return newProduct;
   }
 }
 

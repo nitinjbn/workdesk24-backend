@@ -79,6 +79,34 @@ export class ProductService {
     };
   }
 
+  async getUOM(
+    payload: { hostId: number, filter?: Record<string, unknown>, page?: number, limit?: number, sorting?: CommonReportSorting },
+    scope: ReportScope
+  ): Promise<{ uom: any[], pagination?: any }> {
+    
+    const { hostId, filter, page, limit } = payload;
+    const sorting = this.normalizeCommonSorting(payload);
+
+    const report = await productRepository.getUOM({
+      hostId,
+      page,
+      limit,
+      filter,
+      sortBy: sorting?.sortBy,
+      sortOrder: sorting?.sortOrder,
+    });
+
+    const dateTimeSettings = await getHostDateTimeSettings(hostId);
+    const plainData = report.data.map((item: any) =>
+      item && typeof item.toJSON === 'function' ? item.toJSON() : item
+    );
+
+    return {
+      uom: formatDateTimeFieldsBySettings(plainData, dateTimeSettings),
+      pagination: report.pagination,
+    };
+  }
+
   async getProducts(
     payload: GetProductsPayload,
     scope: ReportScope
@@ -217,6 +245,62 @@ export class ProductService {
       });
 
     return result;
+  }
+
+  async createProduct(payload: any, scope: ReportScope): Promise<any> {
+    const { productMedia, productAttribute, ...otherPayload } = payload;
+    const currentUnixTime = DateTimeFormatUtil.getCurrentUnixTime();
+
+    const createProductResult = await productRepository.createProduct({
+      hostId: otherPayload.hostId,
+      productCode: otherPayload.productCode,
+      productName: otherPayload.productName,
+      shortName: otherPayload.shortName,
+      categoryId: otherPayload.categoryId,
+      brandId: otherPayload.brandId,
+      uomId: otherPayload.uomId,
+      sku: otherPayload.sku,
+      barcode: otherPayload.barcode,
+      hsnCode: otherPayload.hsnCode,
+      purchasePrice: otherPayload.purchasePrice,
+      sellingPrice: otherPayload.sellingPrice,
+      mrp: otherPayload.mrp,
+      taxPercentage: otherPayload.taxPercentage,
+      remarks: otherPayload.remarks,
+      isEnabled: otherPayload.isEnabled,
+      createdAt: currentUnixTime
+    });
+
+    if (createProductResult?.id) {
+      if (productMedia && Array.isArray(productMedia)) {
+        //Now product is created, so we can save the media with the productId
+        for (const media of productMedia) {
+          await productRepository.updateProductMedia({
+            updatePayload: {
+              productId: createProductResult.id,
+              isEnabled: media.isEnabled || 1, // Default to enabled if not provided
+              updatedAt: currentUnixTime
+            },
+            where: {
+              id: media.mediaId,
+              hostId: otherPayload.hostId
+            }
+          });
+        }
+      }
+
+      if (productAttribute && Array.isArray(productAttribute)) {
+        // Now product is created, so we can save the attributes with the productId
+        await productRepository.saveProductAttributes({
+          hostId: otherPayload.hostId,
+          productId: createProductResult.id,
+          attributes: productAttribute,
+          createdAt: currentUnixTime
+        });
+      }
+    }
+
+    return createProductResult;
   }
 }
 

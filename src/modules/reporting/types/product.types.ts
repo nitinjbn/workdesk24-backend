@@ -117,3 +117,27 @@ export interface SaveProductMediaPayload {
   isEnabled?: number;
   createdAt?: number;
 }
+
+export interface SaveProductAttributePayload {
+  hostId: number;
+  productId: number;
+  attributeName: string;
+  attributeValue: string;
+  isEnabled?: number;
+  createdAt?: number;
+}
+
+export interface SaveProductAttributesPayload {
+  hostId: number;
+  productId: number;
+  attributes: Array<{
+    attributeGroup: string;
+    attributeName: string;
+    attributeValue: string;
+    attributeType: 'TEXT' | 'NUMBER' | 'DECIMAL' | 'DATE' | 'BOOLEAN' | 'JSON';
+    attributeUomId?: number;
+    sortOrder?: number;
+    isEnabled?: number;
+  }>;
+  createdAt?: number;
+}

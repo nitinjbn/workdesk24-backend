@@ -24,6 +24,16 @@ export class ProductController {
       'Product brands retrieved successfully'
     );
   }
+
+  async getUOM(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    await this.executeUserScopedReport(
+      req,
+      res,
+      next,
+      (payload, scope) => productService.getUOM(payload as any, scope),
+      'Product UOM retrieved successfully'
+    );
+  }
   
   async getProducts(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     await this.executeUserScopedReport(
@@ -127,8 +137,8 @@ export class ProductController {
         fileName: file.originalname,
         fileSizeInBytes: file.size,
         mimeType: file.mimetype,
-        isPrimary: isPrimary,
-        sortOrder: sortOrder,
+        isPrimary: isPrimary || 0,
+        sortOrder: sortOrder || 0,
         isEnabled: isEnabled || 0
       });
       console.log('####################### Media saved to database:', saveMedia);
@@ -153,6 +163,16 @@ export class ProductController {
         error: error.message,
       } as ApiResponse);
     }
+  }
+
+  async createProduct(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    await this.executeUserScopedReport(
+      req,
+      res,
+      next,
+      (payload, scope) => productService.createProduct(payload as any, scope),
+      'Product created successfully'
+    );
   }
 
   private getResourceType(mimeType: string): string {
