@@ -3,9 +3,7 @@ import { ApiResponse } from '../../../shared/types/base.types';
 import { AuthRequest } from '../../../shared/types/auth.types';
 import { GetUsersPayload } from '../types/master.types';
 import userService from '../services/user.service';
-import cloudinary from '../../../config/cloudinary';
-import productService from '../services/product.service';
-
+import { uploadBufferToMediaStorage } from '../../../shared/utils/media-storage.util';
 export class UserController {
 
   async getAppUsers(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
@@ -70,33 +68,21 @@ export class UserController {
 
   async createAppUser(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { hostId, name, email, mobile, password, reportingManagerId, roleId, designationId, joiningDate, isActive } =  req.body;
+      const { hostId, name, email, employeeCode, mobile, password, reportingManagerId, roleId, designationId, joiningDate, isActive } =  req.body;
       const file = req.file as Express.Multer.File | undefined;
 
       let profileImageUrl = "";
       if(file) {
-        const result = await new Promise<any>((resolve, reject) => {
-          const uploadStream = cloudinary.uploader.upload_stream(
-            { folder: `${hostId}/users`, resource_type: this.getResourceType(file.mimetype) },
-            (error: any, uploadResult: any) => {
-              if (error) {
-                reject(error);
-                return;
-              }
-              resolve(uploadResult);
-            }
-          );
-
-          uploadStream.end(file.buffer);
-        });
+        const result = await uploadBufferToMediaStorage(file, `${hostId}/users`);
         console.log('####################### Media uploaded to Cloudinary:', result);
-        profileImageUrl = result.secure_url;
+        profileImageUrl = result.url;
       }      
 
       const createUserResult = await userService.createAppUser({
         hostId,
         name,
         email,
+        employeeCode,
         mobile,
         password,
         reportingManagerId,
@@ -114,6 +100,7 @@ export class UserController {
         data: {
           userId: createUserResult.id,
           name: createUserResult.name,
+          employeeCode: createUserResult.employeeCode,
           email: createUserResult.email,
           mobile: createUserResult.mobile,
           profileImageUrl: createUserResult.profileImageUrl,
@@ -149,18 +136,6 @@ export class UserController {
       } as ApiResponse);
     } catch (error) {
       next(error);
-    }
-  }
-
-  private getResourceType(mimeType: string): string {
-    if (mimeType.startsWith('image/')) {
-      return 'image';
-    } else if (mimeType.startsWith('video/')) {
-      return 'video';
-    } else if (mimeType.startsWith('audio/')) {
-      return 'video'; // Treat audio as video for Cloudinary
-    } else {
-      return 'auto'; // Let cloudinary handle
     }
   }
 }

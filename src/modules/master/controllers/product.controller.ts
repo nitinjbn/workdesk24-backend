@@ -2,7 +2,10 @@ import { Response, NextFunction } from 'express';
 import productService from '../services/product.service';
 import { ApiResponse } from '../../../shared/types/base.types';
 import { AuthRequest } from '../../../shared/types/auth.types';
-import cloudinary from '../../../config/cloudinary';
+import {
+  getMediaResourceType,
+  uploadBufferToMediaStorage,
+} from '../../../shared/utils/media-storage.util';
 
 export class ProductController {
   async getCategories(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
@@ -112,28 +115,15 @@ export class ProductController {
         return;
       }
 
-      const result = await new Promise<any>((resolve, reject) => {
-        const uploadStream = cloudinary.uploader.upload_stream(
-          { folder: `${hostId}/products`, resource_type: this.getResourceType(file.mimetype) },
-          (error: any, uploadResult: any) => {
-            if (error) {
-              reject(error);
-              return;
-            }
-            resolve(uploadResult);
-          }
-        );
-
-        uploadStream.end(file.buffer);
-      });
+      const result = await uploadBufferToMediaStorage(file, `${hostId}/products`);
       console.log('####################### Media uploaded to Cloudinary:', result);
 
       const saveMedia = await productService.saveProductMedia({
         hostId,
         productId: productId || 0,
-        mediaUrl: result.secure_url,
-        mediaType: mediaType || this.getResourceType(file.mimetype).toUpperCase(),
-        publicId: result.public_id,
+        mediaUrl: result.url,
+        mediaType: mediaType || getMediaResourceType(file.mimetype).toUpperCase(),
+        publicId: result.fileId,
         fileName: file.originalname,
         fileSizeInBytes: file.size,
         mimeType: file.mimetype,
@@ -147,8 +137,8 @@ export class ProductController {
         success: true,
         message: 'Media uploaded successfully',
         data: {
-          url: result.secure_url,
-          public_id: result.public_id,
+          url: result.url,
+          public_id: result.fileId,
           mediaId: saveMedia.id,
           isTemporary: !saveMedia.isEnabled,
           fileName: saveMedia.fileName,
@@ -175,17 +165,6 @@ export class ProductController {
     );
   }
 
-  private getResourceType(mimeType: string): string {
-    if (mimeType.startsWith('image/')) {
-      return 'image';
-    } else if (mimeType.startsWith('video/')) {
-      return 'video';
-    } else if (mimeType.startsWith('audio/')) {
-      return 'video'; // Treat audio as video for Cloudinary
-    } else {
-      return 'auto'; // Let cloudinary handle
-    }
-  }
 }
 
 export default new ProductController();

@@ -2,7 +2,10 @@ import { Response, NextFunction } from 'express';
 import syncService from '../services/sync.service';
 import { ApiResponse } from '../../../shared/types/base.types';
 import { AuthRequest } from '../../../shared/types/auth.types';
-import cloudinary from '../../../config/cloudinary';
+import {
+  uploadBufferToMediaStorage,
+  uploadManyBuffersToMediaStorage,
+} from '../../../shared/utils/media-storage.util';
 
 export class SyncController {
   async syncAttendance(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
@@ -230,18 +233,6 @@ export class SyncController {
     }
   }
 
-  private getResourceType(mimeType: string): string {
-    if (mimeType.startsWith('image/')) {
-      return 'image';
-    } else if (mimeType.startsWith('video/')) {
-      return 'video';
-    } else if (mimeType.startsWith('audio/')) {
-      return 'video'; // Treat audio as video for Cloudinary
-    } else {
-      return 'auto'; // Let cloudinary handle
-    }
-  }
-
   async uploadMedia(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const userId = req.user!.id;
@@ -255,27 +246,14 @@ export class SyncController {
         return;
       }
 
-      const result = await new Promise<any>((resolve, reject) => {
-        const uploadStream = cloudinary.uploader.upload_stream(
-          { folder: 'uploads', resource_type: this.getResourceType(file.mimetype) },
-          (error: any, uploadResult: any) => {
-            if (error) {
-              reject(error);
-              return;
-            }
-            resolve(uploadResult);
-          }
-        );
-
-        uploadStream.end(file.buffer);
-      });
+      const result = await uploadBufferToMediaStorage(file, 'uploads');
 
       res.json({
         success: true,
         message: 'Media uploaded successfully',
         data: {
-          url: result.secure_url,
-          public_id: result.public_id,
+          url: result.url,
+          public_id: result.fileId,
         },
       } as ApiResponse);
     } catch (error: any) {
@@ -300,35 +278,12 @@ export class SyncController {
         return;
       }
 
-      const uploadResults = await Promise.allSettled(files.map(file => {
-        return new Promise<any>((resolve, reject) => {
-          const uploadStream = cloudinary.uploader.upload_stream(
-            { folder: 'uploads', resource_type: this.getResourceType(file.mimetype) },
-            (error: any, uploadResult: any) => {
-              if (error) {
-                reject(error);
-                return;
-              }
-              resolve(uploadResult);
-            }
-          );
-
-          uploadStream.end(file.buffer);
-        });
+      const uploadResults = await uploadManyBuffersToMediaStorage(files, 'uploads');
+      const successfulUploads = uploadResults.successful.map((result) => ({
+        url: result.url,
+        public_id: result.fileId,
       }));
-
-      const successfulUploads = uploadResults
-        .filter((result): result is PromiseFulfilledResult<any> => result.status === 'fulfilled')
-        .map(result => ({
-          url: result.value.secure_url,
-          public_id: result.value.public_id,
-        }));
-
-      const failedUploads = uploadResults
-        .filter((result): result is PromiseRejectedResult => result.status === 'rejected')
-        .map(result => ({
-          error: result.reason?.message || String(result.reason),
-        }));
+      const failedUploads = uploadResults.failed;
 
       if (failedUploads.length > 0) {
         res.status(500).json({
