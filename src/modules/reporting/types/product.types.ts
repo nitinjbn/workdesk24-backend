@@ -102,3 +102,18 @@ export interface GetProductAttributesDetailsByIdPayload {
     isEnabled?: boolean;
   }
 }
+
+export interface SaveProductMediaPayload {
+  hostId: number;
+  productId: number;
+  mediaUrl: string;
+  mediaType: "IMAGE" | "VIDEO" | "PDF" | "DOCUMENT" | "BROCHURE" | "CERTIFICATE" | "LABEL" | "MANUAL";
+  publicId?: string;
+  fileName?: string;
+  fileSizeInBytes?: number;
+  mimeType?: string;
+  isPrimary?: number;
+  sortOrder?: number;
+  isEnabled?: number;
+  createdAt?: number;
+}

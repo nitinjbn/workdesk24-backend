@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import multer from 'multer';
 import rateLimitConfig from '../../../config/rateLimit';
 import { authMiddleware, requireAdminRole } from '../../../shared/middleware/auth.middleware';
 import { requireAdminCsrfToken } from '../../../shared/middleware/csrf.middleware';
@@ -10,6 +11,7 @@ import { User, Inquiry } from '../../../models/index';
 import productController from '../../../modules/reporting/controllers/product.controller';
 
 const router = Router();
+const upload = multer({ storage: multer.memoryStorage() });
 
 router.post('/login', rateLimitConfig.auth, adminAuthController.login.bind(adminAuthController));
 router.post('/refresh', rateLimitConfig.auth, requireAdminCsrfToken, adminAuthController.refresh.bind(adminAuthController));
@@ -47,6 +49,7 @@ router.post('/products/getProducts', productController.getProducts.bind(productC
 router.post('/products/getProductDetails', productController.getProductDetails.bind(productController));
 router.post('/products/getProductMedia', productController.getProductMedia.bind(productController));
 router.post('/products/getProductAttributes', productController.getProductAttributes.bind(productController));
+router.post('/products/uploadMedia', upload.single('media'), productController.uploadMedia.bind(productController));
 
 router.post('/dashboard/stats', async (req, res, next) => {
   try {

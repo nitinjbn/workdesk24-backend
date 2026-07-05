@@ -1,6 +1,6 @@
 import { FindAndCountOptions, Op} from 'sequelize';
 import db, { Product, ProductAttribute, ProductBrand, ProductMedia, ProductCategory } from '../../../models';
-import { GetProductsPayload, GetProductDetailsByIdPayload, ReportResponse, SingleRecordResponse, ProductMediaResponse, GetProductMediaDetailsByIdPayload, GetProductAttributesDetailsByIdPayload} from '../types/product.types';
+import { GetProductsPayload, GetProductDetailsByIdPayload, ReportResponse, SingleRecordResponse, ProductMediaResponse, GetProductMediaDetailsByIdPayload, GetProductAttributesDetailsByIdPayload, SaveProductMediaPayload} from '../types/product.types';
 import baseReportHelper from '../helpers/base-report.helper';
 import { buildCommonReportOrder } from './user-scoped-report.helper';
 
@@ -388,6 +388,26 @@ export class productRepository {
     return {
       data: attributeDetails
     };
+  }
+
+  async saveProductMedia(params: SaveProductMediaPayload): Promise<any> {
+    const { hostId, productId, mediaUrl, mediaType, publicId, fileName, fileSizeInBytes, mimeType, isPrimary, sortOrder, isEnabled, createdAt } = params;
+    const newMedia = await ProductMedia.create({
+      hostId,
+      productId,
+      mediaUrl,
+      mediaType,
+      publicId,
+      fileName,
+      fileSizeInBytes,
+      mimeType,
+      isPrimary,
+      sortOrder,
+      isEnabled,
+      createdAt
+    });
+
+    return newMedia;
   }
 }
 

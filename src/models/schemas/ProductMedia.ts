@@ -44,7 +44,7 @@ export function initProductMedia(sequelize: Sequelize): typeof ProductMedia {
       },
       productId: {
         type: DataTypes.BIGINT,
-        allowNull: false,
+        allowNull: true,
       },
       mediaUrl: {
         type: DataTypes.STRING(255),

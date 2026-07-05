@@ -9,7 +9,8 @@ import {
   ReportScope,
   GetProductsReportResponse,
   ProductMediaResponse,
-  ProductAttributesResponse
+  ProductAttributesResponse,
+  SaveProductMediaPayload
 } from '../types/product.types';
 import { Product } from '../../../models/schemas';
 import baseReportHelper from '../helpers/base-report.helper';
@@ -17,6 +18,7 @@ import { createConfiguredError } from '../../../shared/utils/error.util';
 import { getHostDateTimeSettings } from '../../../shared/utils/host-settings.util';
 import { formatDateTimeFieldsBySettings } from '../../../shared/utils/date-time-format.util';
 import { CONFIG } from '../../../config/constants';
+import { DateTimeFormatUtil } from '../../../shared/utils/date-time-format.util';
 
 type ProductInstance = typeof Product.prototype;
 
@@ -194,6 +196,27 @@ export class ProductService {
     //   sortBy,
     //   sortOrder: baseReportHelper.normalizeSortDirection(requestedSortOrder),
     // };
+  }
+
+  async saveProductMedia(payload: SaveProductMediaPayload): Promise<any> {
+    console.log('############################# saveProductMedia payload:', payload);
+    const { hostId, productId, mediaUrl, mediaType, publicId, fileName, fileSizeInBytes, mimeType, isPrimary, sortOrder, isEnabled  } = payload;
+      const result = await productRepository.saveProductMedia({
+        hostId,
+        productId,
+        mediaUrl,
+        mediaType,
+        publicId,
+        fileName,
+        fileSizeInBytes,
+        mimeType,
+        isPrimary,
+        sortOrder,
+        isEnabled,
+        createdAt: DateTimeFormatUtil.getCurrentUnixTime()
+      });
+
+    return result;
   }
 }
 
