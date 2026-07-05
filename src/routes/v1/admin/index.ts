@@ -1,17 +1,15 @@
 import { Router } from 'express';
-import multer from 'multer';
 import rateLimitConfig from '../../../config/rateLimit';
 import { authMiddleware, requireAdminRole } from '../../../shared/middleware/auth.middleware';
 import { requireAdminCsrfToken } from '../../../shared/middleware/csrf.middleware';
 import adminAuthController from '../../../modules/admin/controllers/auth.controller';
-import userController from '../../../modules/master/controllers/user.controller';
-import inquiryController from '../../../modules/public/controllers/inquiry.controller';
-import reportController from '../../../modules/reporting/controllers/report.controller';
-import { User, Inquiry } from '../../../models/index';
-import productController from '../../../modules/master/controllers/product.controller';
+import userRoutes from './users.routes';
+import productRoutes from './products.routes';
+import reportRoutes from './reports.routes';
+import inquiryRoutes from './inquiries.routes';
+import dashboardRoutes from './dashboard.routes';
 
 const router = Router();
-const upload = multer({ storage: multer.memoryStorage() });
 
 router.post('/login', rateLimitConfig.auth, adminAuthController.login.bind(adminAuthController));
 router.post('/refresh', rateLimitConfig.auth, requireAdminCsrfToken, adminAuthController.refresh.bind(adminAuthController));
@@ -21,89 +19,10 @@ router.use(authMiddleware);
 router.use(requireAdminRole);
 router.use(requireAdminCsrfToken);
 
-// router.post('/users/list', userController.getAllUsers.bind(userController));
-// router.post('/users/get', userController.getUserById.bind(userController));
-// router.post('/users/update', userController.updateUser.bind(userController));
-// router.post('/users/delete', userController.deleteUser.bind(userController));
-
-router.post('/inquiries/list', inquiryController.getAllInquiries.bind(inquiryController));
-router.post('/inquiries/get', inquiryController.getInquiryById.bind(inquiryController));
-router.post('/inquiries/update', inquiryController.updateInquiry.bind(inquiryController));
-router.post('/inquiries/status', inquiryController.updateInquiryStatus.bind(inquiryController));
-router.post('/inquiries/assign', inquiryController.assignInquiry.bind(inquiryController));
-router.post('/inquiries/delete', inquiryController.deleteInquiry.bind(inquiryController));
-
-// Report related routes
-router.post('/reports/getGPSHistory', reportController.getAdminGpsHistory.bind(reportController));
-router.post('/reports/getAttendance', reportController.getAdminAttendance.bind(reportController));
-
-// User related routes
-router.post('/users/getDesignations', userController.getDesignations.bind(userController));
-router.post('/users/getRoles', userController.getRoles.bind(userController));
-router.post('/users/getUsers', userController.getAppUsers.bind(userController));
-router.post('/users/getUserDetails', userController.getUserDetails.bind(userController));
-router.post('/users/createUser', upload.single('media'), userController.createAppUser.bind(userController));
-
-// Product related routes
-router.post('/products/getCategories', productController.getCategories.bind(productController));
-router.post('/products/getBrands', productController.getBrands.bind(productController));
-router.post('/products/getUOM', productController.getUOM.bind(productController));
-router.post('/products/getProducts', productController.getProducts.bind(productController));
-router.post('/products/getProductDetails', productController.getProductDetails.bind(productController));
-router.post('/products/getProductMedia', productController.getProductMedia.bind(productController));
-router.post('/products/getProductAttributes', productController.getProductAttributes.bind(productController));
-router.post('/products/uploadMedia', upload.single('media'), productController.uploadMedia.bind(productController));
-router.post('/products/createProduct', productController.createProduct.bind(productController));
-
-router.post('/dashboard/stats', async (req, res, next) => {
-  try {
-    const [totalUsers, totalInquiries, pendingInquiries, resolvedInquiries] = await Promise.all([
-      User.count(),
-      Inquiry.count(),
-      Inquiry.count({ where: { status: 'pending' } }),
-      Inquiry.count({ where: { status: 'resolved' } }),
-    ]);
-
-    res.json({
-      success: true,
-      message: 'Dashboard statistics retrieved successfully',
-      data: {
-        totalUsers,
-        totalInquiries,
-        pendingInquiries,
-        resolvedInquiries,
-        inProgressInquiries: totalInquiries - pendingInquiries - resolvedInquiries,
-      },
-    });
-  } catch (error) {
-    next(error);
-  }
-});
-
-router.post('/dashboard/recent-inquiries', async (req, res, next) => {
-  try {
-    const { limit = 5 } = req.body;
-
-    const inquiries = await Inquiry.findAll({
-      limit: parseInt(String(limit)),
-      order: [['createdAt', 'DESC']],
-      include: [
-        {
-          model: User,
-          as: 'assignedAdmin',
-          attributes: ['id', 'name', 'email'],
-        },
-      ],
-    });
-
-    res.json({
-      success: true,
-      message: 'Recent inquiries retrieved successfully',
-      data: inquiries,
-    });
-  } catch (error) {
-    next(error);
-  }
-});
+router.use(userRoutes);
+router.use(productRoutes);
+router.use(reportRoutes);
+router.use(inquiryRoutes);
+router.use(dashboardRoutes);
 
 export default router;
