@@ -2,8 +2,7 @@ import { Response, NextFunction } from 'express';
 import reportService from '../services/report.service';
 import { ApiResponse } from '../../../shared/types/base.types';
 import { AuthRequest } from '../../../shared/types/auth.types';
-import { AttendanceReportPayload, GpsHistoryReportPayload, GetUsersPayload } from '../types/report.types';
-import userService from '../services/user.service';
+import { AttendanceReportPayload, GpsHistoryReportPayload } from '../types/report.types';
 
 export class ReportController {
   async getAdminGpsHistory(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
@@ -37,26 +36,6 @@ export class ReportController {
     );
   }
 
-  async getDesignations(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
-    await this.executeUserScopedReport(
-      req,
-      res,
-      next,
-      (payload, scope) => userService.getDesignations(payload as any, scope),
-      'Designations retrieved successfully'
-    );
-  }
-
-  async getRoles(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
-    await this.executeUserScopedReport(
-      req,
-      res,
-      next,
-      (payload, scope) => userService.getRoles(payload as any, scope),
-      'Roles retrieved successfully'
-    );
-  }
-
   async getAppAttendance(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     await this.executeUserScopedReport(
       req,
@@ -65,26 +44,6 @@ export class ReportController {
       (payload, scope) => reportService.getAttendanceReport(payload as AttendanceReportPayload, scope),
       'Attendance report retrieved successfully',
       true
-    );
-  }
-
-  async getAppUsers(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
-    await this.executeUserScopedReport(
-      req,
-      res,
-      next,
-      (payload, scope) => userService.getAppUsers(payload as GetUsersPayload, scope),
-      'Users retrieved successfully'
-    );
-  }
-
-  async getUserDetails(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
-    await this.executeUserScopedReport(
-      req,
-      res,
-      next,
-      (payload, scope) => userService.getUserDetails(payload as any, scope),
-      'User details retrieved successfully'
     );
   }
 

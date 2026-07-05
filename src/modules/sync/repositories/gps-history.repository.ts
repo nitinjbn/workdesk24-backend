@@ -33,5 +33,3 @@ export class GpsHistoryRepository extends BaseRepository<typeof GpsHistory.proto
     });
   }
 }
-
-export default new GpsHistoryRepository();

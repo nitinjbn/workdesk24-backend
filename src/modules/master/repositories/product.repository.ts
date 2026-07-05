@@ -1,6 +1,6 @@
 import { FindAndCountOptions, Op} from 'sequelize';
 import db, { Product, ProductAttribute, ProductBrand, ProductMedia, ProductCategory, UOM } from '../../../models';
-import { GetProductsPayload, GetProductDetailsByIdPayload, ReportResponse, SingleRecordResponse, ProductMediaResponse, GetProductMediaDetailsByIdPayload, GetProductAttributesDetailsByIdPayload, SaveProductMediaPayload, SaveProductAttributesPayload} from '../types/product.types';
+import { GetProductsPayload, GetProductDetailsByIdPayload, ReportResponse, SingleRecordResponse, ProductMediaResponse, GetProductMediaDetailsByIdPayload, GetProductAttributesDetailsByIdPayload, SaveProductMediaPayload, SaveProductAttributesPayload} from '../types/master.types';
 import baseReportHelper from '../helpers/base-report.helper';
 import { buildCommonReportOrder } from './user-scoped-report.helper';
 

@@ -11,7 +11,7 @@ import {
   ProductMediaResponse,
   ProductAttributesResponse,
   SaveProductMediaPayload
-} from '../types/product.types';
+} from '../types/master.types';
 import { Product } from '../../../models/schemas';
 import baseReportHelper from '../helpers/base-report.helper';
 import { createConfiguredError } from '../../../shared/utils/error.util';

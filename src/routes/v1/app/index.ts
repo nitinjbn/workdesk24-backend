@@ -11,6 +11,7 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 router.use(authMiddleware);
 
+// Sync related routes
 router.post('/sync/attendance', syncController.syncAttendance.bind(syncController));
 router.post('/sync/gps-history', syncController.syncGpsHistory.bind(syncController));
 router.post('/sync/visits', syncController.syncVisits.bind(syncController));
@@ -21,14 +22,14 @@ router.post('/sync/images', resolveVisitLocalId(), syncController.syncImages.bin
 router.post('/sync/all', syncController.syncAll.bind(syncController));
 router.post('/sync/get-updates', syncController.getUpdates.bind(syncController));
 router.post('/sync/status', syncController.getSyncStatus.bind(syncController));
-router.post('/reports/getGPSHistory', reportController.getAppGpsHistory.bind(reportController));
-router.post('/reports/getAttendance', reportController.getAppAttendance.bind(reportController));
-
 router.post('/sync/getCustomers', syncController.getCustomers.bind(syncController));
 router.post('/sync/getProducts', syncController.getProducts.bind(syncController));
-
 router.post('/sync/uploadMedia', upload.single('media'), syncController.uploadMedia.bind(syncController));
 router.post('/sync/uploadMultipleMedia', upload.array('media', 10), syncController.uploadMultipleMedia.bind(syncController));
+
+// Report related routes
+router.post('/reports/getGPSHistory', reportController.getAppGpsHistory.bind(reportController));
+router.post('/reports/getAttendance', reportController.getAppAttendance.bind(reportController));
 
 router.post('/profile/get', (req: AuthRequest, res) => {
   res.json({

@@ -3,7 +3,6 @@ import {
   CommonReportSortBy,
   CommonReportSorting,
   DesignationsReportResponse,
-  ReportResponse,
   ReportScope,
   UserDetailsResponse,
   UserScopedReportPayload,
@@ -12,12 +11,13 @@ import {
   GetRolesPayload,
   UsersReportResponse,
   RolesReportResponse,
-} from '../types/report.types';
+  SingleRecordResponse,
+} from '../types/master.types';
 import { User, Designation, Role } from '../../../models/schemas';
 import baseReportHelper from '../helpers/base-report.helper';
 import { createConfiguredError } from '../../../shared/utils/error.util';
 import { getHostDateTimeSettings } from '../../../shared/utils/host-settings.util';
-import { formatDateTimeFieldsBySettings } from '../../../shared/utils/date-time-format.util';
+import { DateTimeFormatUtil, formatDateTimeFieldsBySettings } from '../../../shared/utils/date-time-format.util';
 import { CONFIG } from '../../../config/constants';
 import roleRepository from '../repositories/role-report.repository';
 
@@ -139,6 +139,66 @@ export class UserService {
       roles: roles.data,
       pagination: roles.pagination,
     };
+  }
+
+  async getRoleDetailsById(
+    payload: { hostId: number, roleId: number },
+    scope: ReportScope
+  ): Promise<any> {
+    let { hostId, roleId } = payload;
+    const roleDetails = await roleRepository.getRoleById({
+      roleId,
+      hostId
+    });
+    return {
+      role: roleDetails.data,
+    };
+  }
+
+  async getRoleDetailsByCode(
+    payload: { hostId: number, roleCode: string },
+    scope: ReportScope
+  ): Promise<any> {
+    let { hostId, roleCode } = payload;
+    const roleDetails = await roleRepository.getRoleByCode({
+      roleCode,
+      hostId
+    });
+    return {
+      role: roleDetails.data,
+    };
+  }
+
+  async createAppUser(payload: any): Promise<any> {
+    const { hostId, name, employeeCode, email, mobile, password, reportingManagerId, roleId, designationId, profileImageUrl, joiningDate, isActive } = payload;
+    const currentUnixTime = DateTimeFormatUtil.getCurrentUnixTime();
+
+    const appUserRoleDetails = await roleRepository.getRoleByCode({
+      roleCode:CONFIG.AUTH.APP.LOGIN.ALLOWED_ROLES[0],
+      hostId
+    });
+    console.log('############# appUserRoleDetails:', appUserRoleDetails);
+    if (!appUserRoleDetails?.data?.id) {
+      throw new Error('Invalid role details');
+    }
+
+    const createAppUserResult = await usersRepository.createAppUser({
+      hostId,
+      name,
+      email,
+      mobile,
+      password,
+      employeeCode,
+      roleId: appUserRoleDetails?.data?.id,
+      reportingManagerId,
+      designationId,
+      profileImageUrl,
+      joiningDate,
+      isActive,
+      createdAt: currentUnixTime
+    });
+
+    return createAppUserResult;
   }
 }
 

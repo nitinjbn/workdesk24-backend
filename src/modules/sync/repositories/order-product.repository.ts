@@ -30,5 +30,3 @@ export class OrderProductRepository extends BaseRepository<typeof OrderProduct.p
     }
   }
 }
-
-export default new OrderProductRepository();

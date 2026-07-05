@@ -1,6 +1,6 @@
 import { FindAndCountOptions, Includeable , Op} from 'sequelize';
 import db, { User, Role, Designation } from '../../../models';
-import { CommonReportSortBy, GetUsersFilter, ReportResponse, ReportSortDirection, SingleRecordResponse } from '../types/report.types';
+import { CommonReportSortBy, GetUsersFilter, ReportResponse, ReportSortDirection, SingleRecordResponse } from '../types/master.types';
 import baseReportHelper from '../helpers/base-report.helper';
 import { buildCommonReportOrder } from './user-scoped-report.helper';
 
@@ -229,6 +229,27 @@ export class usersRepository {
         data: rows
       };
     }
+  }
+
+  async createAppUser(params: any): Promise<any> {
+    const { hostId, name, employeeCode, email, mobile, password, reportingManagerId, roleId, designationId, profileImageUrl, joiningDate, isActive, createdAt } = params;
+    const newUser = await User.create({
+      hostId,
+      name,
+      employeeCode,
+      email,
+      mobile,
+      password,
+      reportingManagerId,
+      roleId,
+      designationId,
+      profileImageUrl,
+      joiningDate,
+      isActive,
+      createdAt
+    });
+
+    return newUser;
   }
 }
 

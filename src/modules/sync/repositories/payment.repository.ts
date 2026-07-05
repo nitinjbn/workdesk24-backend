@@ -33,5 +33,3 @@ export class PaymentRepository extends BaseRepository<typeof Payment.prototype> 
     });
   }
 }
-
-export default new PaymentRepository();

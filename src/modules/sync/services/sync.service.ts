@@ -1,14 +1,26 @@
-import attendanceRepository from '../../staff/repositories/attendance.repository';
-import gpsHistoryRepository from '../../staff/repositories/gps-history.repository';
-import visitRepository from '../../staff/repositories/visit.repository';
-import orderRepository from '../../staff/repositories/order.repository';
-import orderProductRepository from '../../staff/repositories/order-product.repository';
-import paymentRepository from '../../staff/repositories/payment.repository';
-import feedbackRepository from '../../staff/repositories/feedback.repository';
-import imageRepository from '../../staff/repositories/image.repository';
-import customersRepository from '../../staff/repositories/customers.repository';
-import productsRepository from '../../staff/repositories/products.repository';
+import { 
+  AttendanceRepository, 
+  GpsHistoryRepository, 
+  VisitRepository, 
+  OrderRepository, 
+  OrderProductRepository, 
+  PaymentRepository, 
+  FeedbackRepository, 
+  ImageRepository, 
+  CustomerRepository, 
+  ProductRepository } from '../repositories';
 import { resolveVisitLocalIdForRecord } from '../../../shared/utils/visit-local-id-resolver';
+
+const attendanceRepository = new AttendanceRepository();
+const gpsHistoryRepository = new GpsHistoryRepository();
+const visitRepository = new VisitRepository();
+const orderRepository = new OrderRepository();
+const orderProductRepository = new OrderProductRepository();
+const paymentRepository = new PaymentRepository();
+const feedbackRepository = new FeedbackRepository();
+const imageRepository = new ImageRepository();
+const customerRepository = new CustomerRepository();
+const productRepository = new ProductRepository();
 
 interface SyncRecord {
   localId?: string;
@@ -280,11 +292,11 @@ export class SyncService {
   }
 
   async getCustomers(payload: {userId: number, hostId: number}): Promise<any> {
-    return await customersRepository.getCustomers(payload);
+    return await customerRepository.getCustomers(payload);
   }
 
   async getProducts(payload: {userId: number, hostId: number}): Promise<any> {
-    return await productsRepository.getProducts(payload);
+    return await productRepository.getProducts(payload);
   }
 }
 

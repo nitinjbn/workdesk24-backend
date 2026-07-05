@@ -140,7 +140,7 @@ export function initUser(sequelize: Sequelize): typeof User {
       },
       updatedAt: {
         type: DataTypes.BIGINT,
-        allowNull: false
+        allowNull: true
       },
       isDeleted: {
         type: DataTypes.TINYINT,

@@ -33,5 +33,3 @@ export class VisitRepository extends BaseRepository<typeof Visit.prototype> {
     });
   }
 }
-
-export default new VisitRepository();

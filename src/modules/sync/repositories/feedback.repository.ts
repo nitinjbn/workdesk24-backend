@@ -21,5 +21,3 @@ export class FeedbackRepository extends BaseRepository<typeof Feedback.prototype
     } as WhereOptions<typeof Feedback.prototype>);
   }
 }
-
-export default new FeedbackRepository();

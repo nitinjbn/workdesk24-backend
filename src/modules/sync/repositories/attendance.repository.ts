@@ -40,5 +40,3 @@ export class AttendanceRepository extends BaseRepository<typeof Attendance.proto
     } as WhereOptions<typeof Attendance.prototype>);
   }
 }
-
-export default new AttendanceRepository();

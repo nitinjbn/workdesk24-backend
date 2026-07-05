@@ -1,6 +1,6 @@
 import { FindAndCountOptions, Op} from 'sequelize';
 import { Role } from '../../../models';
-import { GetRolesPayload, GetRoleDetailsByIdPayload, ReportResponse, SingleRecordResponse} from '../types/report.types';
+import { GetRolesPayload, GetRoleDetailsByIdPayload, ReportResponse, SingleRecordResponse, GetRoleDetailsByCodePayload } from '../types/master.types';
 import baseReportHelper from '../helpers/base-report.helper';
 import { buildCommonReportOrder } from './user-scoped-report.helper';
 
@@ -67,6 +67,29 @@ export class roleRepository {
 
     const where:any = {
       id: roleId,
+      hostId,
+      isDeleted:0
+    }
+   
+    const query: FindAndCountOptions<RoleInstance> = {
+      attributes: {
+        exclude: ['isDeleted', 'deletedAt'],
+      },
+      where,
+      logging: console.log, // Enable logging for debugging
+    };
+
+    const roleDetails = await Role.findOne(query);
+    return {
+      data: roleDetails || {}
+    };
+  }
+
+  async getRoleByCode(params: GetRoleDetailsByCodePayload): Promise<SingleRecordResponse<RoleInstance>> {
+    const { hostId, roleCode } = params;
+
+    const where:any = {
+      roleCode: roleCode,
       hostId,
       isDeleted:0
     }

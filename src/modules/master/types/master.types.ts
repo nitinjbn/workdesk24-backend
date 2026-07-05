@@ -45,6 +45,86 @@ export type GetProductsReportResponse<T> = ReportResponse<T, 'products'>;
 export type ProductDetailsResponse<T> = SingleRecordResponse<T, 'product'>;
 export type ProductMediaResponse<T> = SingleRecordResponse<T, 'media'>;
 export type ProductAttributesResponse<T> = SingleRecordResponse<T, 'attributes'>;
+export type UsersReportResponse<T> = ReportResponse<T, 'users'>;
+export type DesignationsReportResponse<T> = ReportResponse<T, 'designations'>;
+export type UserDetailsResponse<T> = SingleRecordResponse<T, 'user'>;
+export type RolesReportResponse<T> = ReportResponse<T, 'roles'>;
+
+export interface GetUsersPayload extends ReportPaginationParams, ReportSortParams {
+  hostId?: number;
+  filter?: GetUsersFilter;
+}
+
+export interface GetUsersFilter {
+  id?: number,
+  userId?: number,
+  employeeId?: string,
+  name?: string,
+  email?: string,
+  mobile?: number,
+  isActive?: boolean,
+  roleCode?: string[],
+  searchKey?: string
+}
+
+export interface GetRolesPayload {
+  hostId: number;
+  page?: number;
+  limit?: number;
+  filter?: {
+    id?: number;
+    roleId?: number;
+    roleCode?: string;
+    roleName?: string;
+  };
+  sortBy: CommonReportSortBy;
+  sortOrder: ReportSortDirection;
+}
+
+
+
+export interface CreatedAtRangeFilter {
+  from?: number | string;
+  to?: number | string;
+  start?: number | string;
+  end?: number | string;
+  gte?: number | string;
+  lte?: number | string;
+  eq?: number | string;
+}
+
+
+export interface UserScopedReportFilter {
+  userId?: number | string;
+  createdAt?: number | string | CreatedAtRangeFilter;
+  [key: string]: unknown;
+}
+
+export interface UserScopedReportPayload extends ReportPaginationParams, ReportSortParams {
+  hostId?: number | string;
+  userId?: number | string;
+  createdAt?: number | string | CreatedAtRangeFilter;
+  filter?: UserScopedReportFilter;
+}
+
+export interface GetRoleDetailsByIdPayload {
+  hostId: number;
+  roleId: number;
+} 
+
+export interface GetRoleDetailsByCodePayload {
+  hostId: number;
+  roleCode: string;
+}
+
+export interface GetDesignationsPayload extends ReportPaginationParams, ReportSortParams {
+  hostId?: number;
+  filter?: {
+    id?: number;
+    name?: string;
+    isEnabled?: boolean;
+  };
+}
 
 export type CommonReportSortBy = 'createdAt' | 'batteryPercentage' | 'speed' | 'userName';
 

@@ -4,11 +4,11 @@ import rateLimitConfig from '../../../config/rateLimit';
 import { authMiddleware, requireAdminRole } from '../../../shared/middleware/auth.middleware';
 import { requireAdminCsrfToken } from '../../../shared/middleware/csrf.middleware';
 import adminAuthController from '../../../modules/admin/controllers/auth.controller';
-import userController from '../../../modules/admin/controllers/user.controller';
+import userController from '../../../modules/master/controllers/user.controller';
 import inquiryController from '../../../modules/public/controllers/inquiry.controller';
 import reportController from '../../../modules/reporting/controllers/report.controller';
 import { User, Inquiry } from '../../../models/index';
-import productController from '../../../modules/reporting/controllers/product.controller';
+import productController from '../../../modules/master/controllers/product.controller';
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -33,14 +33,16 @@ router.post('/inquiries/status', inquiryController.updateInquiryStatus.bind(inqu
 router.post('/inquiries/assign', inquiryController.assignInquiry.bind(inquiryController));
 router.post('/inquiries/delete', inquiryController.deleteInquiry.bind(inquiryController));
 
+// Report related routes
 router.post('/reports/getGPSHistory', reportController.getAdminGpsHistory.bind(reportController));
 router.post('/reports/getAttendance', reportController.getAdminAttendance.bind(reportController));
 
-router.post('/users/getUsers', reportController.getAppUsers.bind(reportController));
-router.post('/users/getUserDetails', reportController.getUserDetails.bind(reportController));
-
-router.post('/users/getDesignations', reportController.getDesignations.bind(reportController));
-router.post('/users/getRoles', reportController.getRoles.bind(reportController));
+// User related routes
+router.post('/users/getDesignations', userController.getDesignations.bind(userController));
+router.post('/users/getRoles', userController.getRoles.bind(userController));
+router.post('/users/getUsers', userController.getAppUsers.bind(userController));
+router.post('/users/getUserDetails', userController.getUserDetails.bind(userController));
+router.post('/users/createUser', upload.single('media'), userController.createAppUser.bind(userController));
 
 // Product related routes
 router.post('/products/getCategories', productController.getCategories.bind(productController));

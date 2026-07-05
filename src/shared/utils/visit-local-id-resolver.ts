@@ -1,4 +1,5 @@
-import visitRepository from '../../modules/staff/repositories/visit.repository';
+import { VisitRepository } from '../../modules/sync/repositories';
+const visitRepository = new VisitRepository();
 
 export type RecordWithVisitLocalId = {
   visitLocalId?: string;

@@ -31,5 +31,3 @@ export class ImageRepository extends BaseRepository<typeof Image.prototype> {
     });
   }
 }
-
-export default new ImageRepository();

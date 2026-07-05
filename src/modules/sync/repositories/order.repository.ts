@@ -33,5 +33,3 @@ export class OrderRepository extends BaseRepository<typeof Order.prototype> {
     });
   }
 }
-
-export default new OrderRepository();
