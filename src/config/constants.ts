@@ -26,4 +26,10 @@ export const CONFIG = {
         },
     },
   },
+  USER: {
+    MOBILE: {
+      DEFAULT_COUNTRY: 'IN',
+      ALLOWED_TYPES: ['MOBILE', 'FIXED_LINE_OR_MOBILE'],
+    },
+  }
 };

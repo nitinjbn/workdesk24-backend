@@ -4,6 +4,7 @@ import { AuthRequest } from '../../../shared/types/auth.types';
 import { GetUsersPayload } from '../types/master.types';
 import userService from '../services/user.service';
 import { uploadBufferToMediaStorage } from '../../../shared/utils/media-storage.util';
+import { PhoneUtil } from '../../../shared/utils/phone.util';
 export class UserController {
 
   async getAppUsers(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
@@ -136,6 +137,44 @@ export class UserController {
       } as ApiResponse);
     } catch (error) {
       next(error);
+    }
+  }
+
+  async validateMobile(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { mobile, defaultCountry } = req.body;
+      // TODO: Get the default country from wd_hosts based on the hostId in the request
+      const validationResult = PhoneUtil.validate(mobile, defaultCountry);
+      if (!validationResult.success) {
+        res.status(400).json({
+          success: false,
+          message: validationResult.message,
+        } as ApiResponse);
+        return;
+      } else {
+
+        // TODO: Check if the mobile number already exists in the database for the given hostId
+
+        res.json({
+          success: true,
+          message: 'Mobile number is valid.',
+          data: {
+            e164: validationResult.e164,
+            country: validationResult.country,
+            countryCode: validationResult.countryCode,
+            nationalNumber: validationResult.nationalNumber,
+            international: validationResult.international,
+            national: validationResult.national,
+            type: validationResult.type
+          }
+        } as ApiResponse);
+      }
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Caught error in validating mobile number',
+        error: error.message,
+      } as ApiResponse);
     }
   }
 }
