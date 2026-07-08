@@ -1,5 +1,5 @@
 import { FindAndCountOptions, Includeable , Op} from 'sequelize';
-import db, { User, Role, Designation } from '../../../models';
+import db, { User, UserSettings, Role, Designation } from '../../../models';
 import { CommonReportSortBy, GetUsersFilter, ReportResponse, ReportSortDirection, SingleRecordResponse } from '../types/master.types';
 import baseReportHelper from '../helpers/base-report.helper';
 import { buildCommonReportOrder } from './user-scoped-report.helper';
@@ -27,10 +27,10 @@ export class usersRepository {
       hostId,
       isDeleted:0
     }
-    if(filter.isActive!==undefined) {
-      where.isActive = filter.isActive;
+    if(filter.accountStatus!==undefined) {
+      where.accountStatus = filter.accountStatus;
     } else {
-      where.isActive = 1;
+      where.accountStatus = 'ACTIVE';
     }
 
     if(filter.userId || filter.id) {
@@ -84,7 +84,7 @@ export class usersRepository {
    
     const query: FindAndCountOptions<UserInstance> = {
       attributes: {
-        exclude: ['id', 'roleId', 'designationId', 'password', 'reportingManagerId', 'isActive', 'isDeleted', 'deletedAt'],
+        exclude: ['id', 'roleId', 'designationId', 'password', 'reportingManagerId', 'accountStatus', 'isDeleted', 'deletedAt'],
         include: [
           [db.Sequelize.col('User.id'), 'userId'],
           [db.Sequelize.col('role.roleName'), 'role'],
@@ -93,6 +93,15 @@ export class usersRepository {
       },
       where,
       include: [
+        {
+          attributes: ['settingName', 'settingValue', 'isEnabled'],
+          model: UserSettings,
+          where: {
+            isDeleted: 0
+          },
+          as: "settings",
+          required: false
+        },
         {
           attributes:[],
           model: Role,
@@ -111,7 +120,7 @@ export class usersRepository {
         }
       ],
       order,
-      raw: true,
+      raw: false,
       logging: console.log, // Enable logging for debugging
     };
 
@@ -121,15 +130,38 @@ export class usersRepository {
 
       const { rows, count } = await User.findAndCountAll(query);
 
+      const cleanedRows = rows.map(row => {
+        const jsonRow = row.toJSON() as any;
+        if(jsonRow.settings && Array.isArray(jsonRow.settings)) {
+          jsonRow.settings = jsonRow.settings.map((s: any) => ({
+            settingName: s.settingName,
+            settingValue: s.settingValue,
+            isEnabled: s.isEnabled
+          }));
+        }
+        return jsonRow;
+      });
+
       return {
-        data: rows,
+        data: cleanedRows as any,
         pagination: baseReportHelper.buildPagination(count, page, limit),
       };
 
     } else {
       const rows = await User.findAll(query);
+      const cleanedRows = rows.map(row => {
+        const jsonRow = row.toJSON() as any;
+        if(jsonRow.settings && Array.isArray(jsonRow.settings)) {
+          jsonRow.settings = jsonRow.settings.map((s: any) => ({
+            settingName: s.settingName,
+            settingValue: s.settingValue,
+            isEnabled: s.isEnabled
+          }));
+        }
+        return jsonRow;
+      });
       return {
-        data: rows
+        data: cleanedRows as any
       };
     }
   }
@@ -146,7 +178,7 @@ export class usersRepository {
    
     const query: FindAndCountOptions<UserInstance> = {
       attributes: {
-        exclude: ['id', 'roleId', 'designationId', 'password', 'reportingManagerId', 'isDeleted', 'deletedAt'],
+        exclude: ['id', 'roleId', 'designationId', 'password', 'reportingManagerId', 'accountStatus', 'isDeleted', 'deletedAt'],
         include: [
           [db.Sequelize.col('User.id'), 'userId'],
           [db.Sequelize.col('role.roleName'), 'role'],
@@ -155,6 +187,15 @@ export class usersRepository {
       },
       where,
       include: [
+        {
+          attributes: ['settingName', 'settingValue', 'isEnabled'],
+          model: UserSettings,
+          where: {
+            isDeleted: 0
+          },
+          as: "settings",
+          required: false
+        },
         {
           attributes:[],
           model: Role,
@@ -174,12 +215,25 @@ export class usersRepository {
           required: true
         }
       ],
-      raw: true,
+      subQuery: false,
+      raw: false,
       logging: console.log, // Enable logging for debugging
     };
 
     const data = await User.findOne(query);
-    return data || {};
+    if (!data) {
+      return {};
+    }
+    
+    const jsonData = data.toJSON() as any;
+    if(jsonData.settings && Array.isArray(jsonData.settings)) {
+      jsonData.settings = jsonData.settings.map((s: any) => ({
+        settingName: s.settingName,
+        settingValue: s.settingValue,
+        isEnabled: s.isEnabled
+      }));
+    }
+    return jsonData;
   }
 
   async getDesignations(params: {hostId: number, page?: number, limit?: number, filter?: any, sortBy: CommonReportSortBy, sortOrder: ReportSortDirection}): Promise<ReportResponse<any>> {
@@ -232,12 +286,13 @@ export class usersRepository {
   }
 
   async createAppUser(params: any): Promise<any> {
-    const { hostId, name, employeeCode, email, mobile, password, reportingManagerId, roleId, designationId, profileImageUrl, joiningDate, isActive, createdAt } = params;
+    const { hostId, name, employeeCode, email, countryCode, mobile, password, reportingManagerId, roleId, designationId, profileImageUrl, joiningDate, accountStatus, createdAt, gender, addressLine1, addressLine2, landmark, country, state, city, district, pinCode, timezone } = params;
     const newUser = await User.create({
       hostId,
       name,
       employeeCode,
       email,
+      countryCode,
       mobile,
       password,
       reportingManagerId,
@@ -245,12 +300,72 @@ export class usersRepository {
       designationId,
       profileImageUrl,
       joiningDate,
-      isActive,
+      accountStatus,
+      accountStatusUpdatedAt:createdAt,
+      gender,
+      addressLine1,
+      addressLine2,
+      landmark,
+      country,
+      state,
+      city,
+      district,
+      pinCode,
+      timezone,
+      isDeleted: 0,
       createdAt
     });
 
     return newUser;
   }
+
+  async getUserByFilter(params: { filter: any}): Promise<any> {
+    const { filter } = params;
+    if(!filter) {
+      throw new Error('Filter is required');
+    }
+    const where:any = filter;
+    where.isDeleted = 0;
+    const user = await User.findOne({
+      where,
+      raw: true,
+      logging: console.log, // Enable logging for debugging
+    });
+    return user || {};
+  }
+
+  async createUserSettings(params: {
+    userId: number;
+    settings: Array<{ settingName: string; settingValue: string; isEnabled?: number }>;
+    createdAt?: number;
+  }): Promise<any[]> {
+    const { userId, settings, createdAt } = params;
+
+    if(!settings || !Array.isArray(settings) || settings.length === 0) {
+      return [];
+    }
+
+    if(!userId) {
+      throw new Error('userId is required');
+    }
+
+    const now = createdAt || Date.now() / 1000; // Current Unix timestamp in seconds
+
+    const records = settings.map((s) => ({
+      userId,
+      settingName: s.settingName,
+      settingValue: s.settingValue,
+      isEnabled: s.isEnabled || 1, // Default to 1 if not provided
+      isDeleted: 0,
+      createdAt: now,
+      updatedAt: now,
+    }));
+
+    const created = await UserSettings.bulkCreate(records);
+    return created;
+  }
+
+  
 }
 
 export default new usersRepository();

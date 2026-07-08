@@ -13,7 +13,7 @@ export class UserRepository extends BaseRepository<typeof User.prototype> {
     return this.model.create({
       ...data,
       role: (data as any).role || 'user',
-      isActive: (data as any).isActive !== undefined ? (data as any).isActive : 1,
+      accountStatus: (data as any).accountStatus !== undefined ? (data as any).accountStatus : 'ACTIVE',
       lastLoginAt: (data as any).lastLoginAt || null,
       createdAt: now,
       updatedAt: now,

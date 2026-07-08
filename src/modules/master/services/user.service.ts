@@ -20,6 +20,8 @@ import { getHostDateTimeSettings } from '../../../shared/utils/host-settings.uti
 import { DateTimeFormatUtil, formatDateTimeFieldsBySettings } from '../../../shared/utils/date-time-format.util';
 import { CONFIG } from '../../../config/constants';
 import roleRepository from '../repositories/role-report.repository';
+import { CommonUtil } from '../../../shared/utils/common.util';
+import { PhoneUtil } from '../../../shared/utils/phone.util';
 
 type UserInstance = typeof User.prototype;
 type DesignationInstance = typeof Designation.prototype;
@@ -47,9 +49,21 @@ export class UserService {
     });
 
     const dateTimeSettings = await getHostDateTimeSettings(hostId);
-    const plainData = report.data.map((item: any) =>
-      item && typeof item.toJSON === 'function' ? item.toJSON() : item
-    );
+    const plainData = report.data.map((item: any) => {
+      const userData = item && typeof item.toJSON === 'function' ? item.toJSON() : item;
+      // Convert settings array to key-value object
+      if (userData.settings && Array.isArray(userData.settings)) {
+        userData.settings = CommonUtil.convertSettingsToObject(userData.settings);
+
+        // If weeklyOffMask is present, convert it to weeklyOffDays and remove weeklyOffMask
+        if(userData.settings?.weeklyOffMask) {
+          userData.settings.weeklyOffDays = DateTimeFormatUtil.getWeeklyOffDays(userData.settings.weeklyOffMask);
+          delete userData.settings.weeklyOffMask;
+        }
+      }
+      
+      return userData;
+    });
 
     return {
       users: formatDateTimeFieldsBySettings(plainData, dateTimeSettings),
@@ -67,6 +81,17 @@ export class UserService {
       hostId,
       userId
     });
+
+    // Convert settings array to key-value object
+    if (userDetails.settings && Array.isArray(userDetails.settings)) {
+      userDetails.settings = CommonUtil.convertSettingsToObject(userDetails.settings);
+
+      // If weeklyOffMask is present, convert it to weeklyOffDays and remove weeklyOffMask
+      if(userDetails.settings?.weeklyOffMask) {
+        userDetails.settings.weeklyOffDays = DateTimeFormatUtil.getWeeklyOffDays(userDetails.settings.weeklyOffMask);
+        delete userDetails.settings.weeklyOffMask;
+      }
+    }
 
     const dateTimeSettings = await getHostDateTimeSettings(hostId);
     return {
@@ -170,36 +195,88 @@ export class UserService {
   }
 
   async createAppUser(payload: any): Promise<any> {
-    const { hostId, name, employeeCode, email, mobile, password, reportingManagerId, roleId, designationId, profileImageUrl, joiningDate, isActive } = payload;
-    const currentUnixTime = DateTimeFormatUtil.getCurrentUnixTime();
+    const { hostId, name, employeeCode, email, mobile, password, reportingManagerId, designationId, profileImageUrl, joiningDate, gender, accountStatus, addressLine1, addressLine2, landmark, country, state, city, district, pinCode, timezone } = payload;
 
+    let settings = payload.settings;
+    if(settings && typeof settings !== 'object') {
+      settings = CommonUtil.parseJsonField(settings);
+
+      // If weeklyOffDays is present, convert it to getWeeklyOffMask and remove weeklyOffDays
+      if(settings?.weeklyOffDays) {
+        settings.weeklyOffMask = DateTimeFormatUtil.getWeeklyOffMask(settings.weeklyOffDays);
+        delete settings.weeklyOffDays;
+      }
+    }
+    //console.log("#################################### settings after processing:", settings);
+
+    const currentUnixTime = DateTimeFormatUtil.getCurrentUnixTime();
     const appUserRoleDetails = await roleRepository.getRoleByCode({
       roleCode:CONFIG.AUTH.APP.LOGIN.ALLOWED_ROLES[0],
       hostId
     });
-    console.log('############# appUserRoleDetails:', appUserRoleDetails);
-    if (!appUserRoleDetails?.data?.id) {
+    //console.log('############# appUserRoleDetails:', appUserRoleDetails);
+    const roleId = appUserRoleDetails?.data?.id;
+    if (!roleId) {
       throw new Error('Invalid role details');
+    }
+
+    const validationResult = PhoneUtil.validate(mobile, country);
+    //console.log('############# Phone validation result:', validationResult);
+    if (!validationResult.success) {
+      throw new Error(validationResult.message || 'Invalid mobile number');
     }
 
     const createAppUserResult = await usersRepository.createAppUser({
       hostId,
       name,
       email,
-      mobile,
+      countryCode: validationResult.countryCode,
+      mobile: validationResult.e164 || mobile,
       password,
       employeeCode,
-      roleId: appUserRoleDetails?.data?.id,
+      roleId,
       reportingManagerId,
       designationId,
       profileImageUrl,
       joiningDate,
-      isActive,
+      gender,
+      accountStatus,
+      addressLine1,
+      addressLine2,
+      landmark,
+      country,
+      state,
+      city,
+      district,
+      pinCode,
+      timezone,
       createdAt: currentUnixTime
     });
 
-    return createAppUserResult;
+    if (!createAppUserResult) {
+      throw new Error('Failed to create app user');
+    }
+
+    const createUserSettingsResult = await usersRepository.createUserSettings({
+      userId: createAppUserResult.id,
+      settings: CommonUtil.convertSettingsToArray(settings),
+      createdAt: currentUnixTime
+    });
+
+    return { user: createAppUserResult, settings: createUserSettingsResult };
   }
+
+  // async getUserByMobile(payload: { hostId: number, mobile: string }): Promise<SingleRecordResponse<UserInstance>> {
+  //   const { hostId, mobile } = payload;
+  //   const userDetails = await usersRepository.getUserByFilter({
+  //     mobile,
+  //     accountStatus: 'ACTIVE',
+  //     isDeleted: 0
+  //   });
+  //   return {
+  //     user: userDetails.data,
+  //   };
+  // }
 }
 
 export default new UserService();

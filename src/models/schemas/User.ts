@@ -10,15 +10,39 @@ interface UserAttributes extends BaseModel {
   roleId: number;
   designationId: number;
   employeeCode?: string;
+  countryCode?: string;
   mobile: string;
+  mobileVerified: number;
+  mobileVerifiedAt?: number | null;
   reportingManagerId?: number;
   profileImageUrl?: string;
+  gender?: "MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY";
   joiningDate?: number;
   lastLoginAt?: number;
-  isActive?: number;
+  accountStatus: 'ACTIVE' | 'INACTIVE' | 'LOCKED';
+  accountStatusUpdatedAt?: number;
+  addressLine1?: string;
+  addressLine2?: string;
+  landmark?: string;
+  country?: string;
+  state?: string;
+  city?: string;
+  district?: string;
+  pinCode?: string;
+  timezone?: string;
+  // reportingTime?: string;
+  // shiftEndTime?: string;
+  // weeklyOffMask?: number;
+  // attendanceSelfieRequired?: number;
+  // dayoverSelfieRequired?: number;
+  // locationTrackingRequired?: number;
+  // locationTrackingMinutes?: number;
+  employmentStatus?: 'ACTIVE' | 'RESIGNED' | 'TERMINATED' | 'RETIRED' | 'CONTRACT_COMPLETED' | 'TRANSFERRED';
+  //employmentStatus: 'ACTIVE' | 'RESIGNED' | 'TERMINATED' | 'RETIRED' | 'CONTRACT_COMPLETED' | 'TRANSFERRED';
+  //employmentStatusUpdatedAt?: number;
 }
 
-interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'hostId' | 'name' | 'roleId' | 'designationId' | 'employeeCode' | 'mobile' | 'reportingManagerId' | 'profileImageUrl' | 'joiningDate' | 'lastLoginAt' | 'isActive' | 'createdAt' | 'updatedAt' | 'isDeleted' | 'deletedAt'> {}
+interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'hostId' | 'name' | 'roleId' | 'designationId' | 'employeeCode' | 'countryCode' | 'mobile' | 'mobileVerified' | 'mobileVerifiedAt' | 'reportingManagerId' | 'profileImageUrl' | 'gender' | 'joiningDate' | 'lastLoginAt' | 'accountStatus' | 'accountStatusUpdatedAt' | 'addressLine1' | 'addressLine2' | 'landmark' | 'country' | 'state' | 'city' | 'district' | 'pinCode' | 'timezone' | 'createdAt' | 'updatedAt' | 'isDeleted' | 'deletedAt'> {}
 
 class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
   public id!: number;
@@ -29,12 +53,29 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
   public employeeCode?: string;
   public name?: string;
   public password!: string;
+  public countryCode?: string;
   public mobile!: string;
+  public mobileVerified!: number;
+  public mobileVerifiedAt?: number | null;
   public reportingManagerId?: number;
   public profileImageUrl?: string;
+  public gender?: "MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY";
   public joiningDate?: number;
   public lastLoginAt?: number | null;
-  public isActive?: number;
+  public accountStatus!: 'ACTIVE' | 'INACTIVE';
+  public accountStatusUpdatedAt?: number;
+  public addressLine1?: string;
+  public addressLine2?: string
+  public landmark?: string;
+  public country?: string;
+  public state?: string
+  public city?: string;
+  public district?: string
+  public pinCode?: string;
+  public timezone?: string;
+  //public employmentStatus!: 'ACTIVE' | 'RESIGNED' | 'TERMINATED' | 'RETIRED' | 'CONTRACT_COMPLETED' | 'TRANSFERRED';
+  //public accountStatusUpdatedAt?: number;
+  //public employmentStatusUpdatedAt?: number;
   public createdAt!: number;
   public updatedAt!: number;
   public isDeleted!: number;
@@ -66,6 +107,11 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
     User.belongsTo(models.Designation, {
       foreignKey: 'designationId',
       as: 'designation',
+    });
+
+    User.hasMany(models.UserSettings, {
+      foreignKey: 'userId',
+      as: 'settings',
     });
   }
 }
@@ -104,9 +150,23 @@ export function initUser(sequelize: Sequelize): typeof User {
         unique: false,
         validate: { isEmail: true },
       },
+      countryCode: {
+        type: DataTypes.STRING(6),
+        allowNull: true,
+      },
       mobile: {
         type: DataTypes.STRING(20),
         allowNull: false,
+      },
+      mobileVerified: {
+        type: DataTypes.TINYINT,
+        allowNull: false,
+        defaultValue: 0,
+      },
+      mobileVerifiedAt: {
+        type: DataTypes.BIGINT,
+        allowNull: true,
+        defaultValue: null,
       },
       password: {
         type: DataTypes.STRING(255),
@@ -123,17 +183,102 @@ export function initUser(sequelize: Sequelize): typeof User {
       joiningDate: {
         type: DataTypes.BIGINT,
         allowNull: true,
-      },
+      },      
+      // maxWorkingMinutes: {
+      //   type: DataTypes.SMALLINT,
+      //   allowNull: true,
+      // },
       lastLoginAt: {
         type: DataTypes.BIGINT,
         allowNull: true,
         defaultValue: null,
       },
-      isActive: {
-        type: DataTypes.TINYINT,
-        allowNull: false,
-        defaultValue: 1
+      gender: {
+        type: DataTypes.ENUM(
+          'MALE',
+          'FEMALE',
+          'OTHER',
+          'PREFER_NOT_TO_SAY'
+        ),
+        allowNull: true,
       },
+      accountStatus: {
+        type: DataTypes.ENUM(
+            'ACTIVE',
+            'INACTIVE'
+        ),
+        allowNull: false,
+        defaultValue: 'ACTIVE'
+      },
+      accountStatusUpdatedAt: {
+        type: DataTypes.BIGINT,
+        allowNull: true,
+        defaultValue: null
+      },
+      addressLine1: {
+        type: DataTypes.STRING(50),
+        allowNull: true,
+      },
+      addressLine2: {
+        type: DataTypes.STRING(50),
+        allowNull: true,
+      },
+      landmark: {
+        type: DataTypes.STRING(50),
+        allowNull: true,
+      },
+      country: {
+        type: DataTypes.STRING(50),
+        allowNull: true,
+      },
+      state: {
+        type: DataTypes.STRING(50),
+        allowNull: true,
+      },
+      city: {
+        type: DataTypes.STRING(50),
+        allowNull: true,
+      },      
+      district: {
+        type: DataTypes.STRING(50),
+        allowNull: true,
+      },
+      pinCode: {
+        type: DataTypes.STRING(20),
+        allowNull: true,
+      },
+      timezone: {
+        type: DataTypes.STRING(50),
+        allowNull: true,
+      },
+      // reportingTime: {
+      //   type: DataTypes.TIME,
+      //   allowNull: true,
+      // },
+      // shiftEndTime: {
+      //   type: DataTypes.TIME,
+      //   allowNull: true,
+      // },
+      // weeklyOffMask: {
+      //   type: DataTypes.TINYINT.UNSIGNED,
+      //   allowNull: true,
+      // },
+      // attendanceSelfieRequired: {
+      //   type: DataTypes.TINYINT,
+      //   allowNull: true,
+      // },
+      // dayoverSelfieRequired: {
+      //   type: DataTypes.TINYINT,
+      //   allowNull: true,
+      // },
+      // locationTrackingRequired: {
+      //   type: DataTypes.TINYINT,
+      //   allowNull: true,
+      // },
+      // locationTrackingMinutes: {
+      //   type: DataTypes.SMALLINT,
+      //   allowNull: true,
+      // },
       createdAt: {
         type: DataTypes.BIGINT,
         allowNull: false
@@ -165,7 +310,13 @@ export function initUser(sequelize: Sequelize): typeof User {
           user.updatedAt = now;
           user.isDeleted = 0;
           user.deletedAt = null;
-          if (user.isActive === undefined) user.isActive = 1;
+          if (user.accountStatus === undefined) {
+            user.accountStatus = 'ACTIVE';
+            user.accountStatusUpdatedAt = now;
+          }
+          if(!user.accountStatusUpdatedAt) {
+            user.accountStatusUpdatedAt = now;
+          }
           if (user.password) {
             user.password = await bcrypt.hash(user.password, 10);
           }

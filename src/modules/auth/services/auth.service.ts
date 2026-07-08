@@ -175,7 +175,7 @@ export class AuthService {
       throw createConfiguredError('INVALID_REFRESH_TOKEN', 'INVALID_REFRESH_TOKEN');
     }
 
-    if (user.isActive === 0) {
+    if (user.accountStatus !== 'ACTIVE') {
       await adminRefreshTokenRepository.revokeAllActiveForUser(payload.userId);
       throw createConfiguredError('ACCOUNT_INACTIVE', 'ACCOUNT_INACTIVE');
     }
@@ -238,7 +238,7 @@ export class AuthService {
       throw createConfiguredError('INVALID_CREDENTIALS', 'INVALID_CREDENTIALS');
     }
 
-    if (user.isActive === 0) {
+    if (user.accountStatus != 'ACTIVE') {
       throw createConfiguredError('ACCOUNT_INACTIVE', 'ACCOUNT_INACTIVE');
     }
 

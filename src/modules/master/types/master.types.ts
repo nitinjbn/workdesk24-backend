@@ -62,7 +62,7 @@ export interface GetUsersFilter {
   name?: string,
   email?: string,
   mobile?: number,
-  isActive?: boolean,
+  accountStatus?: 'ACTIVE' | 'INACTIVE',
   roleCode?: string[],
   searchKey?: string
 }

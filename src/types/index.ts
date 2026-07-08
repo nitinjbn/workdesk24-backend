@@ -298,7 +298,7 @@ export interface UserAttributes {
   lastLoginAt?: number;
   profileImageUrl?: string;
   joiningDate?: number;
-  isActive?: number;
+  accountStatus?: 'ACTIVE' | 'INACTIVE';
   createdAt?: number;
   updatedAt?: number;
   isDeleted?: number;
@@ -530,7 +530,7 @@ export interface HostAttributes {
   longitude?: number;
   gstNumber?: string;
   panNumber?: string;
-  isActive?: number;
+  accountStatus?: 'ACTIVE' | 'INACTIVE';
   lastLoginAt?: number;
   isDeleted?: number;
   createdAt?: number;

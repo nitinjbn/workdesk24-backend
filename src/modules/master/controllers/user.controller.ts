@@ -69,13 +69,13 @@ export class UserController {
 
   async createAppUser(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { hostId, name, email, employeeCode, mobile, password, reportingManagerId, roleId, designationId, joiningDate, isActive } =  req.body;
+      const { hostId, name, email, employeeCode, mobile, gender, password, reportingManagerId, roleId, designationId, joiningDate, accountStatus, addressLine1, addressLine2, landmark, country, state, city, district, pinCode, timezone, settings } =  req.body;
       const file = req.file as Express.Multer.File | undefined;
 
       let profileImageUrl = "";
       if(file) {
         const result = await uploadBufferToMediaStorage(file, `${hostId}/users`);
-        console.log('####################### Media uploaded to Cloudinary:', result);
+        //console.log('####################### Media uploaded to Cloudinary:', result);
         profileImageUrl = result.url;
       }      
 
@@ -84,6 +84,7 @@ export class UserController {
         name,
         email,
         employeeCode,
+        gender,
         mobile,
         password,
         reportingManagerId,
@@ -91,20 +92,25 @@ export class UserController {
         designationId,
         profileImageUrl,
         joiningDate,
-        isActive
+        accountStatus,
+        addressLine1,
+        addressLine2,
+        landmark,
+        country,
+        state,
+        city,
+        district,
+        pinCode,
+        timezone,
+        settings
       });
-      console.log('####################### createUserResult:', createUserResult);
+      //console.log('####################### createUserResult:', createUserResult);
 
       res.json({
         success: true,
         message: 'User created successfully',
         data: {
-          userId: createUserResult.id,
-          name: createUserResult.name,
-          employeeCode: createUserResult.employeeCode,
-          email: createUserResult.email,
-          mobile: createUserResult.mobile,
-          profileImageUrl: createUserResult.profileImageUrl,
+          userId: createUserResult.user.id
         },
       } as ApiResponse);
     } catch (error: any) {

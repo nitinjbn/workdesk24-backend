@@ -1,6 +1,7 @@
 import { Sequelize } from 'sequelize';
 import dotenv from 'dotenv';
 import { initUser } from './schemas/User';
+import { initUserSettings } from './schemas/UserSettings';
 import { initHost } from './schemas/Host';
 import { initHostSettings } from './schemas/HostSettings';
 import { initRole } from './schemas/Role';
@@ -94,6 +95,7 @@ const Permission = initPermission(sequelize);
 const RolePermission = initRolePermission(sequelize);
 const UserPermission = initUserPermission(sequelize);
 const User = initUser(sequelize);
+const UserSettings = initUserSettings(sequelize);
 const Inquiry = initInquiry(sequelize);
 const Attendance = initAttendance(sequelize);
 const GpsHistory = initGpsHistory(sequelize);
@@ -125,6 +127,7 @@ const db: any = {
   RolePermission,
   UserPermission,
   User,
+  UserSettings,
   Inquiry,
   Attendance,
   GpsHistory,
@@ -207,6 +210,7 @@ export {
   RolePermission,
   UserPermission,
   User,
+  UserSettings,
   Inquiry,
   Attendance,
   GpsHistory,

@@ -50,9 +50,7 @@ export const buildUserInclude = (
   }
 
   if (enforceActiveUsersOnly) {
-    userWhere.isActive = {
-      [Op.or]: [1, null],
-    };
+    userWhere.accountStatus = 'ACTIVE'
   }
 
   return {

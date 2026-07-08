@@ -94,6 +94,27 @@ export class DateTimeFormatUtil {
     console.log("############################## getCurrentUnixTime Started:", moment().tz(timezone).unix());
     return moment().tz(timezone).unix();
   }
+
+  static getWeeklyOffMask(days: string[]): number {
+    return days.reduce((mask, day) => {
+      const normalizedDay = day.toUpperCase().trim();
+      return mask | (CONFIG.WEEKDAY_FLAGS[normalizedDay] || 0);
+    }, 0);
+
+    // Example
+    // const mask = DateTimeFormatUtil.getWeeklyOffMask(['SATURDAY', 'SUNDAY']);
+    // const mask2 = DateTimeFormatUtil.getWeeklyOffMask(['Saturday', 'sunday']);
+    // Output: 65
+  }
+
+  static getWeeklyOffDays(mask: number): string[] {
+    return Object.keys(CONFIG.WEEKDAY_FLAGS).filter(day => (mask & CONFIG.WEEKDAY_FLAGS[day]) !== 0);
+
+    // Example
+    // console.log(DateTimeFormatUtil.getWeeklyOffDays(65));
+    // Output: ['SUNDAY', 'SATURDAY']
+  }
+
 }
 
 export const formatDateTimeFieldsBySettings = <T>(data: T, settings?: HostDateTimeSettings): T => {
