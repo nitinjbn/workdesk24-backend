@@ -530,7 +530,7 @@ export interface HostAttributes {
   longitude?: number;
   gstNumber?: string;
   panNumber?: string;
-  accountStatus?: 'ACTIVE' | 'INACTIVE';
+  isActive?: number;
   lastLoginAt?: number;
   isDeleted?: number;
   createdAt?: number;
