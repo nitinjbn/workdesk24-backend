@@ -10,7 +10,8 @@ interface UserAttributes extends BaseModel {
   roleId: number;
   designationId: number;
   employeeCode?: string;
-  countryCode?: string;
+  enteredMobileNumber?: string;
+  callingCode?: string;
   mobile: string;
   mobileVerified: number;
   mobileVerifiedAt?: number | null;
@@ -24,7 +25,8 @@ interface UserAttributes extends BaseModel {
   addressLine1?: string;
   addressLine2?: string;
   landmark?: string;
-  country?: string;
+  countryName?: string;
+  countryIsoCode?: string;
   state?: string;
   city?: string;
   district?: string;
@@ -42,7 +44,7 @@ interface UserAttributes extends BaseModel {
   //employmentStatusUpdatedAt?: number;
 }
 
-interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'hostId' | 'name' | 'roleId' | 'designationId' | 'employeeCode' | 'countryCode' | 'mobile' | 'mobileVerified' | 'mobileVerifiedAt' | 'reportingManagerId' | 'profileImageUrl' | 'gender' | 'joiningDate' | 'lastLoginAt' | 'accountStatus' | 'accountStatusUpdatedAt' | 'addressLine1' | 'addressLine2' | 'landmark' | 'country' | 'state' | 'city' | 'district' | 'pinCode' | 'timezone' | 'createdAt' | 'updatedAt' | 'isDeleted' | 'deletedAt'> {}
+interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'hostId' | 'name' | 'roleId' | 'designationId' | 'employeeCode' | 'enteredMobileNumber' | 'callingCode' | 'mobile' | 'mobileVerified' | 'mobileVerifiedAt' | 'reportingManagerId' | 'profileImageUrl' | 'gender' | 'joiningDate' | 'lastLoginAt' | 'accountStatus' | 'accountStatusUpdatedAt' | 'addressLine1' | 'addressLine2' | 'landmark' | 'countryName' | 'countryIsoCode' | 'state' | 'city' | 'district' | 'pinCode' | 'timezone' | 'createdAt' | 'updatedAt' | 'isDeleted' | 'deletedAt'> {}
 
 class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
   public id!: number;
@@ -53,8 +55,9 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
   public employeeCode?: string;
   public name?: string;
   public password!: string;
-  public countryCode?: string;
+  public callingCode?: string;
   public mobile!: string;
+  public enteredMobileNumber?: string;
   public mobileVerified!: number;
   public mobileVerifiedAt?: number | null;
   public reportingManagerId?: number;
@@ -67,7 +70,8 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
   public addressLine1?: string;
   public addressLine2?: string
   public landmark?: string;
-  public country?: string;
+  public countryName?: string;
+  public countryIsoCode?: string;
   public state?: string
   public city?: string;
   public district?: string
@@ -150,7 +154,11 @@ export function initUser(sequelize: Sequelize): typeof User {
         unique: false,
         validate: { isEmail: true },
       },
-      countryCode: {
+      enteredMobileNumber: { // Store the raw mobile number as entered by the user
+        type: DataTypes.STRING(20),
+        allowNull: true,
+      },
+      callingCode: {
         type: DataTypes.STRING(6),
         allowNull: true,
       },
@@ -227,8 +235,12 @@ export function initUser(sequelize: Sequelize): typeof User {
         type: DataTypes.STRING(50),
         allowNull: true,
       },
-      country: {
+      countryName: {
         type: DataTypes.STRING(50),
+        allowNull: true,
+      },
+      countryIsoCode: {
+        type: DataTypes.CHAR(2),
         allowNull: true,
       },
       state: {

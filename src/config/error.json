@@ -48,5 +48,15 @@
         "code": "REPORT_USER_SCOPE_REQUIRED",
         "status": 400,
         "message": "User scope is required for this report."
+    },
+    "DUPLICATE_MOBILE_NUMBER": {
+        "code": "DUPLICATE_MOBILE_NUMBER",
+        "status": 400,
+        "message": "The mobile number is already in use. Please use a different mobile number."
+    },
+    "MOBILE_NUMBER_LINKED_WITH_OTHER_HOST": {
+        "code": "MOBILE_NUMBER_LINKED_WITH_OTHER_HOST",
+        "status": 400,
+        "message": "Mobile number is linked with another host, please use a different mobile number."
     }
 }

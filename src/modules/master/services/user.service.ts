@@ -195,7 +195,7 @@ export class UserService {
   }
 
   async createAppUser(payload: any): Promise<any> {
-    const { hostId, name, employeeCode, email, mobile, password, reportingManagerId, designationId, profileImageUrl, joiningDate, gender, accountStatus, addressLine1, addressLine2, landmark, country, state, city, district, pinCode, timezone } = payload;
+    const { hostId, name, employeeCode, email, enteredMobileNumber, mobile, password, reportingManagerId, designationId, profileImageUrl, joiningDate, gender, accountStatus, addressLine1, addressLine2, landmark, countryName, countryIsoCode, state, city, district, pinCode, timezone } = payload;
 
     let settings = payload.settings;
     if(settings && typeof settings !== 'object') {
@@ -220,18 +220,21 @@ export class UserService {
       throw new Error('Invalid role details');
     }
 
-    const validationResult = PhoneUtil.validate(mobile, country);
+    const validationResult = PhoneUtil.validate(mobile, countryIsoCode);
     //console.log('############# Phone validation result:', validationResult);
     if (!validationResult.success) {
       throw new Error(validationResult.message || 'Invalid mobile number');
     }
+    const callingCode = validationResult.countryCode || '';
+    const normalizedMobile = validationResult.e164 || mobile;
 
     const createAppUserResult = await usersRepository.createAppUser({
       hostId,
       name,
       email,
-      countryCode: validationResult.countryCode,
-      mobile: validationResult.e164 || mobile,
+      enteredMobileNumber,
+      callingCode,
+      mobile: normalizedMobile,
       password,
       employeeCode,
       roleId,
@@ -244,7 +247,8 @@ export class UserService {
       addressLine1,
       addressLine2,
       landmark,
-      country,
+      countryName,
+      countryIsoCode,
       state,
       city,
       district,
@@ -266,17 +270,26 @@ export class UserService {
     return { user: createAppUserResult, settings: createUserSettingsResult };
   }
 
-  // async getUserByMobile(payload: { hostId: number, mobile: string }): Promise<SingleRecordResponse<UserInstance>> {
-  //   const { hostId, mobile } = payload;
-  //   const userDetails = await usersRepository.getUserByFilter({
-  //     mobile,
-  //     accountStatus: 'ACTIVE',
-  //     isDeleted: 0
-  //   });
-  //   return {
-  //     user: userDetails.data,
-  //   };
-  // }
+  async validateUserMobile(payload: { hostId: number, mobile: string }): Promise<any> {
+    const { hostId, mobile } = payload;
+    const userDetails = await usersRepository.getUsersByFilter({
+      mobile,
+      accountStatus: 'ACTIVE',
+      isDeleted: 0
+    });
+
+    if (userDetails && userDetails.length > 0) {
+      if (userDetails[0]?.hostId !== hostId) {
+        throw createConfiguredError('MOBILE_NUMBER_LINKED_WITH_OTHER_HOST', 'Mobile number is linked with another host, please use a different mobile number.');
+      }
+
+      throw createConfiguredError('DUPLICATE_MOBILE_NUMBER', 'Mobile number already exists');
+    }
+
+    return {
+      success: true
+    };
+  }
 }
 
 export default new UserService();

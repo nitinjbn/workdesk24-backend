@@ -109,7 +109,7 @@ export class AuthService {
     const user = await this.validateCredentials(data);
     const isAllowedAppLogin = await isAppLoginRole(user.hostId, user.roleId);
     if (!isAllowedAppLogin) {
-      throw createConfiguredError('APP_LOGIN_ACCESS_DENIED', 'APP_LOGIN_ACCESS_DENIED');
+      throw createConfiguredError('APP_LOGIN_ACCESS_DENIED');
     }
 
     const token = this.generateAccessToken(user.id);
@@ -128,7 +128,7 @@ export class AuthService {
 
     const isAdmin = await isAdminRole(user.hostId, user.roleId);
     if (!isAdmin) {
-      throw createConfiguredError('ADMIN_PORTAL_ACCESS_DENIED', 'ADMIN_PORTAL_ACCESS_DENIED');
+      throw createConfiguredError('ADMIN_PORTAL_ACCESS_DENIED');
     }
 
     const sessionTokens = await this.createAdminSessionTokens(user.id);
@@ -151,39 +151,39 @@ export class AuthService {
     const tokenRecord = await adminRefreshTokenRepository.findByTokenHash(tokenHash);
 
     if (!tokenRecord) {
-      throw createConfiguredError('INVALID_REFRESH_TOKEN', 'INVALID_REFRESH_TOKEN');
+      throw createConfiguredError('INVALID_REFRESH_TOKEN');
     }
 
     if (tokenRecord.isRevoked === 1) {
       await adminRefreshTokenRepository.revokeAllActiveForUser(tokenRecord.userId);
-      throw createConfiguredError('REFRESH_TOKEN_REUSE_DETECTED', 'REFRESH_TOKEN_REUSE_DETECTED');
+      throw createConfiguredError('REFRESH_TOKEN_REUSE_DETECTED');
     }
 
     if (tokenRecord.expiresAt <= now) {
       await adminRefreshTokenRepository.revokeTokenById(tokenRecord.id);
-      throw createConfiguredError('REFRESH_TOKEN_EXPIRED', 'REFRESH_TOKEN_EXPIRED');
+      throw createConfiguredError('REFRESH_TOKEN_EXPIRED');
     }
 
     if (tokenRecord.userId !== payload.userId || tokenRecord.tokenFamily !== payload.tokenFamily) {
       await adminRefreshTokenRepository.revokeAllActiveForUser(tokenRecord.userId);
-      throw createConfiguredError('INVALID_REFRESH_TOKEN', 'INVALID_REFRESH_TOKEN');
+      throw createConfiguredError('INVALID_REFRESH_TOKEN');
     }
 
     const user = await userRepository.findById(payload.userId);
     if (!user) {
       await adminRefreshTokenRepository.revokeAllActiveForUser(payload.userId);
-      throw createConfiguredError('INVALID_REFRESH_TOKEN', 'INVALID_REFRESH_TOKEN');
+      throw createConfiguredError('INVALID_REFRESH_TOKEN');
     }
 
     if (user.accountStatus !== 'ACTIVE') {
       await adminRefreshTokenRepository.revokeAllActiveForUser(payload.userId);
-      throw createConfiguredError('ACCOUNT_INACTIVE', 'ACCOUNT_INACTIVE');
+      throw createConfiguredError('ACCOUNT_INACTIVE');
     }
 
     const isAdmin = await isAdminRole(user.hostId, user.roleId);
     if (!isAdmin) {
       await adminRefreshTokenRepository.revokeAllActiveForUser(payload.userId);
-      throw createConfiguredError('ADMIN_PORTAL_ACCESS_DENIED', 'ADMIN_PORTAL_ACCESS_DENIED');
+      throw createConfiguredError('ADMIN_PORTAL_ACCESS_DENIED');
     }
 
     const rotatedTokens = await this.createAdminSessionTokens(user.id, payload.tokenFamily);
@@ -230,16 +230,16 @@ export class AuthService {
 
     const user = await userRepository.findWithPassword(email);
     if (!user) {
-      throw createConfiguredError('INVALID_CREDENTIALS', 'INVALID_CREDENTIALS');
+      throw createConfiguredError('INVALID_CREDENTIALS');
     }
 
     const isValid = await bcrypt.compare(password, user.password);
     if (!isValid) {
-      throw createConfiguredError('INVALID_CREDENTIALS', 'INVALID_CREDENTIALS');
+      throw createConfiguredError('INVALID_CREDENTIALS');
     }
 
     if (user.accountStatus != 'ACTIVE') {
-      throw createConfiguredError('ACCOUNT_INACTIVE', 'ACCOUNT_INACTIVE');
+      throw createConfiguredError('ACCOUNT_INACTIVE');
     }
 
     return user;

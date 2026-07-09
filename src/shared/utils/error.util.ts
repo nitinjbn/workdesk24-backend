@@ -22,20 +22,21 @@ const createAppError = (code: string, statusCode: number, message: string): AppE
   return error;
 };
 
-export const createConfiguredError = (key: string, code?: string): AppError => {
+export const createConfiguredError = (
+  key: string,
+  defaultMessage?: string,
+  statusCode: number = 400,
+  errorCode: string = 'VALIDATION_ERROR'
+): AppError => {
   const byKey = errorConfig[key];
-  const byCode = code
-    ? Object.values(errorConfig).find((item) => item.code === code)
-    : undefined;
-  const selected = byKey || byCode;
 
-  if (!selected) {
+  if (!byKey) {
     return createAppError(
-      'INTERNAL_SERVER_ERROR',
-      500,
-      'Something went wrong'
+      errorCode,
+      statusCode,
+      defaultMessage || 'Something went wrong'
     );
   }
 
-  return createAppError(selected.code, selected.status, selected.message);
+  return createAppError(byKey.code, byKey.status, byKey.message);
 };

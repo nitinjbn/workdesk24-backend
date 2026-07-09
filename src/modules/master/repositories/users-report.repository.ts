@@ -286,13 +286,14 @@ export class usersRepository {
   }
 
   async createAppUser(params: any): Promise<any> {
-    const { hostId, name, employeeCode, email, countryCode, mobile, password, reportingManagerId, roleId, designationId, profileImageUrl, joiningDate, accountStatus, createdAt, gender, addressLine1, addressLine2, landmark, country, state, city, district, pinCode, timezone } = params;
+    const { hostId, name, employeeCode, email, enteredMobileNumber, callingCode, mobile, password, reportingManagerId, roleId, designationId, profileImageUrl, joiningDate, accountStatus, createdAt, gender, addressLine1, addressLine2, landmark, countryName, countryIsoCode, state, city, district, pinCode, timezone } = params;
     const newUser = await User.create({
       hostId,
       name,
       employeeCode,
       email,
-      countryCode,
+      enteredMobileNumber,
+      callingCode,
       mobile,
       password,
       reportingManagerId,
@@ -306,7 +307,8 @@ export class usersRepository {
       addressLine1,
       addressLine2,
       landmark,
-      country,
+      countryName,
+      countryIsoCode,
       state,
       city,
       district,
@@ -319,19 +321,18 @@ export class usersRepository {
     return newUser;
   }
 
-  async getUserByFilter(params: { filter: any}): Promise<any> {
-    const { filter } = params;
+  async getUsersByFilter(filter: any): Promise<any> {
     if(!filter) {
       throw new Error('Filter is required');
     }
     const where:any = filter;
     where.isDeleted = 0;
-    const user = await User.findOne({
+    const users = await User.findAll({
       where,
       raw: true,
       logging: console.log, // Enable logging for debugging
     });
-    return user || {};
+    return users || [];
   }
 
   async createUserSettings(params: {

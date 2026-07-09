@@ -69,7 +69,7 @@ export class UserController {
 
   async createAppUser(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { hostId, name, email, employeeCode, mobile, gender, password, reportingManagerId, roleId, designationId, joiningDate, accountStatus, addressLine1, addressLine2, landmark, country, state, city, district, pinCode, timezone, settings } =  req.body;
+      const { hostId, name, email, employeeCode, mobile, gender, password, reportingManagerId, roleId, designationId, joiningDate, accountStatus, addressLine1, addressLine2, landmark, countryName, countryIsoCode, state, city, district, pinCode, timezone, settings } =  req.body;
       const file = req.file as Express.Multer.File | undefined;
 
       let profileImageUrl = "";
@@ -79,6 +79,17 @@ export class UserController {
         profileImageUrl = result.url;
       }      
 
+      // const validationResult = PhoneUtil.validate(mobile, countryIsoCode);
+      // console.log('############# Phone validation result:', validationResult);
+      // if (!validationResult.success) {
+      //   res.status(400).json({
+      //     success: false,
+      //     message: validationResult.message,
+      //   } as ApiResponse);
+      //   return;
+      // }
+      // const callingCode = validationResult.countryCode || '';
+
       const createUserResult = await userService.createAppUser({
         hostId,
         name,
@@ -86,6 +97,7 @@ export class UserController {
         employeeCode,
         gender,
         mobile,
+        enteredMobileNumber: mobile,
         password,
         reportingManagerId,
         roleId,
@@ -96,7 +108,8 @@ export class UserController {
         addressLine1,
         addressLine2,
         landmark,
-        country,
+        countryName,
+        countryIsoCode,
         state,
         city,
         district,
@@ -146,11 +159,12 @@ export class UserController {
     }
   }
 
-  async validateMobile(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  async validateUserMobile(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { mobile, defaultCountry } = req.body;
-      // TODO: Get the default country from wd_hosts based on the hostId in the request
+      const { hostId, mobile, country: defaultCountry } = req.body;
+      
       const validationResult = PhoneUtil.validate(mobile, defaultCountry);
+      console.log('############# Phone validation result:', validationResult);
       if (!validationResult.success) {
         res.status(400).json({
           success: false,
@@ -159,8 +173,12 @@ export class UserController {
         return;
       } else {
 
-        // TODO: Check if the mobile number already exists in the database for the given hostId
-
+        // Check if the mobile number is globally unique across all hosts, otherwise throw an error
+        await userService.validateUserMobile({
+          hostId,
+          mobile: validationResult.e164 || mobile
+        });
+        
         res.json({
           success: true,
           message: 'Mobile number is valid.',
@@ -175,12 +193,8 @@ export class UserController {
           }
         } as ApiResponse);
       }
-    } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: 'Caught error in validating mobile number',
-        error: error.message,
-      } as ApiResponse);
+    } catch (error: any) {
+      next(error);
     }
   }
 }

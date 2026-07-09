@@ -2,7 +2,7 @@ import { Model, DataTypes, Sequelize, Optional } from 'sequelize';
 import bcrypt from 'bcryptjs';
 import { HostAttributes } from '../../types';
 
-interface HostCreationAttributes extends Optional<HostAttributes, 'id' | 'companyName' | 'companyLogoUrl' | 'websiteUrl' | 'contactPerson' | 'mobile' | 'addressLine1' | 'addressLine2' | 'city' | 'state' | 'postalCode' | 'country' | 'latitude' | 'longitude' | 'gstNumber' | 'panNumber' | 'isActive' | 'lastLoginAt' | 'createdAt' | 'updatedAt' | 'isDeleted' | 'deletedAt'> {}
+interface HostCreationAttributes extends Optional<HostAttributes, 'id' | 'companyName' | 'companyLogoUrl' | 'websiteUrl' | 'contactPerson' | 'callingCode' | 'mobile' | 'addressLine1' | 'addressLine2' | 'landmark' | 'city' | 'state' | 'postalCode' | 'countryName' | 'countryIsoCode' | 'district' | 'latitude' | 'longitude' | 'gstNumber' | 'panNumber' | 'isActive' | 'lastLoginAt' | 'createdAt' | 'updatedAt' | 'isDeleted' | 'deletedAt'> {}
 
 class Host extends Model<HostAttributes, HostCreationAttributes> implements HostAttributes {
   public id!: number;
@@ -10,13 +10,16 @@ class Host extends Model<HostAttributes, HostCreationAttributes> implements Host
   public companyLogoUrl?: string;
   public websiteUrl?: string;
   public contactPerson?: string;
+  public callingCode?: string;
   public mobile?: string;
   public addressLine1?: string;
   public addressLine2?: string;
   public city?: string;
   public state?: string;
   public postalCode?: string;
-  public country?: string;
+  public countryName?: string;
+  public countryIsoCode?: string;
+  public district?: string;
   public latitude?: number;
   public longitude?: number;
   public gstNumber?: string;
@@ -49,6 +52,10 @@ export function initHost(sequelize: Sequelize): typeof Host {
         type: DataTypes.STRING(100),
         allowNull: true,
       },
+      callingCode: {
+        type: DataTypes.STRING(6),
+        allowNull: true,
+      },
       mobile: {
         type: DataTypes.STRING(20),
         allowNull: true,
@@ -72,27 +79,39 @@ export function initHost(sequelize: Sequelize): typeof Host {
         allowNull: true,
       },
       addressLine1: {
-        type: DataTypes.STRING(255),
+        type: DataTypes.STRING(50),
         allowNull: true,
       },
       addressLine2: {
-        type: DataTypes.STRING(255),
+        type: DataTypes.STRING(50),
         allowNull: true,
       },
-      city: {
-        type: DataTypes.STRING(100),
+      landmark: {
+        type: DataTypes.STRING(50),
+        allowNull: true,
+      },
+      countryName: {
+        type: DataTypes.STRING(50),
+        allowNull: true,
+      },
+      countryIsoCode: {
+        type: DataTypes.CHAR(2),
         allowNull: true,
       },
       state: {
-        type: DataTypes.STRING(100),
+        type: DataTypes.STRING(50),
         allowNull: true,
       },
+      city: {
+        type: DataTypes.STRING(50),
+        allowNull: true,
+      },
+      district: {
+        type: DataTypes.STRING(50),
+        allowNull: true,
+      },      
       postalCode: {
         type: DataTypes.STRING(20),
-        allowNull: true,
-      },
-      country: {
-        type: DataTypes.STRING(100),
         allowNull: true,
       },
       latitude: {
