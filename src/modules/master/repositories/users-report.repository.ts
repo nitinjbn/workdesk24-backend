@@ -127,6 +127,7 @@ export class usersRepository {
     if(page && limit) {
       query.limit = limit;
       query.offset = offset;
+      query.distinct = true;
 
       const { rows, count } = await User.findAndCountAll(query);
 
