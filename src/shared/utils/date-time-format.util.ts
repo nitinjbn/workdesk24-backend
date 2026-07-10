@@ -4,9 +4,24 @@ import { CONFIG } from '../../config/constants';
 
 const TIMESTAMP_KEY_PATTERN = /(At|Date|Time|dateOfBirth)$/i;
 
+// Field format configuration: defines how each field should be formatted
+const FIELD_FORMAT_CONFIG: Record<string, 'date' | 'datetime'> = {
+  // Date-only fields (YYYY-MM-DD)
+  dateOfBirth: 'date',
+  joiningDate: 'date',
+  
+  // DateTime fields (full format)
+  createdAt: 'datetime',
+  updatedAt: 'datetime',
+  accountStatusUpdatedAt: 'datetime',
+  deletedAt: 'datetime',
+};
+
 const DEFAULT_DATE_TIME_SETTINGS: HostDateTimeSettings = {
   timeZone: CONFIG.REPORTING.TIMEZONE,
   dateTimeFormat: CONFIG.REPORTING.DATE_TIME_FORMAT,
+  dateFormat: CONFIG.REPORTING.DATE_FORMAT,
+  timeFormat: CONFIG.REPORTING.TIME_FORMAT,
 };
 
 export class DateTimeFormatUtil {
@@ -35,7 +50,7 @@ export class DateTimeFormatUtil {
     return false;
   }
 
-  private static formatUnixValue(value: number | string, settings?: HostDateTimeSettings): string | number {
+  private static formatUnixValue(value: number | string, settings?: HostDateTimeSettings, formatType: 'date' | 'datetime' = 'datetime'): string | number {
     const unixMs = DateTimeFormatUtil.asUnixMs(value);
     if (unixMs === null) {
       return value;
@@ -47,7 +62,8 @@ export class DateTimeFormatUtil {
       ? configuredTimeZone
       : DEFAULT_DATE_TIME_SETTINGS.timeZone;
 
-    const formatPattern = effectiveSettings.dateTimeFormat || DEFAULT_DATE_TIME_SETTINGS.dateTimeFormat;
+    // Use date-only format (YYYY-MM-DD) for date fields, full format for datetime
+    const formatPattern = formatType === 'date' ?  (effectiveSettings.dateFormat || DEFAULT_DATE_TIME_SETTINGS.dateFormat) : (effectiveSettings.dateTimeFormat || DEFAULT_DATE_TIME_SETTINGS.dateTimeFormat);
     const dateTime = moment.tz(unixMs, timeZone);
 
     if (!dateTime.isValid()) {
@@ -57,26 +73,35 @@ export class DateTimeFormatUtil {
     return dateTime.format(formatPattern);
   }
 
-  private static cloneAndFormat(input: unknown, settings?: HostDateTimeSettings): unknown {
+  private static cloneAndFormat(input: unknown, settings?: HostDateTimeSettings, fieldFormatConfig?: Record<string, 'date' | 'datetime'>): unknown {
     if (Array.isArray(input)) {
-      return input.map((item) => DateTimeFormatUtil.cloneAndFormat(item, settings));
+      return input.map((item) => DateTimeFormatUtil.cloneAndFormat(item, settings, fieldFormatConfig));
     }
 
     if (!input || typeof input !== 'object') {
       return input;
     }
 
+    const config = fieldFormatConfig || FIELD_FORMAT_CONFIG;
     const record = input as Record<string, unknown>;
     const output: Record<string, unknown> = {};
 
     Object.entries(record).forEach(([key, value]) => {
       if (value && typeof value === 'object') {
-        output[key] = DateTimeFormatUtil.cloneAndFormat(value, settings);
+        output[key] = DateTimeFormatUtil.cloneAndFormat(value, settings, fieldFormatConfig);
         return;
       }
 
+      // Check if field has explicit format config
+      const formatType = config[key];
+      if (formatType && DateTimeFormatUtil.isTimestampLikeValue(value)) {
+        output[key] = DateTimeFormatUtil.formatUnixValue(value, settings, formatType);
+        return;
+      }
+
+      // Fallback to pattern matching for other timestamp fields
       if (TIMESTAMP_KEY_PATTERN.test(key) && DateTimeFormatUtil.isTimestampLikeValue(value)) {
-        output[key] = DateTimeFormatUtil.formatUnixValue(value, settings);
+        output[key] = DateTimeFormatUtil.formatUnixValue(value, settings, 'datetime');
         return;
       }
 
@@ -86,8 +111,8 @@ export class DateTimeFormatUtil {
     return output;
   }
 
-  static formatDateTimeFieldsBySettings<T>(data: T, settings?: HostDateTimeSettings): T {
-    return DateTimeFormatUtil.cloneAndFormat(data, settings) as T;
+  static formatDateTimeFieldsBySettings<T>(data: T, settings?: HostDateTimeSettings, fieldFormatConfig?: Record<string, 'date' | 'datetime'>): T {
+    return DateTimeFormatUtil.cloneAndFormat(data, settings, fieldFormatConfig) as T;
   }
 
   static getCurrentUnixTime(timezone = 'UTC'): number {
@@ -117,6 +142,8 @@ export class DateTimeFormatUtil {
 
 }
 
-export const formatDateTimeFieldsBySettings = <T>(data: T, settings?: HostDateTimeSettings): T => {
-  return DateTimeFormatUtil.formatDateTimeFieldsBySettings(data, settings);
+export const formatDateTimeFieldsBySettings = <T>(data: T, settings?: HostDateTimeSettings, fieldFormatConfig?: Record<string, 'date' | 'datetime'>): T => {
+  return DateTimeFormatUtil.formatDateTimeFieldsBySettings(data, settings, fieldFormatConfig);
 };
+
+export { FIELD_FORMAT_CONFIG };

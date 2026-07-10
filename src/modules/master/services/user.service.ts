@@ -47,8 +47,10 @@ export class UserService {
       sortBy: sorting.sortBy,
       sortOrder: sorting.sortOrder,
     });
+    console.log("#################################### report:", report);
 
     const dateTimeSettings = await getHostDateTimeSettings(hostId);
+    //console.log("#################################### dateTimeSettings:", dateTimeSettings);
     const plainData = report.data.map((item: any) => {
       const userData = item && typeof item.toJSON === 'function' ? item.toJSON() : item;
       // Convert settings array to key-value object
@@ -64,7 +66,7 @@ export class UserService {
       
       return userData;
     });
-    console.log("#################################### plainData after processing:", plainData);
+    //console.log("#################################### plainData after processing:", plainData);
 
     return {
       users: formatDateTimeFieldsBySettings(plainData, dateTimeSettings),

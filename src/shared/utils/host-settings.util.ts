@@ -9,10 +9,14 @@ export interface HostSettingsMap {
 export interface HostDateTimeSettings {
   timeZone: string;
   dateTimeFormat: string;
+  dateFormat: string;
+  timeFormat: string;
 }
 
 const DEFAULT_TIME_ZONE = CONFIG.REPORTING.TIMEZONE;
 const DEFAULT_DATE_TIME_FORMAT = CONFIG.REPORTING.DATE_TIME_FORMAT;
+const DEFAULT_DATE_FORMAT = CONFIG.REPORTING.DATE_FORMAT;
+const DEFAULT_TIME_FORMAT = CONFIG.REPORTING.TIME_FORMAT;
 
 export const getHostSettingsValues = async (
   hostId: number,
@@ -63,10 +67,12 @@ export const getHostSettingsValues = async (
 };
 
 export const getHostDateTimeSettings = async (hostId: number): Promise<HostDateTimeSettings> => {
-  const settings = await getHostSettingsValues(hostId, ['timezone', 'dateTimeFormat']);
+  const settings = await getHostSettingsValues(hostId, ['timezone', 'dateTimeFormat', 'dateFormat', 'timeFormat']);
 
   return {
     timeZone: settings.timezone || DEFAULT_TIME_ZONE,
     dateTimeFormat: settings.dateTimeFormat || DEFAULT_DATE_TIME_FORMAT,
+    dateFormat: settings.dateFormat || DEFAULT_DATE_FORMAT,
+    timeFormat: settings.timeFormat || DEFAULT_TIME_FORMAT,
   };
 };
