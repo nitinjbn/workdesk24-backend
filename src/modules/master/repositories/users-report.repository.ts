@@ -199,7 +199,7 @@ export class usersRepository {
           required: false
         },
         {
-          attributes: ['roleName'],
+          attributes: [],
           model: Role,
           where: {
             isDeleted: 0
@@ -208,7 +208,7 @@ export class usersRepository {
           required: true
         },
         {
-          attributes: ['name'],
+          attributes: [],
           model: Designation,
           where: {
             isDeleted: 0

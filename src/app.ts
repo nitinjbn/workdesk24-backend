@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import routes from './routes';
 import healthRoutes from './routes/health.routes';
 import { errorHandler } from './shared/middleware/error-handler.middleware';
+import responseSerializerMiddleware from './shared/middleware/response-serializer.middleware';
 
 dotenv.config();
 
@@ -41,6 +42,9 @@ app.use(
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Response serializer middleware - converts numeric fields from Sequelize
+app.use(responseSerializerMiddleware);
 
 // Trust proxy for correct IP addresses
 app.set('trust proxy', true);
