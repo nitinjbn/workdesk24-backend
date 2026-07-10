@@ -15,6 +15,7 @@ interface UserAttributes extends BaseModel {
   mobile: string;
   mobileVerified: number;
   mobileVerifiedAt?: number | null;
+  dateOfBirth?: number;
   reportingManagerId?: number;
   profileImageUrl?: string;
   gender?: "MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY";
@@ -44,7 +45,7 @@ interface UserAttributes extends BaseModel {
   //employmentStatusUpdatedAt?: number;
 }
 
-interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'hostId' | 'name' | 'roleId' | 'designationId' | 'employeeCode' | 'enteredMobileNumber' | 'callingCode' | 'mobile' | 'mobileVerified' | 'mobileVerifiedAt' | 'reportingManagerId' | 'profileImageUrl' | 'gender' | 'joiningDate' | 'lastLoginAt' | 'accountStatus' | 'accountStatusUpdatedAt' | 'addressLine1' | 'addressLine2' | 'landmark' | 'countryName' | 'countryIsoCode' | 'state' | 'city' | 'district' | 'pinCode' | 'timezone' | 'createdAt' | 'updatedAt' | 'isDeleted' | 'deletedAt'> {}
+interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'hostId' | 'name' | 'roleId' | 'designationId' | 'employeeCode' | 'enteredMobileNumber' | 'callingCode' | 'mobile' | 'mobileVerified' | 'mobileVerifiedAt' | 'reportingManagerId' | 'profileImageUrl' | 'gender' | 'joiningDate' | 'lastLoginAt' | 'accountStatus' | 'accountStatusUpdatedAt' | 'addressLine1' | 'addressLine2' | 'landmark' | 'countryName' | 'countryIsoCode' | 'state' | 'city' | 'district' | 'pinCode' | 'timezone' | 'dateOfBirth'  | 'createdAt' | 'updatedAt' | 'isDeleted' | 'deletedAt'> {}
 
 class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
   public id!: number;
@@ -77,6 +78,7 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
   public district?: string
   public pinCode?: string;
   public timezone?: string;
+  public dateOfBirth?: number;
   //public employmentStatus!: 'ACTIVE' | 'RESIGNED' | 'TERMINATED' | 'RETIRED' | 'CONTRACT_COMPLETED' | 'TRANSFERRED';
   //public accountStatusUpdatedAt?: number;
   //public employmentStatusUpdatedAt?: number;
@@ -105,12 +107,12 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
 
     User.belongsTo(models.Role, {
       foreignKey: 'roleId',
-      as: 'role',
+      as: 'roles',
     });
 
     User.belongsTo(models.Designation, {
       foreignKey: 'designationId',
-      as: 'designation',
+      as: 'designations',
     });
 
     User.hasMany(models.UserSettings, {
@@ -179,6 +181,10 @@ export function initUser(sequelize: Sequelize): typeof User {
       password: {
         type: DataTypes.STRING(255),
         allowNull: false,
+      },
+      dateOfBirth: {
+        type: DataTypes.BIGINT,
+        allowNull: true,
       },
       reportingManagerId: {
         type: DataTypes.BIGINT,

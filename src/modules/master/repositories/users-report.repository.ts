@@ -84,11 +84,11 @@ export class usersRepository {
    
     const query: FindAndCountOptions<UserInstance> = {
       attributes: {
-        exclude: ['id', 'roleId', 'designationId', 'password', 'reportingManagerId', 'accountStatus', 'isDeleted', 'deletedAt'],
+        exclude: ['id', 'roleId', 'designationId', 'password', 'reportingManagerId', 'isDeleted', 'deletedAt'],
         include: [
           [db.Sequelize.col('User.id'), 'userId'],
-          [db.Sequelize.col('role.roleName'), 'role'],
-          [db.Sequelize.col('designation.name'), 'designation']
+          [db.Sequelize.col('roles.roleName'), 'role'],
+          [db.Sequelize.col('designations.name'), 'designation']
         ]
       },
       where,
@@ -103,19 +103,19 @@ export class usersRepository {
           required: false
         },
         {
-          attributes:[],
+          attributes: [],
           model: Role,
           where: roleFilter,
-          as: "role",
+          as: "roles",
           required: true
         },
         {
-          attributes:[],
+          attributes: [],
           model: Designation,
           where: {
             isDeleted: 0
           },
-          as: "designation",
+          as: "designations",
           required: true
         }
       ],
@@ -130,6 +130,7 @@ export class usersRepository {
       query.distinct = true;
 
       const { rows, count } = await User.findAndCountAll(query);
+      //console.log("########################################## rows:", rows);
 
       const cleanedRows = rows.map(row => {
         const jsonRow = row.toJSON() as any;
@@ -179,11 +180,11 @@ export class usersRepository {
    
     const query: FindAndCountOptions<UserInstance> = {
       attributes: {
-        exclude: ['id', 'roleId', 'designationId', 'password', 'reportingManagerId', 'accountStatus', 'isDeleted', 'deletedAt'],
+        exclude: ['id', 'roleId', 'designationId', 'password', 'reportingManagerId', 'isDeleted', 'deletedAt'],
         include: [
           [db.Sequelize.col('User.id'), 'userId'],
-          [db.Sequelize.col('role.roleName'), 'role'],
-          [db.Sequelize.col('designation.name'), 'designation']
+          [db.Sequelize.col('roles.roleName'), 'role'],
+          [db.Sequelize.col('designations.name'), 'designation']
         ]
       },
       where,
@@ -198,21 +199,21 @@ export class usersRepository {
           required: false
         },
         {
-          attributes:[],
+          attributes: ['roleName'],
           model: Role,
           where: {
             isDeleted: 0
           },
-          as: "role",
+          as: "roles",
           required: true
         },
         {
-          attributes:[],
+          attributes: ['name'],
           model: Designation,
           where: {
             isDeleted: 0
           },
-          as: "designation",
+          as: "designations",
           required: true
         }
       ],
@@ -287,7 +288,7 @@ export class usersRepository {
   }
 
   async createAppUser(params: any): Promise<any> {
-    const { hostId, name, employeeCode, email, enteredMobileNumber, callingCode, mobile, password, reportingManagerId, roleId, designationId, profileImageUrl, joiningDate, accountStatus, createdAt, gender, addressLine1, addressLine2, landmark, countryName, countryIsoCode, state, city, district, pinCode, timezone } = params;
+    const { hostId, name, employeeCode, email, enteredMobileNumber, callingCode, mobile, dateOfBirth, password, reportingManagerId, roleId, designationId, profileImageUrl, joiningDate, accountStatus, createdAt, gender, addressLine1, addressLine2, landmark, countryName, countryIsoCode, state, city, district, pinCode, timezone } = params;
     const newUser = await User.create({
       hostId,
       name,
@@ -297,6 +298,7 @@ export class usersRepository {
       callingCode,
       mobile,
       password,
+      dateOfBirth,
       reportingManagerId,
       roleId,
       designationId,

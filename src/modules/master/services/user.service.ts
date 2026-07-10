@@ -64,6 +64,7 @@ export class UserService {
       
       return userData;
     });
+    console.log("#################################### plainData after processing:", plainData);
 
     return {
       users: formatDateTimeFieldsBySettings(plainData, dateTimeSettings),
@@ -195,7 +196,7 @@ export class UserService {
   }
 
   async createAppUser(payload: any): Promise<any> {
-    const { hostId, name, employeeCode, email, enteredMobileNumber, mobile, password, reportingManagerId, designationId, profileImageUrl, joiningDate, gender, accountStatus, addressLine1, addressLine2, landmark, countryName, countryIsoCode, state, city, district, pinCode, timezone } = payload;
+    const { hostId, name, employeeCode, email, enteredMobileNumber, mobile, dateOfBirth, password, reportingManagerId, designationId, profileImageUrl, joiningDate, gender, accountStatus, addressLine1, addressLine2, landmark, countryName, countryIsoCode, state, city, district, pinCode, timezone } = payload;
 
     let settings = payload.settings;
     if(settings && typeof settings !== 'object') {
@@ -237,6 +238,7 @@ export class UserService {
       mobile: normalizedMobile,
       password,
       employeeCode,
+      dateOfBirth,
       roleId,
       reportingManagerId,
       designationId,

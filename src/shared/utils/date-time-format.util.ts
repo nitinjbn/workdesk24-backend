@@ -2,7 +2,7 @@ import { HostDateTimeSettings } from './host-settings.util';
 import moment from 'moment-timezone';
 import { CONFIG } from '../../config/constants';
 
-const TIMESTAMP_KEY_PATTERN = /(At|Date|Time)$/i;
+const TIMESTAMP_KEY_PATTERN = /(At|Date|Time|dateOfBirth)$/i;
 
 const DEFAULT_DATE_TIME_SETTINGS: HostDateTimeSettings = {
   timeZone: CONFIG.REPORTING.TIMEZONE,
