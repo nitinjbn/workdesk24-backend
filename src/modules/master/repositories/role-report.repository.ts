@@ -40,6 +40,7 @@ export class roleRepository {
       },
       where,
       order,
+      raw: true,
       logging: console.log, // Enable logging for debugging
     };
 
