@@ -28,7 +28,8 @@ interface UserAttributes extends BaseModel {
   landmark?: string;
   countryName?: string;
   countryIsoCode?: string;
-  state?: string;
+  stateName?: string;
+  stateIsoCode?: string;
   city?: string;
   district?: string;
   pinCode?: string;
@@ -45,7 +46,7 @@ interface UserAttributes extends BaseModel {
   //employmentStatusUpdatedAt?: number;
 }
 
-interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'hostId' | 'name' | 'roleId' | 'designationId' | 'employeeCode' | 'enteredMobileNumber' | 'callingCode' | 'mobile' | 'mobileVerified' | 'mobileVerifiedAt' | 'reportingManagerId' | 'profileImageUrl' | 'gender' | 'joiningDate' | 'lastLoginAt' | 'accountStatus' | 'accountStatusUpdatedAt' | 'addressLine1' | 'addressLine2' | 'landmark' | 'countryName' | 'countryIsoCode' | 'state' | 'city' | 'district' | 'pinCode' | 'timezone' | 'dateOfBirth'  | 'createdAt' | 'updatedAt' | 'isDeleted' | 'deletedAt'> {}
+interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'hostId' | 'name' | 'roleId' | 'designationId' | 'employeeCode' | 'enteredMobileNumber' | 'callingCode' | 'mobile' | 'mobileVerified' | 'mobileVerifiedAt' | 'reportingManagerId' | 'profileImageUrl' | 'gender' | 'joiningDate' | 'lastLoginAt' | 'accountStatus' | 'accountStatusUpdatedAt' | 'addressLine1' | 'addressLine2' | 'landmark' | 'countryName' | 'countryIsoCode' | 'stateName' | 'stateIsoCode' | 'city' | 'district' | 'pinCode' | 'timezone' | 'dateOfBirth'  | 'createdAt' | 'updatedAt' | 'isDeleted' | 'deletedAt'> {}
 
 class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
   public id!: number;
@@ -73,7 +74,8 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
   public landmark?: string;
   public countryName?: string;
   public countryIsoCode?: string;
-  public state?: string
+  public stateName?: string;
+  public stateIsoCode?: string;
   public city?: string;
   public district?: string
   public pinCode?: string;
@@ -249,8 +251,12 @@ export function initUser(sequelize: Sequelize): typeof User {
         type: DataTypes.CHAR(2),
         allowNull: true,
       },
-      state: {
+      stateName: {
         type: DataTypes.STRING(50),
+        allowNull: true,
+      },
+      stateIsoCode: {
+        type: DataTypes.CHAR(2),
         allowNull: true,
       },
       city: {

@@ -69,7 +69,7 @@ export class UserController {
 
   async createAppUser(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { hostId, name, email, employeeCode, mobile, dateOfBirth, gender, password, reportingManagerId, roleId, designationId, joiningDate, accountStatus, addressLine1, addressLine2, landmark, countryName, countryIsoCode, state, city, district, pinCode, timezone, settings } =  req.body;
+      const { hostId, name, email, employeeCode, mobile, dateOfBirth, gender, password, reportingManagerId, roleId, designationId, joiningDate, accountStatus, addressLine1, addressLine2, landmark, countryName, countryIsoCode, stateName, stateIsoCode, city, district, pinCode, timezone, settings } =  req.body;
       const file = req.file as Express.Multer.File | undefined;
 
       let profileImageUrl = "";
@@ -111,7 +111,8 @@ export class UserController {
         landmark,
         countryName,
         countryIsoCode,
-        state,
+        stateName,
+        stateIsoCode,
         city,
         district,
         pinCode,

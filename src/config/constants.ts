@@ -31,6 +31,12 @@ export const CONFIG = {
       DEFAULT_COUNTRY: 'IN',
       ALLOWED_TYPES: ['MOBILE', 'FIXED_LINE_OR_MOBILE'],
     },
+    GENDER: {
+      "MALE": "Male",
+      "FEMALE": "Female",
+      "OTHER": "Other",
+      "PREFER_NOT_TO_SAY": "Prefer not to say"
+    }
   },
   WEEKDAY_FLAGS: {
     SUNDAY: 1,

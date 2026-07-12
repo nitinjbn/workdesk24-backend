@@ -47,7 +47,7 @@ export class UserService {
       sortBy: sorting.sortBy,
       sortOrder: sorting.sortOrder,
     });
-    console.log("#################################### report:", report);
+    //console.log("#################################### report:", report);
 
     const dateTimeSettings = await getHostDateTimeSettings(hostId);
     //console.log("#################################### dateTimeSettings:", dateTimeSettings);
@@ -63,6 +63,8 @@ export class UserService {
           delete userData.settings.weeklyOffMask;
         }
       }
+      //Change display name of gender
+      userData.gender = CONFIG.USER.GENDER[userData.gender]
       
       return userData;
     });
@@ -198,7 +200,7 @@ export class UserService {
   }
 
   async createAppUser(payload: any): Promise<any> {
-    const { hostId, name, employeeCode, email, enteredMobileNumber, mobile, dateOfBirth, password, reportingManagerId, designationId, profileImageUrl, joiningDate, gender, accountStatus, addressLine1, addressLine2, landmark, countryName, countryIsoCode, state, city, district, pinCode, timezone } = payload;
+    const { hostId, name, employeeCode, email, enteredMobileNumber, mobile, dateOfBirth, password, reportingManagerId, designationId, profileImageUrl, joiningDate, gender, accountStatus, addressLine1, addressLine2, landmark, countryName, countryIsoCode, stateName, stateIsoCode, city, district, pinCode, timezone } = payload;
 
     let settings = payload.settings;
     if(settings && typeof settings !== 'object') {
@@ -253,7 +255,8 @@ export class UserService {
       landmark,
       countryName,
       countryIsoCode,
-      state,
+      stateName,
+      stateIsoCode,
       city,
       district,
       pinCode,
