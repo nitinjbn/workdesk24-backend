@@ -214,7 +214,7 @@ export class UserController {
       }
 
       const existingUser = await userService.getUserDetails({ userId, hostId });
-      if(!existingUser) {
+      if(Object.keys(existingUser.user).length === 0) {
         res.status(404).json({
           success: false,
           message: 'User not found.',
@@ -274,6 +274,50 @@ export class UserController {
         message: 'User updated successfully',
         data: {
           userId: updateUserResult.user.id
+        },
+      } as ApiResponse);
+    } catch (error: any) {
+      next(error);
+    }
+  }
+
+  async deleteAppUser(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { hostId, userId } = req.body;
+
+      if(!userId) {
+        res.status(400).json({
+          success: false,
+          message: 'User ID is required for deleting user.',
+        } as ApiResponse);
+        return;
+      }
+
+      const existingUser = await userService.getUserDetails({ userId, hostId });
+      //console.log('###################### existingUser:', existingUser);
+      if(Object.keys(existingUser.user).length === 0) {
+        res.status(404).json({
+          success: false,
+          message: 'User not found.',
+        } as ApiResponse);
+        return;
+      }
+
+      let updateObj: any = {
+        hostId,
+        userId
+      };      
+
+      //// Soft delete the user using the service
+      const deleteUserResult = await userService.deleteAppUser({
+        ...updateObj
+      });
+      
+      res.json({
+        success: true,
+        message: 'User deleted successfully',
+        data: {
+          userId: deleteUserResult.user.id
         },
       } as ApiResponse);
     } catch (error: any) {

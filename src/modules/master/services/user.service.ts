@@ -377,6 +377,28 @@ export class UserService {
 
     return { user: updateAppUserResult, settings: updateUserSettingsResult };
   }
+
+  async deleteAppUser(payload: any): Promise<any> {
+    const { hostId, userId } = payload;    
+    const currentUnixTime = DateTimeFormatUtil.getCurrentUnixTime();
+   
+    let updateObj: any = {
+      isDeleted: 1,
+      deletedAt: currentUnixTime
+    };
+    
+    const deleteAppUserResult = await usersRepository.updateAppUser({
+      ...updateObj
+    }, {hostId, userId});
+
+    console.log("###################### deleteAppUserResult:", deleteAppUserResult);
+
+    if (!deleteAppUserResult) {
+      throw new Error('Failed to delete app user');
+    }
+
+    return { user: deleteAppUserResult };
+  }
 }
 
 export default new UserService();

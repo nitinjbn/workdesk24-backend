@@ -27,10 +27,8 @@ export class usersRepository {
       hostId,
       isDeleted:0
     }
-    if(filter.accountStatus!==undefined) {
+    if(filter.accountStatus) {
       where.accountStatus = filter.accountStatus;
-    } else {
-      where.accountStatus = 'ACTIVE';
     }
 
     if(filter.userId || filter.id) {
