@@ -347,7 +347,7 @@ export function initUser(sequelize: Sequelize): typeof User {
         },
         beforeUpdate: async (user: User) => {
           user.updatedAt = Math.floor(Date.now() / 1000);
-          if (user.changed('password')) {
+          if (user.password) {
             user.password = await bcrypt.hash(user.password, 10);
           }
         },

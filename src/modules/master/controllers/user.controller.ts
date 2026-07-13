@@ -202,7 +202,7 @@ export class UserController {
 
   async updateAppUser(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { hostId, userId, name, email, employeeCode, mobile, dateOfBirth, gender, password, reportingManagerId, roleId, designationId, joiningDate, accountStatus, addressLine1, addressLine2, landmark, countryName, countryIsoCode, stateName, stateIsoCode, city, district, pinCode, timezone, settings } =  req.body;
+      const { hostId, userId, name, email, employeeCode, mobile, dateOfBirth, gender, password, profileImageUrl, reportingManagerId, roleId, designationId, joiningDate, accountStatus, addressLine1, addressLine2, landmark, countryName, countryIsoCode, stateName, stateIsoCode, city, district, pinCode, timezone, settings } =  req.body;
       const file = req.file as Express.Multer.File | undefined;
 
       if(!userId) {
@@ -232,6 +232,7 @@ export class UserController {
         mobile,
         enteredMobileNumber: mobile,
         dateOfBirth,
+        profileImageUrl,
         reportingManagerId,
         roleId,
         designationId,
@@ -252,7 +253,7 @@ export class UserController {
       };
 
       // Update password only if it's provided in the request
-      if(password) {
+      if(password && password.trim() !== 'NOCHANGE') {
         updateObj.password = password;
       }
       

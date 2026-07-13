@@ -180,7 +180,7 @@ export class usersRepository {
    
     const query: FindAndCountOptions<UserInstance> = {
       attributes: {
-        exclude: ['id', 'roleId', 'designationId', 'password', 'reportingManagerId', 'isDeleted', 'deletedAt'],
+        exclude: ['id', 'roleId', 'password', 'reportingManagerId', 'isDeleted', 'deletedAt'],
         include: [
           [db.Sequelize.col('User.id'), 'userId'],
           [db.Sequelize.col('roles.roleName'), 'role'],
