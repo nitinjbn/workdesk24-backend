@@ -370,7 +370,128 @@ export class usersRepository {
     return created;
   }
 
-  
+  async updateUserSettings(params: {
+    userId: number;
+    settings: Array<{ settingName: string; settingValue: string; isEnabled?: number }>;
+    updatedAt?: number;
+  }): Promise<any[]> {
+    const { userId, settings, updatedAt } = params;
+
+    if(!userId) {
+      throw new Error('userId is required');
+    }
+
+    const normalizedSettings = Array.isArray(settings) ? settings : [];
+    const now = updatedAt || Date.now() / 1000;
+
+    try {
+      return await db.sequelize.transaction(async (transaction: any) => {
+        const existingSettings = await UserSettings.findAll({
+          where: { userId },
+          order: [
+            ['isDeleted', 'ASC'],
+            ['updatedAt', 'DESC'],
+            ['id', 'DESC']
+          ],
+          transaction,
+        });
+
+        const existingByName = new Map<string, any>();
+        existingSettings.forEach((setting) => {
+          if(!existingByName.has(setting.settingName)) {
+            existingByName.set(setting.settingName, setting);
+          }
+        });
+
+        const payloadSettingNames = new Set(normalizedSettings.map((setting) => setting.settingName));
+        const savedSettings: any[] = [];
+
+        for(const setting of normalizedSettings) {
+          const existingSetting = existingByName.get(setting.settingName);
+
+          if(existingSetting) {
+            await existingSetting.update(
+              {
+                settingValue: setting.settingValue,
+                isEnabled: setting.isEnabled ?? existingSetting.isEnabled ?? 1,
+                isDeleted: 0,
+                deletedAt: null,
+                updatedAt: now,
+              },
+              { transaction }
+            );
+            savedSettings.push(existingSetting);
+            continue;
+          }
+
+          const createdSetting = await UserSettings.create(
+            {
+              userId,
+              settingName: setting.settingName,
+              settingValue: setting.settingValue,
+              isEnabled: setting.isEnabled ?? 1,
+              isDeleted: 0,
+              deletedAt: null,
+              createdAt: now,
+              updatedAt: now,
+            },
+            { transaction }
+          );
+          savedSettings.push(createdSetting);
+        }
+
+        const settingsToSoftDelete = existingSettings.filter(
+          (setting) => setting.isDeleted === 0 && !payloadSettingNames.has(setting.settingName)
+        );
+
+        for(const setting of settingsToSoftDelete) {
+          await setting.update(
+            {
+              isDeleted: 1,
+              deletedAt: now,
+              updatedAt: now,
+            },
+            { transaction }
+          );
+        }
+
+        return savedSettings;
+      });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async updateAppUser(updateObj: { [key: string]: any }, filter: {hostId: number, userId: number}): Promise<any> {    
+   
+    if(!filter || !filter.hostId || !filter.userId) {
+      throw new Error('hostId and userId are required for updating user');
+    }
+
+    if(!updateObj || Object.keys(updateObj).length === 0) {
+      throw new Error('No fields provided for update');
+    }
+
+    const [updatedCount] = await User.update(
+      {
+        ...updateObj
+      },
+      {
+        where: {          
+          id: filter.userId,
+          hostId: filter.hostId
+        }
+      }
+    );
+
+    if (updatedCount === 0) {
+      throw new Error('Failed to update app user');
+    }
+
+    return {
+      id: filter.userId
+    };
+  }
 }
 
 export default new usersRepository();

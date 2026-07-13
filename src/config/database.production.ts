@@ -207,7 +207,7 @@ const config: Config = {
 
     // Transaction configuration
     transactionType: Transaction.TYPES.IMMEDIATE,
-    isolationLevel: 'READ_COMMITTED',
+    isolationLevel: Transaction.ISOLATION_LEVELS.READ_COMMITTED,
   },
 
   test: {
@@ -309,7 +309,7 @@ const config: Config = {
     },
 
     transactionType: Transaction.TYPES.IMMEDIATE,
-    isolationLevel: 'READ_COMMITTED',
+    isolationLevel: Transaction.ISOLATION_LEVELS.READ_COMMITTED,
   },
 
   production: {
@@ -385,7 +385,7 @@ const config: Config = {
 
     // Transaction configuration
     transactionType: Transaction.TYPES.IMMEDIATE,
-    isolationLevel: 'READ_COMMITTED',
+    isolationLevel: Transaction.ISOLATION_LEVELS.READ_COMMITTED,
 
     // Query optimization
     query: {

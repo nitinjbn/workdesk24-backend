@@ -78,7 +78,7 @@ export class UserService {
 
   async getUserDetails(
     payload: { hostId: number, userId: number },
-    scope: ReportScope
+    scope?: ReportScope
   ): Promise<UserDetailsResponse<UserInstance>> {
     let { hostId, userId } = payload;
 
@@ -296,6 +296,86 @@ export class UserService {
     return {
       success: true
     };
+  }
+
+  async updateAppUser(payload: any): Promise<any> {
+    const { hostId, userId, name, employeeCode, email, enteredMobileNumber, mobile, dateOfBirth, password, reportingManagerId, designationId, profileImageUrl, joiningDate, gender, accountStatus, addressLine1, addressLine2, landmark, countryName, countryIsoCode, stateName, stateIsoCode, city, district, pinCode, timezone } = payload;
+
+    let settings = payload.settings;
+    if(settings && typeof settings !== 'object') {
+      settings = CommonUtil.parseJsonField(settings);
+
+      // If weeklyOffDays is present, convert it to getWeeklyOffMask and remove weeklyOffDays
+      if(settings?.weeklyOffDays) {
+        settings.weeklyOffMask = DateTimeFormatUtil.getWeeklyOffMask(settings.weeklyOffDays);
+        delete settings.weeklyOffDays;
+      }
+    }
+    //console.log("#################################### settings after processing:", settings);
+
+    const currentUnixTime = DateTimeFormatUtil.getCurrentUnixTime();
+   
+    const validationResult = PhoneUtil.validate(mobile, countryIsoCode);
+    //console.log('############# Phone validation result:', validationResult);
+    if (!validationResult.success) {
+      throw new Error(validationResult.message || 'Invalid mobile number');
+    }
+    const callingCode = validationResult.countryCode || '';
+    const normalizedMobile = validationResult.e164 || mobile;
+
+    let updateObj: any = {
+      name,
+      email,
+      enteredMobileNumber,
+      callingCode,
+      mobile: normalizedMobile,
+      employeeCode,
+      dateOfBirth,
+      reportingManagerId,
+      designationId,
+      joiningDate,
+      gender,
+      accountStatus,
+      addressLine1,
+      addressLine2,
+      landmark,
+      countryName,
+      countryIsoCode,
+      stateName,
+      stateIsoCode,
+      city,
+      district,
+      pinCode,
+      timezone,
+      updatedAt: currentUnixTime
+    };
+
+    if(password) {
+      updateObj.password = password;
+    }
+
+    if(profileImageUrl) {
+      updateObj.profileImageUrl = profileImageUrl;
+    }
+
+    const updateAppUserResult = await usersRepository.updateAppUser({
+      ...updateObj
+    }, {hostId, userId});
+
+    console.log("###################### updateAppUserResult:", updateAppUserResult);
+
+    if (!updateAppUserResult) {
+      throw new Error('Failed to update app user');
+    }
+
+    // Update user settings
+    const updateUserSettingsResult = await usersRepository.updateUserSettings({
+      userId: updateAppUserResult.id,
+      settings: CommonUtil.convertSettingsToArray(settings),
+      updatedAt: currentUnixTime
+    });
+
+    return { user: updateAppUserResult, settings: updateUserSettingsResult };
   }
 }
 

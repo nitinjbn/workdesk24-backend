@@ -199,6 +199,86 @@ export class UserController {
       next(error);
     }
   }
+
+  async updateAppUser(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { hostId, userId, name, email, employeeCode, mobile, dateOfBirth, gender, password, reportingManagerId, roleId, designationId, joiningDate, accountStatus, addressLine1, addressLine2, landmark, countryName, countryIsoCode, stateName, stateIsoCode, city, district, pinCode, timezone, settings } =  req.body;
+      const file = req.file as Express.Multer.File | undefined;
+
+      if(!userId) {
+        res.status(400).json({
+          success: false,
+          message: 'User ID is required for updating user.',
+        } as ApiResponse);
+        return;
+      }
+
+      const existingUser = await userService.getUserDetails({ userId, hostId });
+      if(!existingUser) {
+        res.status(404).json({
+          success: false,
+          message: 'User not found.',
+        } as ApiResponse);
+        return;
+      }
+
+      let updateObj: any = {
+        hostId,
+        userId,
+        name,
+        email,
+        employeeCode,
+        gender,
+        mobile,
+        enteredMobileNumber: mobile,
+        dateOfBirth,
+        reportingManagerId,
+        roleId,
+        designationId,
+        joiningDate,
+        accountStatus,
+        addressLine1,
+        addressLine2,
+        landmark,
+        countryName,
+        countryIsoCode,
+        stateName,
+        stateIsoCode,
+        city,
+        district,
+        pinCode,
+        timezone,
+        settings
+      };
+
+      // Update password only if it's provided in the request
+      if(password) {
+        updateObj.password = password;
+      }
+      
+      // Update profile image only if a new file is provided
+      if(file) {
+        const result = await uploadBufferToMediaStorage(file, `${hostId}/users`);
+        //console.log('####################### Media uploaded to Cloudinary:', result);
+        updateObj.profileImageUrl = result.url;
+      }      
+
+      //// Update the user using the service
+      const updateUserResult = await userService.updateAppUser({
+        ...updateObj
+      });
+      
+      res.json({
+        success: true,
+        message: 'User updated successfully',
+        data: {
+          userId: updateUserResult.user.id
+        },
+      } as ApiResponse);
+    } catch (error: any) {
+      next(error);
+    }
+  }
 }
 
 export default new UserController();
