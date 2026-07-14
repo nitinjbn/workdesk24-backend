@@ -5,6 +5,8 @@ import { GetUsersPayload } from '../types/master.types';
 import userService from '../services/user.service';
 import { uploadBufferToMediaStorage } from '../../../shared/utils/media-storage.util';
 import { PhoneUtil } from '../../../shared/utils/phone.util';
+import { EmailUtil } from '../../../shared/utils/email.util';
+import { CONFIG } from '../../../config/constants';
 export class UserController {
 
   async getAppUsers(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
@@ -67,36 +69,106 @@ export class UserController {
     );
   }
 
+  private async validateEmail(payload:{email: string, hostId: number}): Promise<any> {
+    const { email, hostId } = payload;
+    const emailValidationResult = await EmailUtil.validate(email, {
+      checkMx: true,
+      checkDisposable: true
+    });
+    if (!emailValidationResult.isValid) {
+      throw new Error(emailValidationResult.error || 'Invalid email address');
+    }
+
+    // Check if the email is globally unique across all hosts, otherwise throw an error
+    const userDetails = await userService.getUsersByFilter({hostId, filter: { email: emailValidationResult.email, accountStatus: 'ACTIVE', isDeleted: 0 }});
+    if (userDetails && userDetails?.users?.length > 0) {
+      if (userDetails.users[0]?.hostId != hostId) {
+        throw new Error('Email is linked with another host, please use a different email.');
+      }
+
+      throw new Error('Email already exists');
+    }
+    return {
+      isValid: true,
+      email: emailValidationResult.email,
+      localPart: emailValidationResult.localPart,
+      domain: emailValidationResult.domain
+    }
+  }
+
+  private async validateMobile(payload:{hostId: number, mobile: string, countryIsoCode: "IN" | "US"}): Promise<any> {
+    const { hostId, mobile, countryIsoCode } = payload;
+      
+      const validationResult = PhoneUtil.validate(mobile, countryIsoCode);
+      //console.log('############# Phone validation result:', validationResult);
+      if (!validationResult.success) {
+        throw new Error(validationResult.message || 'Invalid mobile number');
+      } else {
+        // Check if the mobile number is globally unique across all hosts, otherwise throw an error
+        await userService.validateUserMobile({
+          hostId,
+          mobile: validationResult.e164 || mobile
+        });
+
+        return {
+          isValid: true,
+          e164: validationResult.e164,
+          country: validationResult.country,
+          countryCode: validationResult.countryCode,
+          nationalNumber: validationResult.nationalNumber,
+          international: validationResult.international,
+          national: validationResult.national,
+          type: validationResult.type
+        }
+      }
+  }
+
   async createAppUser(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { hostId, name, email, employeeCode, mobile, dateOfBirth, gender, password, reportingManagerId, roleId, designationId, joiningDate, accountStatus, addressLine1, addressLine2, landmark, countryName, countryIsoCode, stateName, stateIsoCode, city, district, pinCode, timezone, settings } =  req.body;
+      const { hostId, name, email, employeeCode, mobile, dateOfBirth, gender, password, reportingManagerId, designationId, joiningDate, accountStatus, addressLine1, addressLine2, landmark, countryName, countryIsoCode, stateName, stateIsoCode, city, district, pinCode, timezone, settings } =  req.body;
       const file = req.file as Express.Multer.File | undefined;
 
+      //Step 1: Validate the mobile number uniqueness and format using PhoneUtil
+      const validationResult = PhoneUtil.validate(mobile, countryIsoCode);
+      if (!validationResult.success) {
+        throw new Error(validationResult.message || 'Invalid mobile number');
+      }
+      //console.log("###################### Phone validation result:", validationResult);
+      const callingCode = validationResult.countryCode || '';
+      const normalizedMobile = validationResult.e164 || mobile;
+
+      //Step 2: Validate the email uniqueness and format using EmailUtil
+      const emailValidationResult = await this.validateEmail({ email, hostId });
+      if (!emailValidationResult.isValid) {
+        throw new Error('Invalid email address');
+      }
+
+      //Step 3: Check if the email is globally unique across all hosts, otherwise throw an error
+      const appUserRoleDetails = await userService.getRoleByCode({
+        roleCode:CONFIG.AUTH.APP.LOGIN.ALLOWED_ROLES[0],
+        hostId
+      });
+      const roleId = appUserRoleDetails?.role?.id;
+      if (!roleId) {
+        throw new Error('Invalid role details');
+      }
+
+      //Step 4: Upload the profile image to media storage if provided
       let profileImageUrl = "";
       if(file) {
         const result = await uploadBufferToMediaStorage(file, `${hostId}/users`);
         //console.log('####################### Media uploaded to Cloudinary:', result);
         profileImageUrl = result.url;
-      }      
-
-      // const validationResult = PhoneUtil.validate(mobile, countryIsoCode);
-      // console.log('############# Phone validation result:', validationResult);
-      // if (!validationResult.success) {
-      //   res.status(400).json({
-      //     success: false,
-      //     message: validationResult.message,
-      //   } as ApiResponse);
-      //   return;
-      // }
-      // const callingCode = validationResult.countryCode || '';
+      }
 
       const createUserResult = await userService.createAppUser({
         hostId,
         name,
-        email,
+        email: emailValidationResult.email,
         employeeCode,
         gender,
-        mobile,
+        callingCode,
+        normalizedMobile,
         enteredMobileNumber: mobile,
         password,
         dateOfBirth,
@@ -164,37 +236,26 @@ export class UserController {
   async validateUserMobile(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const { hostId, mobile, country: defaultCountry } = req.body;
+      const validationResult = await this.validateMobile({ hostId, mobile, countryIsoCode: defaultCountry });
       
-      const validationResult = PhoneUtil.validate(mobile, defaultCountry);
-      console.log('############# Phone validation result:', validationResult);
-      if (!validationResult.success) {
-        res.status(400).json({
-          success: false,
-          message: validationResult.message,
-        } as ApiResponse);
-        return;
-      } else {
-
-        // Check if the mobile number is globally unique across all hosts, otherwise throw an error
-        await userService.validateUserMobile({
-          hostId,
-          mobile: validationResult.e164 || mobile
-        });
-        
-        res.json({
-          success: true,
-          message: 'Mobile number is valid.',
-          data: {
-            e164: validationResult.e164,
-            country: validationResult.country,
-            countryCode: validationResult.countryCode,
-            nationalNumber: validationResult.nationalNumber,
-            international: validationResult.international,
-            national: validationResult.national,
-            type: validationResult.type
-          }
-        } as ApiResponse);
+      if (!validationResult.isValid) {
+        throw new Error('Invalid mobile number');
       }
+
+      res.json({
+        success: true,
+        message: 'Mobile number is valid.',
+        data: {
+          e164: validationResult.e164,
+          country: validationResult.country,
+          countryCode: validationResult.countryCode,
+          nationalNumber: validationResult.nationalNumber,
+          international: validationResult.international,
+          national: validationResult.national,
+          type: validationResult.type
+        }
+      } as ApiResponse);
+
     } catch (error: any) {
       next(error);
     }
@@ -320,6 +381,27 @@ export class UserController {
           userId: deleteUserResult.user.id
         },
       } as ApiResponse);
+    } catch (error: any) {
+      next(error);
+    }
+  }
+
+  async validateUserEmail(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { hostId, email } = req.body;
+      const validationResult = await this.validateEmail({ email, hostId });
+      
+      if (validationResult.isValid) {
+        res.json({
+          success: true,
+          message: 'Email is valid.',
+          data: {
+            email: validationResult.email,
+            localPart: validationResult.localPart,
+            domain: validationResult.domain
+          }
+        } as ApiResponse);
+      }
     } catch (error: any) {
       next(error);
     }

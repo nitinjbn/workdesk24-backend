@@ -200,7 +200,7 @@ export class UserService {
   }
 
   async createAppUser(payload: any): Promise<any> {
-    const { hostId, name, employeeCode, email, enteredMobileNumber, mobile, dateOfBirth, password, reportingManagerId, designationId, profileImageUrl, joiningDate, gender, accountStatus, addressLine1, addressLine2, landmark, countryName, countryIsoCode, stateName, stateIsoCode, city, district, pinCode, timezone } = payload;
+    const { hostId, name, employeeCode, email, callingCode, enteredMobileNumber, normalizedMobile, dateOfBirth, password, reportingManagerId, roleId, designationId, profileImageUrl, joiningDate, gender, accountStatus, addressLine1, addressLine2, landmark, countryName, countryIsoCode, stateName, stateIsoCode, city, district, pinCode, timezone } = payload;
 
     let settings = payload.settings;
     if(settings && typeof settings !== 'object') {
@@ -215,16 +215,17 @@ export class UserService {
     //console.log("#################################### settings after processing:", settings);
 
     const currentUnixTime = DateTimeFormatUtil.getCurrentUnixTime();
-    const appUserRoleDetails = await roleRepository.getRoleByCode({
-      roleCode:CONFIG.AUTH.APP.LOGIN.ALLOWED_ROLES[0],
-      hostId
-    });
-    //console.log('############# appUserRoleDetails:', appUserRoleDetails);
-    const roleId = appUserRoleDetails?.data?.id;
-    if (!roleId) {
-      throw new Error('Invalid role details');
-    }
+    // const appUserRoleDetails = await roleRepository.getRoleByCode({
+    //   roleCode:CONFIG.AUTH.APP.LOGIN.ALLOWED_ROLES[0],
+    //   hostId
+    // });
+    // //console.log('############# appUserRoleDetails:', appUserRoleDetails);
+    // const roleId = appUserRoleDetails?.data?.id;
+    // if (!roleId) {
+    //   throw new Error('Invalid role details');
+    // }
 
+    /*
     const validationResult = PhoneUtil.validate(mobile, countryIsoCode);
     //console.log('############# Phone validation result:', validationResult);
     if (!validationResult.success) {
@@ -232,6 +233,7 @@ export class UserService {
     }
     const callingCode = validationResult.countryCode || '';
     const normalizedMobile = validationResult.e164 || mobile;
+    */
 
     const createAppUserResult = await usersRepository.createAppUser({
       hostId,
@@ -286,7 +288,7 @@ export class UserService {
     });
 
     if (userDetails && userDetails.length > 0) {
-      if (userDetails[0]?.hostId !== hostId) {
+      if (userDetails[0]?.hostId != hostId) {
         throw createConfiguredError('MOBILE_NUMBER_LINKED_WITH_OTHER_HOST', 'Mobile number is linked with another host, please use a different mobile number.');
       }
 
@@ -362,7 +364,7 @@ export class UserService {
       ...updateObj
     }, {hostId, userId});
 
-    console.log("###################### updateAppUserResult:", updateAppUserResult);
+    //console.log("###################### updateAppUserResult:", updateAppUserResult);
 
     if (!updateAppUserResult) {
       throw new Error('Failed to update app user');
@@ -391,13 +393,57 @@ export class UserService {
       ...updateObj
     }, {hostId, userId});
 
-    console.log("###################### deleteAppUserResult:", deleteAppUserResult);
+    //console.log("###################### deleteAppUserResult:", deleteAppUserResult);
 
     if (!deleteAppUserResult) {
       throw new Error('Failed to delete app user');
     }
 
     return { user: deleteAppUserResult };
+  }
+
+  async validateUserEmail(payload: { hostId: number, email: string }): Promise<any> {
+    const { hostId, email } = payload;
+    const userDetails = await usersRepository.getUsersByFilter({
+      email,
+      accountStatus: 'ACTIVE',
+      isDeleted: 0
+    });
+    //console.log("###################### userDetails for email validation:", userDetails);
+
+    if (userDetails && userDetails.length > 0) {
+      if (userDetails[0]?.hostId != hostId) {
+        throw createConfiguredError('EMAIL_LINKED_WITH_OTHER_HOST', 'Email is linked with another host, please use a different email.');
+      }
+
+      throw createConfiguredError('DUPLICATE_EMAIL', 'Email already exists');
+    }
+
+    return {
+      success: true
+    };
+  }
+
+  async getRoleByCode(payload: { hostId: number, roleCode: string }): Promise<any> {
+    const { hostId, roleCode } = payload;
+    const roleDetails = await roleRepository.getRoleByCode({
+      roleCode,
+      hostId
+    });
+    return {
+      role: roleDetails.data,
+    };
+  }
+
+  async getUsersByFilter(payload: { hostId: number, filter: any }): Promise<any> {
+    const { hostId, filter } = payload;
+    const users = await usersRepository.getUsersByFilter({
+      ...filter,
+      hostId
+    });
+    return {
+      users: users,
+    };
   }
 }
 

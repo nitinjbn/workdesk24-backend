@@ -328,7 +328,11 @@ export class usersRepository {
       throw new Error('Filter is required');
     }
     const where:any = filter;
-    where.isDeleted = 0;
+    
+    // Ensure that isDeleted is always checked to be 0 unless explicitly provided in the filter
+    if(!Object.prototype.hasOwnProperty.call(where, 'isDeleted')) {
+      where.isDeleted = 0;
+    }
     const users = await User.findAll({
       where,
       raw: true,

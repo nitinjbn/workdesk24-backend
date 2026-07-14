@@ -12,7 +12,7 @@ router.post('/users/getUserDetails', userController.getUserDetails.bind(userCont
 router.post('/users/createUser', upload.single('media'), userController.createAppUser.bind(userController));
 router.post('/users/updateUser', upload.single('media'), userController.updateAppUser.bind(userController));
 router.post('/users/deleteUser', userController.deleteAppUser.bind(userController));
-//router.post('/users/validateEmail', upload.single('media'), userController.validateEmail.bind(userController));
+router.post('/users/validateEmail', userController.validateUserEmail.bind(userController));
 router.post('/users/validateMobile', userController.validateUserMobile.bind(userController));
 
 export default router;

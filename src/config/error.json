@@ -58,5 +58,15 @@
         "code": "MOBILE_NUMBER_LINKED_WITH_OTHER_HOST",
         "status": 400,
         "message": "Mobile number is linked with another host, please use a different mobile number."
+    },
+    "DUPLICATE_EMAIL": {
+        "code": "DUPLICATE_EMAIL",
+        "status": 400,
+        "message": "The email address is already in use. Please use a different email address."
+    },
+    "EMAIL_LINKED_WITH_OTHER_HOST": {
+        "code": "EMAIL_LINKED_WITH_OTHER_HOST",
+        "status": 400,
+        "message": "Email address is linked with another host, please use a different email address."
     }
 }
