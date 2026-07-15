@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import app from './app';
 import { initializeDatabase, getDatabaseStatus } from './models/index';
 import { logger } from './config/database';

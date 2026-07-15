@@ -1,8 +1,39 @@
 import { Request, Response, NextFunction } from 'express';
 import authService from '../services/auth.service';
 import { ApiResponse } from '../../../shared/types/base.types';
+import authNotificationService from '../../notifications/auth/authNotificationService';
 
 export class AuthController {
+  async requestOtp(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { email, otpCode, purpose, appName, expiryMinutes } = req.body;
+
+      if (!email || !otpCode) {
+        res.status(400).json({
+          success: false,
+          message: 'email and otpCode are required',
+        } as ApiResponse);
+        return;
+      }
+
+      const result = await authNotificationService.sendOtpEmail({
+        email,
+        otpCode,
+        purpose,
+        appName,
+        expiryMinutes,
+      });
+
+      res.json({
+        success: true,
+        message: 'OTP email sent successfully',
+        data: result,
+      } as ApiResponse);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async register(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { hostId, email, password, name, roleId, designationId, mobile, employeeCode, reportingManagerId, profileImageUrl, joiningDate } = req.body;

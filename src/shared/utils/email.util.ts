@@ -25,6 +25,7 @@ export class EmailUtil {
    * Normalize email before saving.
    */
   static normalize(email?: string | null): string | null {
+    console.log("################ EmailUtil.normalize called with email:", email);
     if (!email) return null;
 
     const normalized = validator.normalizeEmail(email.trim(), {
@@ -34,6 +35,7 @@ export class EmailUtil {
       yahoo_remove_subaddress: false,
       icloud_remove_subaddress: false
     });
+    console.log("################ EmailUtil.normalize: Normalized email:", normalized);
 
     return normalized ? normalized.toLowerCase() : null;
   }
@@ -48,7 +50,9 @@ export class EmailUtil {
       checkDisposable?: boolean;
     }
   ): Promise<EmailValidationResult> {
+    console.log("################ EmailUtil.validate called with email:", email, "and options:", options);
     if (!email || !email.trim()) {
+      console.log("################ EmailUtil.validate: Email is empty or null");
       return {
         isValid: false,
         email: null,

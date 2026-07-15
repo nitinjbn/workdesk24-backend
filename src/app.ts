@@ -1,13 +1,11 @@
+import 'dotenv/config';
 import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
-import dotenv from 'dotenv';
 import routes from './routes';
 import healthRoutes from './routes/health.routes';
 import { errorHandler } from './shared/middleware/error-handler.middleware';
 import responseSerializerMiddleware from './shared/middleware/response-serializer.middleware';
-
-dotenv.config();
 
 const app: Application = express();
 
