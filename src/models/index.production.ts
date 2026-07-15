@@ -31,6 +31,7 @@ import { initProductCategory } from './schemas/ProductCategories';
 import { initProductAttribute } from './schemas/ProductAttributes';
 import { initProductMedia } from './schemas/ProductMedia';
 import { initUOM } from './schemas/UOM';
+import { initUserOTP } from './schemas/UserOTP';
 
 dotenv.config();
 
@@ -117,7 +118,7 @@ const ProductBrand = initProductBrand(sequelize);
 const ProductAttribute = initProductAttribute(sequelize);
 const ProductMedia = initProductMedia(sequelize);
 const UOM = initUOM(sequelize);
-
+const UserOTP = initUserOTP(sequelize);
 // Store models in an object
 const db: any = {
   Host,
@@ -151,6 +152,7 @@ const db: any = {
   UOM,
   sequelize,
   Sequelize,
+  UserOTP,
   connectionManager,
 };
 
@@ -232,6 +234,7 @@ export {
   ProductAttribute,
   ProductMedia,
   UOM,
+  UserOTP,
   connectionManager,
 };
 
