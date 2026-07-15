@@ -482,7 +482,8 @@ export class usersRepository {
         where: {          
           id: filter.userId,
           hostId: filter.hostId
-        }
+        },
+        individualHooks: true
       }
     );
 

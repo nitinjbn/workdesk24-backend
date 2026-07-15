@@ -200,7 +200,7 @@ export class UserService {
   }
 
   async createAppUser(payload: any): Promise<any> {
-    const { hostId, name, employeeCode, email, callingCode, enteredMobileNumber, normalizedMobile, dateOfBirth, password, reportingManagerId, roleId, designationId, profileImageUrl, joiningDate, gender, accountStatus, addressLine1, addressLine2, landmark, countryName, countryIsoCode, stateName, stateIsoCode, city, district, pinCode, timezone } = payload;
+    const { hostId, name, employeeCode, email, callingCode, enteredMobileNumber, mobile, dateOfBirth, password, reportingManagerId, roleId, designationId, profileImageUrl, joiningDate, gender, accountStatus, addressLine1, addressLine2, landmark, countryName, countryIsoCode, stateName, stateIsoCode, city, district, pinCode, timezone } = payload;
 
     let settings = payload.settings;
     if(settings && typeof settings !== 'object') {
@@ -241,7 +241,7 @@ export class UserService {
       email,
       enteredMobileNumber,
       callingCode,
-      mobile: normalizedMobile,
+      mobile,
       password,
       employeeCode,
       dateOfBirth,
@@ -279,16 +279,18 @@ export class UserService {
     return { user: createAppUserResult, settings: createUserSettingsResult };
   }
 
-  async validateUserMobile(payload: { hostId: number, mobile: string }): Promise<any> {
-    const { hostId, mobile } = payload;
+  async validateUserMobile(payload: { hostId: number, mobile: string, userId?: number }): Promise<any> {
+    const { hostId, mobile, userId } = payload;
     const userDetails = await usersRepository.getUsersByFilter({
       mobile,
       accountStatus: 'ACTIVE',
       isDeleted: 0
     });
 
-    if (userDetails && userDetails.length > 0) {
-      if (userDetails[0]?.hostId != hostId) {
+    const duplicateUsers = (userDetails || []).filter((user: any) => !userId || Number(user.id) !== Number(userId));
+
+    if (duplicateUsers.length > 0) {
+      if (duplicateUsers[0]?.hostId != hostId) {
         throw createConfiguredError('MOBILE_NUMBER_LINKED_WITH_OTHER_HOST', 'Mobile number is linked with another host, please use a different mobile number.');
       }
 
@@ -301,7 +303,7 @@ export class UserService {
   }
 
   async updateAppUser(payload: any): Promise<any> {
-    const { hostId, userId, name, employeeCode, email, enteredMobileNumber, mobile, dateOfBirth, password, reportingManagerId, designationId, profileImageUrl, joiningDate, gender, accountStatus, addressLine1, addressLine2, landmark, countryName, countryIsoCode, stateName, stateIsoCode, city, district, pinCode, timezone } = payload;
+    const { hostId, userId, name, employeeCode, email, callingCode, enteredMobileNumber, mobile, dateOfBirth, password, reportingManagerId, designationId, profileImageUrl, joiningDate, gender, accountStatus, addressLine1, addressLine2, landmark, countryName, countryIsoCode, stateName, stateIsoCode, city, district, pinCode, timezone } = payload;
 
     let settings = payload.settings;
     if(settings && typeof settings !== 'object') {
@@ -317,20 +319,20 @@ export class UserService {
 
     const currentUnixTime = DateTimeFormatUtil.getCurrentUnixTime();
    
-    const validationResult = PhoneUtil.validate(mobile, countryIsoCode);
-    //console.log('############# Phone validation result:', validationResult);
-    if (!validationResult.success) {
-      throw new Error(validationResult.message || 'Invalid mobile number');
-    }
-    const callingCode = validationResult.countryCode || '';
-    const normalizedMobile = validationResult.e164 || mobile;
+    // const validationResult = PhoneUtil.validate(mobile, countryIsoCode);
+    // //console.log('############# Phone validation result:', validationResult);
+    // if (!validationResult.success) {
+    //   throw new Error(validationResult.message || 'Invalid mobile number');
+    // }
+    // const callingCode = validationResult.countryCode || '';
+    // const normalizedMobile = validationResult.e164 || mobile;
 
     let updateObj: any = {
       name,
       email,
       enteredMobileNumber,
       callingCode,
-      mobile: normalizedMobile,
+      mobile,
       employeeCode,
       dateOfBirth,
       reportingManagerId,

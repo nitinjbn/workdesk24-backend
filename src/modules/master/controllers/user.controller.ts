@@ -69,8 +69,8 @@ export class UserController {
     );
   }
 
-  private async validateEmail(payload:{email: string, hostId: number}): Promise<any> {
-    const { email, hostId } = payload;
+  private async validateEmail(payload:{email: string, hostId: number, userId?: number}): Promise<any> {
+    const { email, hostId, userId } = payload;
     const emailValidationResult = await EmailUtil.validate(email, {
       checkMx: true,
       checkDisposable: true
@@ -81,8 +81,9 @@ export class UserController {
 
     // Check if the email is globally unique across all hosts, otherwise throw an error
     const userDetails = await userService.getUsersByFilter({hostId, filter: { email: emailValidationResult.email, accountStatus: 'ACTIVE', isDeleted: 0 }});
-    if (userDetails && userDetails?.users?.length > 0) {
-      if (userDetails.users[0]?.hostId != hostId) {
+    const duplicateUsers = (userDetails?.users || []).filter((user: any) => !userId || Number(user.id) !== Number(userId));
+    if (duplicateUsers.length > 0) {
+      if (duplicateUsers[0]?.hostId != hostId) {
         throw new Error('Email is linked with another host, please use a different email.');
       }
 
@@ -96,8 +97,8 @@ export class UserController {
     }
   }
 
-  private async validateMobile(payload:{hostId: number, mobile: string, countryIsoCode: "IN" | "US"}): Promise<any> {
-    const { hostId, mobile, countryIsoCode } = payload;
+  private async validateMobile(payload:{hostId: number, mobile: string, countryIsoCode: "IN" | "US", userId?: number}): Promise<any> {
+    const { hostId, mobile, countryIsoCode, userId } = payload;
       
       const validationResult = PhoneUtil.validate(mobile, countryIsoCode);
       //console.log('############# Phone validation result:', validationResult);
@@ -107,7 +108,8 @@ export class UserController {
         // Check if the mobile number is globally unique across all hosts, otherwise throw an error
         await userService.validateUserMobile({
           hostId,
-          mobile: validationResult.e164 || mobile
+          mobile: validationResult.e164 || mobile,
+          userId
         });
 
         return {
@@ -129,13 +131,12 @@ export class UserController {
       const file = req.file as Express.Multer.File | undefined;
 
       //Step 1: Validate the mobile number uniqueness and format using PhoneUtil
-      const validationResult = PhoneUtil.validate(mobile, countryIsoCode);
-      if (!validationResult.success) {
-        throw new Error(validationResult.message || 'Invalid mobile number');
+      const mobileValidationResult = await this.validateMobile({ hostId, mobile, countryIsoCode });
+      if (!mobileValidationResult.isValid) {
+        throw new Error('Invalid mobile number');
       }
-      //console.log("###################### Phone validation result:", validationResult);
-      const callingCode = validationResult.countryCode || '';
-      const normalizedMobile = validationResult.e164 || mobile;
+      const callingCode = mobileValidationResult.countryCode || '';
+      const normalizedMobile = mobileValidationResult.e164 || mobile;
 
       //Step 2: Validate the email uniqueness and format using EmailUtil
       const emailValidationResult = await this.validateEmail({ email, hostId });
@@ -168,7 +169,7 @@ export class UserController {
         employeeCode,
         gender,
         callingCode,
-        normalizedMobile,
+        mobile: normalizedMobile,
         enteredMobileNumber: mobile,
         password,
         dateOfBirth,
@@ -283,14 +284,29 @@ export class UserController {
         return;
       }
 
+      //Step 1: Validate the mobile number uniqueness and format using PhoneUtil
+      const mobileValidationResult = await this.validateMobile({ hostId, mobile, countryIsoCode, userId: Number(userId) });
+      if (!mobileValidationResult.isValid) {
+        throw new Error('Invalid mobile number');
+      }
+      const callingCode = mobileValidationResult.countryCode || '';
+      const normalizedMobile = mobileValidationResult.e164 || mobile;
+
+      //Step 2: Validate the email uniqueness and format using EmailUtil
+      const emailValidationResult = await this.validateEmail({ email, hostId, userId: Number(userId) });
+      if (!emailValidationResult.isValid) {
+        throw new Error('Invalid email address');
+      }
+
       let updateObj: any = {
         hostId,
         userId,
         name,
-        email,
+        email: emailValidationResult.email,
         employeeCode,
         gender,
-        mobile,
+        callingCode,
+        mobile: normalizedMobile,
         enteredMobileNumber: mobile,
         dateOfBirth,
         profileImageUrl,
