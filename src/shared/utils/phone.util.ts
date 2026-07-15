@@ -86,4 +86,29 @@ export class PhoneUtil {
             type: phone.getType()
         };
     }
+
+   static parseMobileNumber(
+    mobile: string,
+    defaultCountry: 'IN' | 'US' | 'GB' | 'AE' = CONFIG.USER.MOBILE.DEFAULT_COUNTRY as 'IN' | 'US' | 'GB' | 'AE'
+    ): any {
+        if (!mobile?.trim()) {
+            return {
+                isValid: false,
+                message: 'Mobile number is required.'
+            };
+        }
+        
+        const phone = parsePhoneNumberFromString(mobile.trim(), defaultCountry);
+        return {
+            isValid: phone?.isValid() ?? false,
+            message: phone?.isValid() ? 'Valid mobile number.' : 'Invalid mobile number.',
+            mobile: phone?.number,
+            country: phone?.country,
+            countryCode: phone?.countryCallingCode,
+            nationalNumber: phone?.nationalNumber,
+            international: phone?.formatInternational(),
+            national: phone?.formatNational(),
+            type: phone?.getType()
+        };
+    }
 }

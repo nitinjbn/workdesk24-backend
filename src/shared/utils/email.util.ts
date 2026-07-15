@@ -154,4 +154,23 @@ export class EmailUtil {
       error: null
     };
   }
+
+  static parseEmail(email?: string | null): any {
+    if (!email?.trim()) {
+        return {
+            isValid: false,
+            message: 'Email is required.'
+        };
+    }
+    const normalizedEmail = this.normalize(email.trim());
+    const isValid = validator.isEmail(normalizedEmail, {
+        require_tld: true,
+        allow_utf8_local_part: false,
+    });
+    return {
+        isValid,
+        message: isValid ? 'Valid email.' : 'Invalid email.',
+        email: normalizedEmail
+    };
+  }
 }

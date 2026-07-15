@@ -1,4 +1,7 @@
 export const CONFIG = {
+  APP_CONFIG: {
+    NAME: process.env.APP_NAME || 'WorkDesk24',
+  },
   REPORTING: {
     TIMEZONE: 'Asia/Kolkata',
     DATE_FORMAT: 'DD-MMM-YYYY',
@@ -65,13 +68,35 @@ export const CONFIG = {
         SECRET_ACCESS_KEY: process.env.AWS_SES_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY || '',
         SESSION_TOKEN: process.env.AWS_SES_SESSION_TOKEN || process.env.AWS_SESSION_TOKEN || ''
       }
+    }
+  },
+  OTP: {
+    AUTH: {
+      PURPOSE_KEY: 'AUTH_OTP',
+      LABEL: 'Account Verification',
+      EMAIL_TEMPLATE: 'AUTH_OTP_EMAIL',
+      CODE_LENGTH: 6,
+      EXPIRY_MINUTES: 10,
+      MAX_ATTEMPTS: 5,
+      MAX_RESENDS: 3,
     },
-    AUTH_OTP: {
-      TEMPLATE_KEY: 'AUTH_OTP_EMAIL',
-      APP_NAME: process.env.AUTH_OTP_APP_NAME || 'Workdesk24',
-      PURPOSE: process.env.AUTH_OTP_PURPOSE || 'account verification',
-      CODE_LENGTH: Number(process.env.AUTH_OTP_CODE_LENGTH || 6),
-      EXPIRY_MINUTES: Number(process.env.AUTH_OTP_EXPIRY_MINUTES || 10)
+    PASSWORD_RESET: {
+      PURPOSE_KEY: 'PASSWORD_RESET',
+      LABEL: 'Password Reset',
+      EMAIL_TEMPLATE: 'PASSWORD_RESET_EMAIL',
+      CODE_LENGTH: 6,
+      EXPIRY_MINUTES: 10,
+      MAX_ATTEMPTS: 5,
+      MAX_RESENDS: 3,
+    },
+    EMAIL_VERIFICATION: {
+      PURPOSE_KEY: 'EMAIL_VERIFICATION',
+      LABEL: 'Email Verification',
+      EMAIL_TEMPLATE: 'EMAIL_VERIFICATION_EMAIL',
+      CODE_LENGTH: 6,
+      EXPIRY_MINUTES: 15,
+      MAX_ATTEMPTS: 5,
+      MAX_RESENDS: 3,
     }
   }
-};
+}

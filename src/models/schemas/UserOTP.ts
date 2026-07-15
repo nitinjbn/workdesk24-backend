@@ -8,6 +8,7 @@ interface UserOTPAttributes extends BaseModel {
   otpHash: string;
   identifierType: string; // Type of identifier (e.g., 'EMAIL', 'MOBILE')
   identifierValue?: string | null;
+  messageId?: string | null; // Optional message ID returned by the notification service
   expiresAt: number;
   purpose: string; // Purpose of the OTP (e.g., 'LOGIN', 'PASSWORD_RESET', etc.)
   deliveryChannel: string; // Channel through which the OTP was sent (e.g., 'EMAIL', 'SMS', 'WHATSAPP', 'PUSH')
@@ -31,6 +32,7 @@ class UserOTP extends Model<UserOTPAttributes, UserOTPCreationAttributes> implem
   public expiresAt!: number;
   public purpose!: string;
   public deliveryChannel!: string;
+  public messageId?: string | null;
   public status!: string;
   public attemptCount!: number;
   public maxAttempts!: number;
@@ -102,6 +104,10 @@ export function initUserOTP(sequelize: Sequelize): typeof UserOTP {
       deliveryChannel: { // Channel through which the OTP was sent (e.g., 'EMAIL', 'SMS', 'WHATSAPP', 'PUSH')
         type: DataTypes.STRING(30),
         allowNull: false,
+      },
+      messageId: { // Optional message ID returned by the notification service
+        type: DataTypes.STRING(255),
+        allowNull: true,
       },
       resendCount: { // Number of times the OTP has been resent
         type: DataTypes.SMALLINT,

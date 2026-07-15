@@ -411,6 +411,25 @@ export class AuthService {
     const secret = getJwtSecret();
     return jwt.verify(token, secret) as { userId: number };
   }
+
+  async getUsersByFilter(filter: any): Promise<any> {
+    if (!filter || typeof filter !== 'object') {
+      throw createConfiguredError('INVALID_FILTER', 'Filter must be a valid object', 400, 'VALIDATION_ERROR');
+    }
+    const users = await userRepository.getUsersByFilter(filter);
+    return {
+      users: users,
+    };
+  }
+
+  async saveOtpForUser(payload: { hostId: number, userId: number; identifierType: string; identifierValue: string; otpCode: string; expiresAt: number; purpose: string; deliveryChannel: string; messageId?: string; maxAttempts: number; requestIp: string; createdAt: number }): Promise<void> {
+    const { userId } = payload;
+    const user = await userRepository.findById(userId);
+    if (!user) {
+      throw createConfiguredError('USER_NOT_FOUND', 'User not found', 404, 'NOT_FOUND');
+    }
+    return await userRepository.saveOtpForUser(payload);
+  }
 }
 
 export default new AuthService();
