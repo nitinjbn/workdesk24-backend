@@ -14,6 +14,8 @@ import {
   isAdminRole,
 } from '../../../shared/utils/jwt.util';
 import { createConfiguredError } from '../../../shared/utils/error.util';
+import { CommonUtil } from '../../../shared/utils/common.util';
+import { CONFIG } from '../../../config/constants';
 
 interface RegisterDto {
   hostId?: number;
@@ -32,6 +34,11 @@ interface RegisterDto {
 interface LoginDto {
   email: string;
   password: string;
+}
+
+interface VerifyOtpDto {
+  identifier: string;
+  otpCode: string;
 }
 
 interface AuthResponse {
@@ -107,6 +114,81 @@ export class AuthService {
 
   async login(data: LoginDto): Promise<AuthResponse> {
     const user = await this.validateCredentials(data);
+    return this.buildAppLoginResponse(user);
+  }
+
+  async verifyOtp(payload: VerifyOtpDto): Promise<AuthResponse> {
+    const identifier = payload.identifier?.trim();
+    const otpCode = payload.otpCode?.trim();
+
+    if (!identifier || !otpCode) {
+      throw createConfiguredError('INVALID_OTP', 'Identifier and OTP are required', 400, 'VALIDATION_ERROR');
+    }
+
+    const parsedIdentifier = CommonUtil.parseIdentifier(identifier);
+    if (!parsedIdentifier.type) {
+      throw createConfiguredError('INVALID_OTP', 'Invalid identifier. Must be email or mobile', 400, 'VALIDATION_ERROR');
+    }
+
+    const identifierType = parsedIdentifier.type;
+    const identifierValue = identifierType === 'EMAIL' ? parsedIdentifier.email : parsedIdentifier.mobile;
+
+    const otpEntry = await userRepository.findLatestOtpByIdentifier({
+      identifierType,
+      identifierValue,
+      purpose: CONFIG.OTP.AUTH.PURPOSE_KEY,
+    });
+
+    if (!otpEntry) {
+      throw createConfiguredError('INVALID_OTP', 'Invalid or expired OTP', 400, 'INVALID_OTP');
+    }
+
+    await userRepository.incrementOtpAttempt(Number(otpEntry.id));
+    await otpEntry.reload();
+
+    const now = Math.floor(Date.now() / 1000);
+
+    if (otpEntry.status === 'VERIFIED') {
+      throw createConfiguredError('INVALID_OTP', 'OTP is already verified', 400, 'OTP_ALREADY_VERIFIED');
+    }
+
+    if (otpEntry.expiresAt < now || otpEntry.status === 'EXPIRED') {
+      await userRepository.updateOtpStatus({ otpId: Number(otpEntry.id), status: 'EXPIRED' });
+      throw createConfiguredError('INVALID_OTP', 'OTP has expired', 400, 'OTP_EXPIRED');
+    }
+
+    if (otpEntry.attemptCount > otpEntry.maxAttempts) {
+      await userRepository.updateOtpStatus({ otpId: Number(otpEntry.id), status: 'EXPIRED' });
+      throw createConfiguredError('INVALID_OTP', 'Maximum OTP attempts exceeded', 429, 'OTP_MAX_ATTEMPTS_EXCEEDED');
+    }
+
+    const isOtpValid = await otpEntry.compareOtp(otpCode);
+    if (!isOtpValid) {
+      if (otpEntry.attemptCount >= otpEntry.maxAttempts) {
+        await userRepository.updateOtpStatus({ otpId: Number(otpEntry.id), status: 'EXPIRED' });
+      }
+      throw createConfiguredError('INVALID_OTP', 'Invalid OTP', 400, 'INVALID_OTP');
+    }
+
+    await userRepository.updateOtpStatus({
+      otpId: Number(otpEntry.id),
+      status: 'VERIFIED',
+      verifiedAt: now,
+    });
+
+    const user = await userRepository.findById(Number(otpEntry.userId));
+    if (!user) {
+      throw createConfiguredError('USER_NOT_FOUND', 'User not found', 404, 'NOT_FOUND');
+    }
+
+    if (user.accountStatus != 'ACTIVE') {
+      throw createConfiguredError('ACCOUNT_INACTIVE');
+    }
+
+    return this.buildAppLoginResponse(user as LoginUser);
+  }
+
+  private async buildAppLoginResponse(user: { id: number; hostId: number; roleId: number; toJSON: () => unknown }): Promise<AuthResponse> {
     const isAllowedAppLogin = await isAppLoginRole(user.hostId, user.roleId);
     if (!isAllowedAppLogin) {
       throw createConfiguredError('APP_LOGIN_ACCESS_DENIED');

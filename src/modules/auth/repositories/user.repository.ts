@@ -74,6 +74,52 @@ export class UserRepository extends BaseRepository<typeof User.prototype> {
       createdAt
     });
   }
+
+  async findLatestOtpByIdentifier(payload: {
+    identifierType: string;
+    identifierValue: string;
+    purpose: string;
+  }): Promise<typeof UserOTP.prototype | null> {
+    const { identifierType, identifierValue, purpose } = payload;
+
+    return UserOTP.findOne({
+      where: {
+        identifierType,
+        identifierValue,
+        purpose,
+      },
+      order: [
+        ['createdAt', 'DESC'],
+        ['id', 'DESC'],
+      ],
+    });
+  }
+
+  async incrementOtpAttempt(otpId: number): Promise<void> {
+    await UserOTP.increment('attemptCount', {
+      by: 1,
+      where: { id: otpId },
+    });
+  }
+
+  async updateOtpStatus(payload: {
+    otpId: number;
+    status: string;
+    verifiedAt?: number | null;
+  }): Promise<void> {
+    const { otpId, status, verifiedAt } = payload;
+
+    await UserOTP.update(
+      {
+        status,
+        ...(verifiedAt !== undefined ? { verifiedAt } : {}),
+      },
+      {
+        where: { id: otpId },
+        individualHooks: true,
+      }
+    );
+  }
 }
 
 export default new UserRepository();

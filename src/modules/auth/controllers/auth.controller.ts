@@ -142,6 +142,36 @@ export class AuthController {
     }
   }
 
+  async verifyOtp(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      let { identifier, otpCode } = req.body;
+      identifier = identifier?.trim();
+      otpCode = otpCode?.toString().trim();
+
+      if (!identifier || !otpCode) {
+        res.status(400).json({
+          success: false,
+          message: 'Identifier and OTP code are required',
+        } as ApiResponse);
+        return;
+      }
+
+      const result = await authService.verifyOtp({ identifier, otpCode });
+
+      res.json({
+        success: true,
+        message: 'OTP verification successful',
+        data: {
+          user: result.user,
+          token: result.token,
+          permissions: result.permissionsByModule,
+        },
+      } as ApiResponse);
+    } catch (error: any) {
+      next(error);
+    }
+  }
+
   async register(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { hostId, email, password, name, roleId, designationId, mobile, employeeCode, reportingManagerId, profileImageUrl, joiningDate } = req.body;
