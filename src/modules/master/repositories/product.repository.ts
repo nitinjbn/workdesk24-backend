@@ -204,6 +204,27 @@ export class productRepository {
     }
 
     if(filter) {
+      if (filter.searchKey?.trim()) {
+        const searchKey = filter.searchKey.trim();
+        where[Op.or] = [
+          {
+            productName: {
+              [Op.like]: `%${searchKey}%`,
+            },
+          },
+          {
+            productCode: {
+              [Op.like]: `%${searchKey}%`,
+            },
+          },
+          {
+            shortName: {
+              [Op.like]: `%${searchKey}%`,
+            },
+          },
+        ];
+      }
+      
       if(filter.productId || filter.id) {
         filter.id = filter.productId || filter.id;
       }
@@ -224,11 +245,11 @@ export class productRepository {
       if(filter.hsnCode) {
         where.hsnCode = filter.hsnCode;
       }
-      if(filter.productCategoryId) {
-        where.categoryId = filter.productCategoryId;
+      if(filter.categoryId) {
+        where.categoryId = filter.categoryId;
       }
-      if(filter.productBrandId) {
-        where.brandId = filter.productBrandId;
+      if(filter.brandId) {
+        where.brandId = filter.brandId;
       }
     }
    

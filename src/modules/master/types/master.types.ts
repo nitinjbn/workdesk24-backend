@@ -139,11 +139,12 @@ export interface GetProductsPayload {
   limit?: number;
   filter?: {
     id?: number;
+    searchKey?: string;
     productId?: number;
     productCode?: string;
     productName?: string;
-    productCategoryId?: number;
-    productBrandId?: number;
+    categoryId?: number;
+    brandId?: number;
     sku?: string;
     barCode?: string;
     hsnCode?: string;
