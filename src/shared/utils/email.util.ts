@@ -35,7 +35,7 @@ export class EmailUtil {
       yahoo_remove_subaddress: false,
       icloud_remove_subaddress: false
     });
-    console.log("################ EmailUtil.normalize: Normalized email:", normalized);
+    //console.log("################ EmailUtil.normalize: Normalized email:", normalized);
 
     return normalized ? normalized.toLowerCase() : null;
   }

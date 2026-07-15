@@ -76,17 +76,17 @@ export class UserRepository extends BaseRepository<typeof User.prototype> {
   }
 
   async findLatestOtpByIdentifier(payload: {
-    identifierType: string;
-    identifierValue: string;
+    hostId: number;
+    userId: number;
     purpose: string;
   }): Promise<typeof UserOTP.prototype | null> {
-    const { identifierType, identifierValue, purpose } = payload;
+    const { hostId, userId, purpose } = payload;
 
     return UserOTP.findOne({
       where: {
-        identifierType,
-        identifierValue,
-        purpose,
+        hostId,
+        userId,
+        purpose
       },
       order: [
         ['createdAt', 'DESC'],

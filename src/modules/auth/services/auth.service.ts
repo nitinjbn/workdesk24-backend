@@ -125,19 +125,18 @@ export class AuthService {
       throw createConfiguredError('INVALID_OTP', 'Identifier and OTP are required', 400, 'VALIDATION_ERROR');
     }
 
-    const parsedIdentifier = CommonUtil.parseIdentifier(identifier);
-    if (!parsedIdentifier.type) {
-      throw createConfiguredError('INVALID_OTP', 'Invalid identifier. Must be email or mobile', 400, 'VALIDATION_ERROR');
+    const user = await this.getUserByIdentifier({ identifier });
+    //console.log("################ AuthService.verifyOtp: User found:", user);
+    if (user.accountStatus != 'ACTIVE') {
+      throw createConfiguredError('ACCOUNT_INACTIVE', 'User account is inactive', 403, 'ACCOUNT_INACTIVE');
     }
 
-    const identifierType = parsedIdentifier.type;
-    const identifierValue = identifierType === 'EMAIL' ? parsedIdentifier.email : parsedIdentifier.mobile;
-
     const otpEntry = await userRepository.findLatestOtpByIdentifier({
-      identifierType,
-      identifierValue,
+      hostId: user.hostId,
+      userId: user.id,
       purpose: CONFIG.OTP.AUTH.PURPOSE_KEY,
     });
+    //console.log("################ AuthService.verifyOtp: OTP entry found:", otpEntry);
 
     if (!otpEntry) {
       throw createConfiguredError('INVALID_OTP', 'Invalid or expired OTP', 400, 'INVALID_OTP');
@@ -176,16 +175,12 @@ export class AuthService {
       verifiedAt: now,
     });
 
-    const user = await userRepository.findById(Number(otpEntry.userId));
-    if (!user) {
+    const loginUser = await userRepository.findById(user.id);
+    if (!loginUser) {
       throw createConfiguredError('USER_NOT_FOUND', 'User not found', 404, 'NOT_FOUND');
     }
 
-    if (user.accountStatus != 'ACTIVE') {
-      throw createConfiguredError('ACCOUNT_INACTIVE');
-    }
-
-    return this.buildAppLoginResponse(user as LoginUser);
+    return this.buildAppLoginResponse(loginUser as unknown as LoginUser);
   }
 
   private async buildAppLoginResponse(user: { id: number; hostId: number; roleId: number; toJSON: () => unknown }): Promise<AuthResponse> {
@@ -511,6 +506,48 @@ export class AuthService {
       throw createConfiguredError('USER_NOT_FOUND', 'User not found', 404, 'NOT_FOUND');
     }
     return await userRepository.saveOtpForUser(payload);
+  }
+
+  async getUserByIdentifier(payload: { identifier: string }): Promise<any> {
+    let { identifier } = payload;
+    identifier = identifier?.trim(); // Trim whitespace from the identifier
+    
+    // Validate the identifier exists and is not empty
+    if (!identifier) {
+      throw createConfiguredError('INVALID_IDENTIFIER', 'Please enter email or mobile number.', 400, 'VALIDATION_ERROR');
+    }
+    
+    // Determine if the identifier is an email or mobile number
+    const parseIdentifierResult = CommonUtil.parseIdentifier(identifier);
+    if (!parseIdentifierResult.type) {
+      throw createConfiguredError('INVALID_IDENTIFIER', 'Invalid value. Must be a valid email or phone number.', 400, 'VALIDATION_ERROR');
+    }
+
+    let whereClause: Record<string, any> = {
+      accountStatus: 'ACTIVE',
+      isDeleted: 0
+    };
+
+    if (parseIdentifierResult.type === 'EMAIL') {
+      whereClause.email = parseIdentifierResult.email;
+    } else if (parseIdentifierResult.type === 'MOBILE') {
+      whereClause.mobile = parseIdentifierResult.mobile;
+    }
+
+    const getUsersResult = await this.getUsersByFilter(whereClause);
+    //console.log("################ AuthController.requestOtp: Users fetched by filter:", getUsersResult);
+    const users = getUsersResult.users || [];
+
+    if (!users || users.length === 0) {
+      throw createConfiguredError('USER_NOT_FOUND', 'You are not registered. Please contact your administrator.', 404, 'NOT_FOUND');
+    }
+
+    if(users.length > 1) {
+      throw createConfiguredError('MULTIPLE_USERS_FOUND', 'Multiple users found with the same identifier. Please contact your administrator.', 400, 'VALIDATION_ERROR');
+    }
+
+    const user = users[0];
+    return user;
   }
 }
 

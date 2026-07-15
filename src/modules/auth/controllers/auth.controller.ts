@@ -10,62 +10,17 @@ export class AuthController {
   async requestOtp(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       let { identifier } = req.body;
-      identifier = identifier?.trim(); // Trim whitespace from the identifier
-
-      // Validate the identifier exists and is not empty
-      if (!identifier) {
-        res.status(400).json({
+      const user = await authService.getUserByIdentifier({ identifier });
+      if (!user) {
+        res.status(404).json({
           success: false,
-          message: 'Please enter email or mobile number.',
+          message: 'User not found',
         } as ApiResponse);
         return;
       }
       
-      // Determine if the identifier is an email or mobile number
-      const parseIdentifierResult = CommonUtil.parseIdentifier(identifier);
-      if (!parseIdentifierResult.type) {
-        res.status(400).json({
-          success: false,
-          message: 'Invalid value. Must be a valid email or phone number.',
-        } as ApiResponse);
-        return;
-      }
-
-      let whereClause: Record<string, any> = {
-        accountStatus: 'ACTIVE',
-        isDeleted: 0
-      };
-
-      if (parseIdentifierResult.type === 'EMAIL') {
-        whereClause.email = parseIdentifierResult.email;
-      } else if (parseIdentifierResult.type === 'MOBILE') {
-        whereClause.mobile = parseIdentifierResult.mobile;
-      }
-
-      const getUsersResult = await authService.getUsersByFilter(whereClause);
-      //console.log("################ AuthController.requestOtp: Users fetched by filter:", getUsersResult);
-      const users = getUsersResult.users || [];
-
-      if (!users || users.length === 0) {
-        res.status(404).json({
-          success: false,
-          message: 'You are not registered. Please contact your administrator.',
-        } as ApiResponse);
-        return;
-      }
-
-      if(users.length > 1) {
-        res.status(400).json({
-          success: false,
-          message: 'Multiple users found with the same identifier. Please contact your administrator.',
-        } as ApiResponse);
-        return;
-      }
-
-      const user = users[0];
       //console.log("################ AuthController.requestOtp: User found:", user);
       const { email, mobile } = user;
-
       const otpCode = CommonUtil.generateOTP(CONFIG.OTP.AUTH.CODE_LENGTH);
 
       if (!email || !otpCode) {
