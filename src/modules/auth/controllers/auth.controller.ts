@@ -95,6 +95,7 @@ export class AuthController {
 
       // Determine the status of email OTP sending
       const emailOtpStatus = sendEmailOtpResult.messageId ? true : false;
+      const smsOtpStatus = false; // SMS sending is not implemented yet
 
       if(emailOtpStatus) {
         console.log(`OTP email sent successfully to ${email}. Message ID: ${sendEmailOtpResult.messageId}`);
@@ -121,10 +122,19 @@ export class AuthController {
 
       res.json({
         success: true,
-        message: 'OTP email sent successfully',
+        message: CommonUtil.buildOtpDeliveryMessage({
+          email,
+          mobile,
+          emailOtpStatus,
+          smsOtpStatus
+        }),
         data: {
           email: emailOtpStatus,
-          sms: false, // SMS sending is not implemented yet
+          sms: smsOtpStatus,
+          deliveryTargets: {
+            email: emailOtpStatus && email ? CommonUtil.maskEmail(email) : null,
+            mobile: smsOtpStatus && mobile ? CommonUtil.maskMobile(mobile) : null,
+          }
         }
       } as ApiResponse);
     } catch (error) {
