@@ -466,6 +466,7 @@ export class usersRepository {
 
   async updateAppUser(updateObj: { [key: string]: any }, filter: {hostId: number, userId: number}): Promise<any> {    
    
+    //console.log("###################### updateAppUser updateObj:", updateObj);
     if(!filter || !filter.hostId || !filter.userId) {
       throw new Error('hostId and userId are required for updating user');
     }
