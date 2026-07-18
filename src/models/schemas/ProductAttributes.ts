@@ -49,7 +49,7 @@ export function initProductAttribute(sequelize: Sequelize): typeof ProductAttrib
       },
       attributeGroup: {
         type: DataTypes.STRING(50),
-        allowNull: false,
+        allowNull: true,
       },
       attributeName: {
         type: DataTypes.STRING(50),
@@ -61,7 +61,7 @@ export function initProductAttribute(sequelize: Sequelize): typeof ProductAttrib
       },
       attributeType: {
         type: DataTypes.ENUM('TEXT','NUMBER','DECIMAL','DATE','BOOLEAN','JSON'),
-        allowNull: false,
+        allowNull: true,
       },
       attributeUomId: {
         type: DataTypes.BIGINT,

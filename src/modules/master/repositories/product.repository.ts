@@ -529,13 +529,13 @@ export class productRepository {
     const rows = attributes.map((attribute) => ({
       hostId,
       productId,
-      attributeGroup: attribute.attributeGroup,
+      attributeGroup: attribute.attributeGroup || null,
       attributeName: attribute.attributeName,
       attributeValue: attribute.attributeValue,
-      attributeType: attribute.attributeType,
+      attributeType: attribute.attributeType || null,
       attributeUomId: attribute.attributeUomId,
-      sortOrder: attribute.sortOrder,
-      isEnabled: attribute.isEnabled,
+      sortOrder: attribute.sortOrder || 0,
+      isEnabled: attribute.isEnabled || 1,
       createdAt,
     }));
 
