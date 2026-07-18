@@ -199,16 +199,16 @@ export class AuthService {
       });
     }
 
-    return this.buildAppLoginResponse(loginUser as unknown as LoginUser);
+    return this.buildAppLoginResponse(loginUser as unknown as LoginUser, payload.deviceDetails);
   }
 
-  private async buildAppLoginResponse(user: { id: number; hostId: number; roleId: number; toJSON: () => unknown }): Promise<AuthResponse> {
+  private async buildAppLoginResponse(user: { id: number; hostId: number; roleId: number; toJSON: () => unknown }, deviceDetails?: any): Promise<AuthResponse> {
     const isAllowedAppLogin = await isAppLoginRole(user.hostId, user.roleId);
     if (!isAllowedAppLogin) {
       throw createConfiguredError('APP_LOGIN_ACCESS_DENIED');
     }
 
-    const sessionTokens = await this.createAdminSessionTokens({ hostId: user.hostId, userId: user.id, deviceType: 'ANDROID', deviceId: 'app' });
+    const sessionTokens = await this.createAdminSessionTokens({ hostId: user.hostId, userId: user.id, deviceType: 'ANDROID', deviceId: deviceDetails?.deviceId || 'app' });
     const permissionsByModule = await this.getPermissionsByModuleForUser(user.hostId, user.roleId, user.id);
 
     return {
