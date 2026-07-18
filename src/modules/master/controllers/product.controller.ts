@@ -116,7 +116,7 @@ export class ProductController {
       }
 
       const result = await uploadBufferToMediaStorage(file, `${hostId}/products`);
-      console.log('####################### Media uploaded to Cloudinary:', result);
+      //console.log('####################### Media uploaded to Cloudinary:', result);
 
       const saveMedia = await productService.saveProductMedia({
         hostId,
@@ -131,7 +131,7 @@ export class ProductController {
         sortOrder: sortOrder || 0,
         isEnabled: isEnabled || 0
       });
-      console.log('####################### Media saved to database:', saveMedia);
+      //console.log('####################### Media saved to database:', saveMedia);
 
       res.json({
         success: true,
@@ -140,7 +140,8 @@ export class ProductController {
           url: result.url,
           public_id: result.fileId,
           mediaId: saveMedia.id,
-          isTemporary: !saveMedia.isEnabled,
+          isTemporary: Number(!saveMedia.isEnabled),
+          isPrimary: saveMedia.isPrimary,
           fileName: saveMedia.fileName,
           fileSizeInBytes: saveMedia.fileSizeInBytes,
           mimeType: saveMedia.mimeType
