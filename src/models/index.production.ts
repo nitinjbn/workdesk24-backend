@@ -18,7 +18,7 @@ import { initPayment } from './schemas/Payment';
 import { initFeedback } from './schemas/Feedback';
 import { initImage } from './schemas/Image';
 import { initCustomer } from './schemas/Customer';
-import { initAdminRefreshToken } from './schemas/AdminRefreshToken';
+import { initUserRefreshToken } from './schemas/UserRefreshToken';
 import { initDesignation } from './schemas/Designation';
 import config, { logger } from '../config/database';
 import { DatabaseConnectionManager, type ConnectionMetrics, type HealthCheckResult } from '../shared/database/connection-manager';
@@ -98,6 +98,7 @@ const UserPermission = initUserPermission(sequelize);
 const User = initUser(sequelize);
 const UserSettings = initUserSettings(sequelize);
 const Inquiry = initInquiry(sequelize);
+const UserRefreshToken = initUserRefreshToken(sequelize);
 const Attendance = initAttendance(sequelize);
 const GpsHistory = initGpsHistory(sequelize);
 const Visit = initVisit(sequelize);
@@ -110,7 +111,6 @@ const Customer = initCustomer(sequelize);
 const CustomerMedia = initCustomerMedia(sequelize);
 const CustomerType = initCustomerType(sequelize);
 const CustomerAttribute = initCustomerAttribute(sequelize);
-const AdminRefreshToken = initAdminRefreshToken(sequelize);
 const Designation = initDesignation(sequelize);
 const Product = initProduct(sequelize);
 const ProductCategory = initProductCategory(sequelize);
@@ -142,7 +142,7 @@ const db: any = {
   CustomerMedia,
   CustomerType,
   CustomerAttribute,
-  AdminRefreshToken,
+  UserRefreshToken,
   Designation,
   Product,
   ProductCategory,
@@ -226,7 +226,7 @@ export {
   CustomerMedia,
   CustomerAttribute,
   CustomerType,
-  AdminRefreshToken,
+  UserRefreshToken,
   Designation,
   Product,
   ProductCategory,

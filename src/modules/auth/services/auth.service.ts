@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import userRepository from '../repositories/user.repository';
 import bcrypt from 'bcryptjs';
-import adminRefreshTokenRepository from '../repositories/admin-refresh-token.repository';
+import userRefreshTokenRepository from '../repositories/user-refresh-token.repository';
 import rolePermissionRepository, { RolePermissionAssignmentView, RolePermissionView } from '../repositories/role-permission.repository';
 import userPermissionRepository, { UserPermissionAssignmentView } from '../repositories/user-permission.repository';
 import {
@@ -208,7 +208,7 @@ export class AuthService {
       throw createConfiguredError('ADMIN_PORTAL_ACCESS_DENIED');
     }
 
-    const sessionTokens = await this.createAdminSessionTokens(user.id);
+    const sessionTokens = await this.createAdminSessionTokens({ hostId: user.hostId, userId: user.id, deviceType: 'WEB', deviceId: 'default' });
     const permissionsByModule = await this.getPermissionsByModuleForUser(user.hostId, user.roleId, user.id);
 
     return {
@@ -225,46 +225,46 @@ export class AuthService {
     const payload = this.verifyRefreshToken(refreshToken);
     const now = Math.floor(Date.now() / 1000);
     const tokenHash = this.hashToken(refreshToken);
-    const tokenRecord = await adminRefreshTokenRepository.findByTokenHash(tokenHash);
+    const tokenRecord = await userRefreshTokenRepository.findByTokenHash(tokenHash);
 
     if (!tokenRecord) {
       throw createConfiguredError('INVALID_REFRESH_TOKEN');
     }
 
     if (tokenRecord.isRevoked === 1) {
-      await adminRefreshTokenRepository.revokeAllActiveForUser(tokenRecord.userId);
+      await userRefreshTokenRepository.revokeAllActiveForUser(tokenRecord.userId);
       throw createConfiguredError('REFRESH_TOKEN_REUSE_DETECTED');
     }
 
     if (tokenRecord.expiresAt <= now) {
-      await adminRefreshTokenRepository.revokeTokenById(tokenRecord.id);
+      await userRefreshTokenRepository.revokeTokenById(tokenRecord.id);
       throw createConfiguredError('REFRESH_TOKEN_EXPIRED');
     }
 
     if (tokenRecord.userId !== payload.userId || tokenRecord.tokenFamily !== payload.tokenFamily) {
-      await adminRefreshTokenRepository.revokeAllActiveForUser(tokenRecord.userId);
+      await userRefreshTokenRepository.revokeAllActiveForUser(tokenRecord.userId);
       throw createConfiguredError('INVALID_REFRESH_TOKEN');
     }
 
     const user = await userRepository.findById(payload.userId);
     if (!user) {
-      await adminRefreshTokenRepository.revokeAllActiveForUser(payload.userId);
+      await userRefreshTokenRepository.revokeAllActiveForUser(payload.userId);
       throw createConfiguredError('INVALID_REFRESH_TOKEN');
     }
 
     if (user.accountStatus !== 'ACTIVE') {
-      await adminRefreshTokenRepository.revokeAllActiveForUser(payload.userId);
+      await userRefreshTokenRepository.revokeAllActiveForUser(payload.userId);
       throw createConfiguredError('ACCOUNT_INACTIVE');
     }
 
     const isAdmin = await isAdminRole(user.hostId, user.roleId);
     if (!isAdmin) {
-      await adminRefreshTokenRepository.revokeAllActiveForUser(payload.userId);
+      await userRefreshTokenRepository.revokeAllActiveForUser(payload.userId);
       throw createConfiguredError('ADMIN_PORTAL_ACCESS_DENIED');
     }
 
-    const rotatedTokens = await this.createAdminSessionTokens(user.id, payload.tokenFamily);
-    await adminRefreshTokenRepository.revokeTokenById(tokenRecord.id, rotatedTokens.refreshTokenHash);
+    const rotatedTokens = await this.createAdminSessionTokens({ hostId: user.hostId, userId: user.id, tokenFamily: payload.tokenFamily, deviceType: 'WEB', deviceId: 'default' });
+    await userRefreshTokenRepository.revokeTokenById(tokenRecord.id, rotatedTokens.refreshTokenHash);
     const permissionsByModule = await this.getPermissionsByModuleForUser(user.hostId, user.roleId, user.id);
 
     return {
@@ -285,18 +285,18 @@ export class AuthService {
     try {
       const payload = this.verifyRefreshToken(refreshToken);
       const tokenHash = this.hashToken(refreshToken);
-      const tokenRecord = await adminRefreshTokenRepository.findByTokenHash(tokenHash);
+      const tokenRecord = await userRefreshTokenRepository.findByTokenHash(tokenHash);
 
       if (!tokenRecord) {
         return;
       }
 
       if (tokenRecord.userId !== payload.userId) {
-        await adminRefreshTokenRepository.revokeAllActiveForUser(tokenRecord.userId);
+        await userRefreshTokenRepository.revokeAllActiveForUser(tokenRecord.userId);
         return;
       }
 
-      await adminRefreshTokenRepository.revokeTokenById(tokenRecord.id);
+      await userRefreshTokenRepository.revokeTokenById(tokenRecord.id);
     } catch {
       return;
     }
@@ -329,12 +329,14 @@ export class AuthService {
     return jwt.sign({ userId, tokenType: 'access' }, secret, { expiresIn });
   }
 
-  private async createAdminSessionTokens(userId: number, tokenFamily?: string): Promise<AdminSessionTokens> {
+  private async createAdminSessionTokens(payload:{hostId: number, userId: number, tokenFamily?: string, deviceType?: 'WEB' | 'ANDROID' | 'IOS', deviceId: string, deviceName?: string | null, appVersion?: string | null, lastUsedAt?: number | null }): Promise<AdminSessionTokens> {
     const refreshSecret = getJwtRefreshSecret();
     const refreshExpiresIn = getJwtRefreshExpiresIn();
+    const { hostId, userId, tokenFamily } = payload;
     const finalTokenFamily = tokenFamily || crypto.randomBytes(16).toString('hex');
     const refreshToken = jwt.sign(
       {
+        hostId,
         userId,
         tokenFamily: finalTokenFamily,
         tokenType: 'refresh',
@@ -350,10 +352,16 @@ export class AuthService {
 
     const refreshTokenHash = this.hashToken(refreshToken);
 
-    await adminRefreshTokenRepository.create({
+    await userRefreshTokenRepository.create({
+      hostId,
       userId,
       tokenHash: refreshTokenHash,
       tokenFamily: finalTokenFamily,
+      deviceType: payload.deviceType || 'WEB',
+      deviceId: payload.deviceId,
+      deviceName: payload.deviceName || null,
+      appVersion: payload.appVersion || null,
+      lastUsedAt: payload.lastUsedAt || null,
       expiresAt: decodedRefreshToken.exp,
     });
 
