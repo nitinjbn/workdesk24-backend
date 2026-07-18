@@ -118,7 +118,8 @@ export class AuthController {
         message: 'OTP verification successful',
         data: {
           user: result.user,
-          token: result.token,
+          accessToken: result.accessToken,
+          refreshToken: result.refreshToken,
           permissions: result.permissionsByModule,
         },
       } as ApiResponse);
@@ -170,7 +171,37 @@ export class AuthController {
         message: 'Login successful',
         data: {
           user: result.user,
-          token: result.token,
+          accessToken: result.accessToken,
+          refreshToken: result.refreshToken,
+          permissions: result.permissionsByModule,
+        },
+      } as ApiResponse);
+    } catch (error: any) {
+      next(error);
+    }
+  }
+
+  async refresh(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { refreshToken } = req.body;
+
+      if (!refreshToken) {
+        res.status(400).json({
+          success: false,
+          message: 'Refresh token is required',
+        } as ApiResponse);
+        return;
+      }
+
+      const result = await authService.refreshAppSession(refreshToken);
+
+      res.json({
+        success: true,
+        message: 'Token refreshed successfully',
+        data: {
+          user: result.user,
+          accessToken: result.accessToken,
+          refreshToken: result.refreshToken,
           permissions: result.permissionsByModule,
         },
       } as ApiResponse);

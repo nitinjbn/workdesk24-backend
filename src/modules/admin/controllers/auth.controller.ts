@@ -43,7 +43,7 @@ export class AdminAuthController {
           user: result.user,
           //permissions: result.permissions,
           permissions: result.permissionsByModule,
-          csrfToken: result.csrfToken,
+          csrfToken: result.csrfToken
         },
       } as ApiResponse);
     } catch (error) {

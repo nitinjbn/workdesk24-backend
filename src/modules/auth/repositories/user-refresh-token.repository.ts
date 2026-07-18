@@ -56,6 +56,17 @@ export class UserRefreshTokenRepository {
       }
     );
   }
+
+  async revokeTokenByDevice(hostId: number, userId: number, deviceId: string): Promise<void> {
+    // Delete existing token for this device to avoid unique constraint violation
+    await UserRefreshToken.destroy({
+      where: {
+        hostId,
+        userId,
+        deviceId,
+      },
+    });
+  }
 }
 
 export default new UserRefreshTokenRepository();

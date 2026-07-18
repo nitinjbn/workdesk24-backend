@@ -25,17 +25,17 @@ export const requireAdminCsrfToken = (
   const csrfToken = Array.isArray(csrfHeaderToken) ? csrfHeaderToken[0] : csrfHeaderToken;
 
   if (!csrfCookieToken || !csrfToken) {
-    res.status(403).json({
+    res.status(401).json({
       success: false,
-      message: 'CSRF token is required',
+      message: 'CSRF token is missing or invalid.',
     });
     return;
   }
 
   if (!safeEqual(csrfCookieToken, csrfToken)) {
-    res.status(403).json({
+    res.status(401).json({
       success: false,
-      message: 'Invalid CSRF token',
+      message: 'Invalid CSRF token.',
     });
     return;
   }
