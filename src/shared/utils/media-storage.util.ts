@@ -13,6 +13,17 @@ export interface BatchMediaUploadResult {
   failed: Array<{ error: string }>;
 }
 
+export interface MediaDeleteResult {
+  fileId: string;
+  result: string;
+  raw: unknown;
+}
+
+export interface BatchMediaDeleteResult {
+  successful: MediaDeleteResult[];
+  failed: Array<{ fileId: string; error: string }>;
+}
+
 export function getMediaResourceType(mimeType: string): MediaResourceType {
   if (mimeType.startsWith('image/')) {
     return 'image';
@@ -77,6 +88,58 @@ export async function uploadManyBuffersToMediaStorage(
   const failed = settledResults
     .filter((result): result is PromiseRejectedResult => result.status === 'rejected')
     .map((result) => ({
+      error: result.reason?.message || String(result.reason),
+    }));
+
+  return {
+    successful,
+    failed,
+  };
+}
+
+export async function deleteMediaFromStorage(
+  publicId: string
+): Promise<MediaDeleteResult> {
+  return new Promise<MediaDeleteResult>((resolve, reject) => {
+    cloudinary.uploader.destroy(
+      publicId,
+      { invalidate: true },
+      (error: Error | undefined, deleteResult: any) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+
+        if (!deleteResult) {
+          reject(new Error('Media deletion failed without valid response'));
+          return;
+        }
+
+        resolve({
+          fileId: publicId,
+          result: deleteResult.result,
+          raw: deleteResult,
+        });
+      }
+    );
+  });
+}
+
+export async function deleteManyMediaFromStorage(
+  publicIds: string[]
+): Promise<BatchMediaDeleteResult> {
+  const settledResults = await Promise.allSettled(
+    publicIds.map((publicId) => deleteMediaFromStorage(publicId))
+  );
+
+  const successful = settledResults
+    .filter((result): result is PromiseFulfilledResult<MediaDeleteResult> => result.status === 'fulfilled')
+    .map((result) => result.value);
+
+  const failed = settledResults
+    .filter((result): result is PromiseRejectedResult => result.status === 'rejected')
+    .map((result, index) => ({
+      fileId: publicIds[settledResults.indexOf(result as any)],
       error: result.reason?.message || String(result.reason),
     }));
 

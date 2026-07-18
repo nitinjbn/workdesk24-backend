@@ -19,6 +19,7 @@ import { getHostDateTimeSettings } from '../../../shared/utils/host-settings.uti
 import { formatDateTimeFieldsBySettings } from '../../../shared/utils/date-time-format.util';
 import { CONFIG } from '../../../config/constants';
 import { DateTimeFormatUtil } from '../../../shared/utils/date-time-format.util';
+import { deleteMediaFromStorage } from '../../../shared/utils/media-storage.util';
 
 type ProductInstance = typeof Product.prototype;
 
@@ -301,6 +302,48 @@ export class ProductService {
     }
 
     return createProductResult;
+  }
+
+  async deleteProductMedia(payload: { hostId: number, mediaId: number }): Promise<any> {
+    const { hostId, mediaId } = payload;
+
+    // Fetch the media details to get the publicId for deletion
+    const mediaDetails = await productRepository.getProductMediaById({ hostId, mediaId });
+    if (!mediaDetails || !mediaDetails.data) {
+      throw createConfiguredError("MEDIA_NOT_FOUND", 'Product media not found.');
+    }
+
+    // Ensure the media has a publicId for deletion
+    const publicId = mediaDetails.data.publicId;
+    if (!publicId) {
+      throw createConfiguredError("MEDIA_NOT_FOUND", 'Product media public ID not found.');
+    }
+
+    // Delete media from storage
+    const deleteResult = await deleteMediaFromStorage(publicId);
+    
+    // Check if the deletion was successful
+    if (!deleteResult || deleteResult.result !== 'ok') {
+      throw createConfiguredError("DELETE_FAILED", 'Failed to delete media from storage.');
+    }
+
+    // Soft Delete media record from the database
+    const deleteMediaInDB = await productRepository.updateProductMedia({
+      updatePayload: {
+        isDeleted: 1,
+        updatedAt: DateTimeFormatUtil.getCurrentUnixTime()
+      },
+      where: {
+        id: mediaId,
+        hostId
+      }
+    });
+    
+    // Check if the database update was successful
+    if (!deleteMediaInDB) {
+      throw createConfiguredError("DELETE_FAILED", 'Failed to delete product media.');
+    }
+    return true;
   }
 }
 

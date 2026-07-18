@@ -13,6 +13,7 @@ router.post('/products/getProductDetails', productController.getProductDetails.b
 router.post('/products/getProductMedia', productController.getProductMedia.bind(productController));
 router.post('/products/getProductAttributes', productController.getProductAttributes.bind(productController));
 router.post('/products/uploadMedia', upload.single('media'), productController.uploadMedia.bind(productController));
+router.post('/products/deleteMedia', productController.deleteMedia.bind(productController));
 router.post('/products/createProduct', productController.createProduct.bind(productController));
 
 export default router;

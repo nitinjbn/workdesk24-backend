@@ -566,6 +566,30 @@ export class productRepository {
 
     return newProduct;
   }
+
+  async getProductMediaById(params: { hostId: number, mediaId: number }): Promise<any> {
+    const { hostId, mediaId } = params;
+
+    const where:any = {
+      id: mediaId,
+      hostId,
+      isDeleted:0
+    }
+       
+    const query: FindAndCountOptions<any> = {      
+      attributes: {
+        exclude: ['hostId', 'productId', 'isDeleted', 'deletedAt'],
+      },         
+      where,
+      raw: true,
+      logging: console.log, // Enable logging for debugging
+    };
+
+    const mediaDetails = await ProductMedia.findOne(query);
+    return {
+      data: mediaDetails
+    };
+  }
 }
 
 export default new productRepository();
