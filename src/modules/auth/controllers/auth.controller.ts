@@ -99,7 +99,7 @@ export class AuthController {
 
   async verifyOtp(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      let { identifier, otpCode } = req.body;
+      let { identifier, otpCode, deviceDetails } = req.body;
       identifier = identifier?.trim();
       otpCode = otpCode?.toString().trim();
 
@@ -111,7 +111,7 @@ export class AuthController {
         return;
       }
 
-      const result = await authService.verifyOtp({ identifier, otpCode });
+      const result = await authService.verifyOtp({ identifier, otpCode, deviceDetails });
 
       res.json({
         success: true,

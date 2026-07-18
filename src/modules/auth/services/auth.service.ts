@@ -39,6 +39,22 @@ interface LoginDto {
 interface VerifyOtpDto {
   identifier: string;
   otpCode: string;
+  deviceDetails?: {
+    deviceId: string;
+    deviceName: string;
+    deviceModel: string;
+    manufacturer: string;
+    brand: string;
+    device: string;
+    product: string;
+    hardware?: string | null;
+    osVersion: string;
+    sdkInt: number;
+    appVersion?: string | null;
+    storageTotalBytes?: number | null;
+    storageAvailableBytes?: number | null;
+    storageUsedBytes?: number | null;
+  }
 }
 
 interface AuthResponse {
@@ -172,6 +188,15 @@ export class AuthService {
     const loginUser = await userRepository.findById(user.id);
     if (!loginUser) {
       throw createConfiguredError('USER_NOT_FOUND', 'User not found', 404, 'NOT_FOUND');
+    }
+
+    // Update user device details
+    if(payload.deviceDetails) {
+      await userRepository.updateUserDeviceDetails({
+        hostId: user.hostId,
+        userId: user.id,
+        ...payload.deviceDetails,
+      });
     }
 
     return this.buildAppLoginResponse(loginUser as unknown as LoginUser);

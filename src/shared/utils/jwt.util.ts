@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import roleRepository from '../../modules/auth/repositories/role.repository';
 import { CONFIG } from '../../config/constants';
 
-const DEFAULT_JWT_EXPIRY: jwt.SignOptions['expiresIn'] = '7d';
+const DEFAULT_JWT_EXPIRY: jwt.SignOptions['expiresIn'] = '15m';
 const DEFAULT_JWT_REFRESH_EXPIRY: jwt.SignOptions['expiresIn'] = '30d';
 
 export const getJwtSecret = (): string => {

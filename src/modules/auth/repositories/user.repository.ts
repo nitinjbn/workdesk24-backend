@@ -1,7 +1,9 @@
 import { BaseRepository } from '../../../shared/repositories/base.repository';
 import User from '../../../models/schemas/User';
+import UserDevice from '../../../models/schemas/UserDevices';
 import { WhereOptions } from 'sequelize';
 import { UserOTP } from '../../../models';
+import { DateTimeFormatUtil } from '../../../shared/utils/date-time-format.util';
 
 export class UserRepository extends BaseRepository<typeof User.prototype> {
   constructor() {
@@ -119,6 +121,55 @@ export class UserRepository extends BaseRepository<typeof User.prototype> {
         individualHooks: true,
       }
     );
+  }
+
+  async updateUserDeviceDetails(payload: {
+    hostId: number;
+    userId: number;
+    deviceId: string;
+    deviceName: string;
+    deviceModel: string;
+    manufacturer: string;
+    brand: string;
+    device: string;
+    product: string;
+    hardware?: string | null;
+    osVersion: string;
+    sdkInt: number;
+    appVersion?: string | null;
+    storageTotalBytes?: number | null;
+    storageAvailableBytes?: number | null;
+    storageUsedBytes?: number | null;
+    createdAt?: number;
+  }): Promise<UserDevice> {
+    const { hostId, userId, deviceId, ...deviceData } = payload;
+
+    if(!deviceData.createdAt) {
+      deviceData.createdAt = DateTimeFormatUtil.getCurrentUnixTime();
+    }
+
+    // Try to find existing device record
+    const existingDevice = await UserDevice.findOne({
+      where: {
+        hostId,
+        userId,
+        deviceId,
+      },
+    });
+
+    if (existingDevice) {
+      // Update existing record
+      await existingDevice.update(deviceData);
+      return existingDevice;
+    } else {
+      // Create new record
+      return await UserDevice.create({
+        hostId,
+        userId,
+        deviceId,
+        ...deviceData,
+      });
+    }
   }
 }
 
