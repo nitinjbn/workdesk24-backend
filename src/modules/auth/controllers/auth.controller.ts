@@ -183,12 +183,12 @@ export class AuthController {
 
   async refresh(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { refreshToken } = req.body;
+      const refreshToken = req.headers['x-refresh-token'] as string;
 
       if (!refreshToken) {
         res.status(400).json({
           success: false,
-          message: 'Refresh token is required',
+          message: 'Refresh token is required in x-refresh-token header',
         } as ApiResponse);
         return;
       }
