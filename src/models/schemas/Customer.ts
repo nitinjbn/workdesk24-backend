@@ -1,7 +1,7 @@
 import { Model, DataTypes, Sequelize, Optional } from 'sequelize';
 import { CustomerAttributes } from '../../types';
 
-interface CustomerCreationAttributes extends Optional<CustomerAttributes, 'id' | 'hostId' | 'customerCode' | 'customerName' | 'customerTypeId' | 'contactPerson' | 'mobile' | 'alternateMobile' | 'email' | 'gstNumber' | 'panNumber' | 'city' | 'state' | 'postalCode' | 'country' | 'isEnabled' | 'isDeleted' | 'createdAt' | 'updatedAt' | 'deletedAt'> {}
+interface CustomerCreationAttributes extends Optional<CustomerAttributes, 'id' | 'hostId' | 'customerCode' | 'customerName' | 'customerTypeId' | 'contactPerson' | 'mobile' | 'alternateMobile' | 'email' | 'gstNumber' | 'panNumber' | 'city' | 'stateName' | 'stateIsoCode' | 'postalCode' | 'countryName' | 'countryIsoCode' | 'isEnabled' | 'isDeleted' | 'createdAt' | 'updatedAt' | 'deletedAt'> {}
 
 class Customer extends Model<CustomerAttributes, CustomerCreationAttributes> implements CustomerAttributes {
   public id!: number;
@@ -19,9 +19,11 @@ class Customer extends Model<CustomerAttributes, CustomerCreationAttributes> imp
   public addressLine1?: string;
   public addressLine2?: string;
   public city?: string;
-  public state?: string;
+  public stateName?: string;
+  public stateIsoCode?: string;
   public postalCode?: string;
-  public country?: string;
+  public countryName?: string;
+  public countryIsoCode?: string;
   public remarks?: string;
   public isEnabled!: number;
   public isDeleted!: number;
@@ -116,17 +118,25 @@ export function initCustomer(sequelize: Sequelize): typeof Customer {
         type: DataTypes.STRING(100),
         allowNull: true
       },
-      state: {
-        type: DataTypes.STRING(100),
-        allowNull: true
+      stateName: {
+        type: DataTypes.STRING(50),
+        allowNull: true,
+      },
+      stateIsoCode: {
+        type: DataTypes.CHAR(2),
+        allowNull: true,
       },
       postalCode: {
         type: DataTypes.STRING(20),
         allowNull: true
       },
-      country: {
-        type: DataTypes.STRING(100),
-        allowNull: true
+      countryName: {
+        type: DataTypes.STRING(50),
+        allowNull: true,
+      },
+      countryIsoCode: {
+        type: DataTypes.CHAR(2),
+        allowNull: true,
       },
       remarks: {
         type: DataTypes.TEXT,
@@ -179,9 +189,11 @@ export function initCustomer(sequelize: Sequelize): typeof Customer {
         { fields: ['gstNumber'] },
         { fields: ['panNumber'] },
         { fields: ['city'] },
-        { fields: ['state'] },
+        { fields: ['stateName'] },
+        { fields: ['stateIsoCode'] },
         { fields: ['postalCode'] },
-        { fields: ['country'] },
+        { fields: ['countryName'] },
+        { fields: ['countryIsoCode'] },
       ],
     }
   );

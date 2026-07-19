@@ -571,9 +571,11 @@ export interface CustomerAttributes {
   addressLine1?: string;
   addressLine2?: string;
   city?: string;
-  state?: string;
+  stateName?: string;
+  stateIsoCode?: string;
   postalCode?: string;
-  country?: string;
+  countryName?: string;
+  countryIsoCode?: string;
   latitude?: number;
   longitude?: number;
   remarks?: string;

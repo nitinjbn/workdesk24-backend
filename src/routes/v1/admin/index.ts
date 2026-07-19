@@ -5,6 +5,7 @@ import { requireAdminCsrfToken } from '../../../shared/middleware/csrf.middlewar
 import adminAuthController from '../../../modules/admin/controllers/auth.controller';
 import userRoutes from './users.routes';
 import productRoutes from './products.routes';
+import customerRoutes from './customers.routes';
 import reportRoutes from './reports.routes';
 import inquiryRoutes from './inquiries.routes';
 import dashboardRoutes from './dashboard.routes';
@@ -21,6 +22,7 @@ router.use(requireAdminCsrfToken);
 
 router.use(userRoutes);
 router.use(productRoutes);
+router.use(customerRoutes);
 router.use(reportRoutes);
 router.use(inquiryRoutes);
 router.use(dashboardRoutes);

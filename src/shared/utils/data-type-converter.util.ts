@@ -10,6 +10,10 @@ export const NUMERIC_FIELD_CONFIG: Record<string, 'number' | 'bigint'> = {
   designationId: 'bigint',
   userId: 'bigint',
   reportingManagerId: 'bigint',
+  customerTypeId: 'bigint',
+  customerId: 'bigint',
+  parentCustomerId: 'bigint',
+  mediaId: 'bigint',
 
   // Timestamps (stored as Unix timestamps)
   createdAt: 'bigint',

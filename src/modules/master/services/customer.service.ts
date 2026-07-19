@@ -1,4 +1,4 @@
-import productRepository from '../repositories/product.repository';
+import customerRepository from '../repositories/customer.repository';
 import {
   GetProductsPayload,
   GetProductDetailsByIdPayload,
@@ -10,7 +10,8 @@ import {
   GetProductsReportResponse,
   ProductMediaResponse,
   ProductAttributesResponse,
-  SaveProductMediaPayload
+  SaveProductMediaPayload,
+  SaveCustomerMediaPayload
 } from '../types/master.types';
 import { Product } from '../../../models/schemas';
 import baseReportHelper from '../helpers/base-report.helper';
@@ -23,16 +24,16 @@ import { deleteMediaFromStorage } from '../../../shared/utils/media-storage.util
 
 type ProductInstance = typeof Product.prototype;
 
-export class ProductService {
-  async getCategories(
+export class CustomerService {
+  async getCustomerTypes(
     payload: { hostId: number, filter?: Record<string, unknown>, page?: number, limit?: number, sorting?: CommonReportSorting },
     scope: ReportScope
-  ): Promise<{ categories: any[], pagination?: any }> {
+  ): Promise<{ customerTypes: any[], pagination?: any }> {
     
     const { hostId, filter, page, limit } = payload;
     const sorting = this.normalizeCommonSorting(payload);
 
-    const report = await productRepository.getCategories({
+    const report = await customerRepository.getCustomerTypes({
       hostId,
       page,
       limit,
@@ -47,11 +48,63 @@ export class ProductService {
     );
 
     return {
-      categories: formatDateTimeFieldsBySettings(plainData, dateTimeSettings),
+      customerTypes: formatDateTimeFieldsBySettings(plainData, dateTimeSettings),
       pagination: report.pagination,
     };
   }
 
+  async getCustomers(
+    payload: { hostId: number, filter?: Record<string, unknown>, page?: number, limit?: number, sorting?: CommonReportSorting },
+    scope: ReportScope
+  ): Promise<{ customers: any[], pagination?: any }> {
+    
+    const { hostId, filter, page, limit } = payload;
+    const sorting = this.normalizeCommonSorting(payload);
+
+    const report = await customerRepository.getCustomers({
+      hostId,
+      page,
+      limit,
+      filter,
+      sortBy: sorting?.sortBy,
+      sortOrder: sorting?.sortOrder,
+    });
+
+    const dateTimeSettings = await getHostDateTimeSettings(hostId);
+    const plainData = report.data.map((item: any) =>
+      item && typeof item.toJSON === 'function' ? item.toJSON() : item
+    );
+
+    return {
+      customers: formatDateTimeFieldsBySettings(plainData, dateTimeSettings),
+      pagination: report.pagination,
+    };
+  }
+
+  async getCustomerDetails(
+    payload: { hostId: number, customerId: number },
+    scope: ReportScope
+  ): Promise<any> {
+    let { hostId, customerId } = payload;
+
+    const customerDetails = await customerRepository.getCustomerById({
+      hostId,
+      customerId
+    });    
+    if (!customerDetails || !Object(customerDetails.data) || Object.keys(customerDetails.data).length === 0) {
+      throw createConfiguredError("CUSTOMER_NOT_FOUND", 'Customer not found.');
+    }
+
+    const dateTimeSettings = await getHostDateTimeSettings(hostId);
+    const plainData = customerDetails?.data && typeof customerDetails.data.toJSON === 'function' 
+      ? customerDetails.data.toJSON() 
+      : customerDetails?.data;
+    return {
+      customer: formatDateTimeFieldsBySettings(plainData as any, dateTimeSettings),
+    };
+  }
+
+  /*
   async getBrands(
     payload: { hostId: number, filter?: Record<string, unknown>, page?: number, limit?: number, sorting?: CommonReportSorting },
     scope: ReportScope
@@ -151,9 +204,6 @@ export class ProductService {
       hostId,
       productId
     });
-    if (!productDetails || !Object(productDetails.data) || Object.keys(productDetails.data).length === 0) {
-      throw createConfiguredError("PRODUCT_NOT_FOUND", 'Product not found.');
-    }
 
     const dateTimeSettings = await getHostDateTimeSettings(hostId);
     const plainData = productDetails?.data && typeof productDetails.data.toJSON === 'function' 
@@ -203,6 +253,7 @@ export class ProductService {
       attributes: formatDateTimeFieldsBySettings(plainData as any, dateTimeSettings),
     };
   }
+  */
 
   private normalizeCommonSorting(payload: GetProductsPayload): { sortBy: string, sortOrder: "ASC" | "DESC" } {
     const requestedSortBy = payload.sort?.by || payload.sortBy;
@@ -230,12 +281,13 @@ export class ProductService {
     // };
   }
 
-  async saveProductMedia(payload: SaveProductMediaPayload): Promise<any> {
-    console.log('############################# saveProductMedia payload:', payload);
-    const { hostId, productId, mediaUrl, mediaType, publicId, fileName, fileSizeInBytes, mimeType, isPrimary, sortOrder, isEnabled  } = payload;
-      const result = await productRepository.saveProductMedia({
+  
+  async saveCustomerMedia(payload: SaveCustomerMediaPayload): Promise<any> {
+    console.log('############################# saveCustomerMedia payload:', payload);
+    const { hostId, customerId, mediaUrl, mediaType, publicId, fileName, fileSizeInBytes, mimeType, isPrimary, sortOrder, isEnabled  } = payload;
+      const result = await customerRepository.saveCustomerMedia({
         hostId,
-        productId,
+        customerId,
         mediaUrl,
         mediaType,
         publicId,
@@ -251,8 +303,8 @@ export class ProductService {
     return result;
   }
 
-  private validateProduct(payload: any): void {
-    const requiredFields = ['hostId', 'productName', 'sellingPrice', 'mrp'];
+  private validateCustomer(payload: any): void {
+    const requiredFields = ['hostId', 'customerName'];
     for (const field of requiredFields) {
       if (!payload[field]) {
         throw createConfiguredError("VALIDATION_ERROR", `Missing required field: ${field}`);
@@ -260,40 +312,44 @@ export class ProductService {
     }
   }
 
-  async createProduct(payload: any, scope: ReportScope): Promise<any> {
-    const { productMedia, productAttribute, ...otherPayload } = payload;
+  async createCustomer(payload: any): Promise<any> {
+    const { customerMedia, customerAttribute, ...otherPayload } = payload;
     const currentUnixTime = DateTimeFormatUtil.getCurrentUnixTime();
 
     // Validate required fields
-    this.validateProduct(payload);
+    this.validateCustomer(payload);
 
-    const createProductResult = await productRepository.createProduct({
+    const createCustomerResult = await customerRepository.createCustomer({
       hostId: otherPayload.hostId,
-      productCode: otherPayload.productCode,
-      productName: otherPayload.productName,
-      shortName: otherPayload.shortName,
-      categoryId: otherPayload.categoryId,
-      brandId: otherPayload.brandId,
-      uomId: otherPayload.uomId,
-      sku: otherPayload.sku,
-      barcode: otherPayload.barcode,
-      hsnCode: otherPayload.hsnCode,
-      purchasePrice: otherPayload.purchasePrice,
-      sellingPrice: otherPayload.sellingPrice,
-      mrp: otherPayload.mrp,
-      taxPercentage: otherPayload.taxPercentage,
+      customerCode: otherPayload.customerCode,
+      customerName: otherPayload.customerName,
+      customerTypeId: otherPayload.customerTypeId,
+      contactPerson: otherPayload.contactPerson,
+      email: otherPayload.email,
+      mobile: otherPayload.mobile,
+      alternateMobile: otherPayload.alternateMobile,
+      gstNumber: otherPayload.gstNumber,
+      panNumber: otherPayload.panNumber,
+      addressLine1: otherPayload.addressLine1,
+      addressLine2: otherPayload.addressLine2,
+      city: otherPayload.city,
+      stateName: otherPayload.stateName,
+      stateIsoCode: otherPayload.stateIsoCode,
+      postalCode: otherPayload.postalCode,
+      countryName: otherPayload.countryName,
+      countryIsoCode: otherPayload.countryIsoCode,
       remarks: otherPayload.remarks,
-      isEnabled: otherPayload.isEnabled,
+      isEnabled: otherPayload.isEnabled !== undefined ? otherPayload.isEnabled : 1, // Default to enabled if not provided
       createdAt: currentUnixTime
     });
 
-    if (createProductResult?.id) {
-      if (productMedia && Array.isArray(productMedia)) {
-        //Now product is created, so we can save the media with the productId
-        for (const media of productMedia) {
-          await productRepository.updateProductMedia({
+    if (createCustomerResult?.id) {
+      if (customerMedia && Array.isArray(customerMedia)) {
+        //Now customer is created, so we can save the media with the customerId
+        for (const media of customerMedia) {
+          await customerRepository.updateCustomerMedia({
             updatePayload: {
-              productId: createProductResult.id,
+              customerId: createCustomerResult.id,
               isEnabled: media.isEnabled || 1, // Default to enabled if not provided
               updatedAt: currentUnixTime
             },
@@ -305,85 +361,97 @@ export class ProductService {
         }
       }
 
-      if (productAttribute && Array.isArray(productAttribute)) {
-        // Now product is created, so we can save the attributes with the productId
-        await productRepository.saveProductAttributes({
+      if (customerAttribute && Array.isArray(customerAttribute)) {
+        // Now customer is created, so we can save the attributes with the customerId
+        await customerRepository.saveCustomerAttributes({
           hostId: otherPayload.hostId,
-          productId: createProductResult.id,
-          attributes: productAttribute,
+          customerId: createCustomerResult.id,
+          attributes: customerAttribute,
           createdAt: currentUnixTime
         });
       }
     }
 
-    return createProductResult?.get({ plain: true }) || createProductResult;
+    return createCustomerResult?.get({ plain: true }) || createCustomerResult;
   }
 
-  async updateProduct(payload: any, scope: ReportScope): Promise<any> {
-    const { productId, productMedia, productAttribute, ...otherPayload } = payload;
+  
+  async updateCustomer(payload: any): Promise<any> {
+    const { customerId, customerMedia, customerAttribute, ...otherPayload } = payload;
     const currentUnixTime = DateTimeFormatUtil.getCurrentUnixTime();
 
     // Validate required fields
-    if (!productId) {
-      throw createConfiguredError("VALIDATION_ERROR", 'Missing required field: productId');
+    if (!customerId) {
+      throw createConfiguredError("VALIDATION_ERROR", 'Missing required field: customerId');
     }
 
     // Validate other required fields for update
-    this.validateProduct(payload);
+    this.validateCustomer(payload);
 
-    // Check if the product exists before updating
-    const existingProduct = await productRepository.getProductById({
+    // Check if the customer exists before updating
+    const existingCustomer = await customerRepository.getCustomerById({
       hostId: otherPayload.hostId,
-      productId: productId
+      customerId: customerId
     });
-    if (!existingProduct || !existingProduct.data) {
-      throw createConfiguredError("PRODUCT_NOT_FOUND", 'Product not found.');
+    console.log('############################# existingCustomer:', existingCustomer);
+    if (!existingCustomer || !existingCustomer.data) {
+      throw createConfiguredError("CUSTOMER_NOT_FOUND", 'Customer not found.');
     }
 
-    const updateProductResult = await productRepository.updateProduct({
+    const updateCustomerResult = await customerRepository.updateCustomer({
       updatePayload: {
-        productCode: otherPayload.productCode,
-        productName: otherPayload.productName,
-        shortName: otherPayload.shortName,
+        customerCode: otherPayload.customerCode,
+        customerName: otherPayload.customerName,
+        customerTypeId: otherPayload.customerTypeId,
+        contactPerson: otherPayload.contactPerson,
+        email: otherPayload.email,
+        mobile: otherPayload.mobile,
+        alternateMobile: otherPayload.alternateMobile,
+        gstNumber: otherPayload.gstNumber,
+        panNumber: otherPayload.panNumber,
+        addressLine1: otherPayload.addressLine1,
+        addressLine2: otherPayload.addressLine2,
+        city: otherPayload.city,
+        stateName: otherPayload.stateName,
+        stateIsoCode: otherPayload.stateIsoCode,
+        postalCode: otherPayload.postalCode,
+        countryName: otherPayload.countryName,
+        countryIsoCode: otherPayload.countryIsoCode,
         remarks: otherPayload.remarks,
-        categoryId: otherPayload.categoryId,
-        brandId: otherPayload.brandId,
-        uomId: otherPayload.uomId,
-        sku: otherPayload.sku,
-        barcode: otherPayload.barcode,
-        hsnCode: otherPayload.hsnCode,
-        purchasePrice: otherPayload.purchasePrice,
-        sellingPrice: otherPayload.sellingPrice,
-        mrp: otherPayload.mrp,
-        taxPercentage: otherPayload.taxPercentage,
-        isEnabled: otherPayload.isEnabled !== undefined ? otherPayload.isEnabled : existingProduct.data.isEnabled,
+        isEnabled: otherPayload.isEnabled !== undefined ? otherPayload.isEnabled : 1, // Default to enabled if not provided
         updatedAt: currentUnixTime
       },
       where: {
-        id: productId,
+        id: customerId,
         hostId: otherPayload.hostId
       }
     });
 
     // Handle Product Media - Add, Update, Delete
-    if (productMedia || (existingProduct.data.productMedia && existingProduct.data.productMedia.length > 0)) {
-      const existingMediaIds = existingProduct.data.productMedia?.map((m: any) => Number(m.mediaId)) || [];
-      const payloadMediaIds = productMedia?.map((m: any) => Number(m.mediaId)) || [];
+    if (customerMedia || (existingCustomer.data.customerMedia && existingCustomer.data.customerMedia.length > 0)) {
+      const existingMediaIds = existingCustomer.data.customerMedia?.map((m: any) => Number(m.mediaId)) || [];
+      const payloadMediaIds = customerMedia?.map((m: any) => Number(m.mediaId)) || [];
+      console.log('############################# existingMediaIds:', existingMediaIds);
+      console.log('############################# payloadMediaIds:', payloadMediaIds);
 
       // Media to ADD (in payload but not in existing)
-      const mediaToAdd = productMedia?.filter((m: any) => !existingMediaIds.includes(Number(m.mediaId))) || [];
+      const mediaToAdd = customerMedia?.filter((m: any) => !existingMediaIds.includes(Number(m.mediaId))) || [];
       
       // Media to UPDATE (in both payload and existing)
-      const mediaToUpdate = productMedia?.filter((m: any) => existingMediaIds.includes(Number(m.mediaId))) || [];
+      const mediaToUpdate = customerMedia?.filter((m: any) => existingMediaIds.includes(Number(m.mediaId))) || [];
             
       // Media to DELETE (in existing but not in payload)
-      const mediaToDelete = existingProduct.data.productMedia?.filter((m: any) => !payloadMediaIds.includes(Number(m.mediaId))) || [];
+      const mediaToDelete = existingCustomer.data.customerMedia?.filter((m: any) => !payloadMediaIds.includes(Number(m.mediaId))) || [];
       
+      console.log('############################# mediaToAdd:', mediaToAdd);
+      console.log('############################# mediaToUpdate:', mediaToUpdate);
+      console.log('############################# mediaToDelete:', mediaToDelete);
+
       // Execute ADD operations
       for (const media of mediaToAdd) {
-        await productRepository.updateProductMedia({
+        await customerRepository.updateCustomerMedia({
           updatePayload: {
-            productId: productId,
+            customerId: customerId,
             isEnabled: media.isEnabled || 1, // Default to enabled if not provided
             isPrimary: media.isPrimary || 0,
             sortOrder: media.sortOrder || 0,
@@ -398,9 +466,9 @@ export class ProductService {
 
       // Execute UPDATE operations
       for (const media of mediaToUpdate) {
-        await productRepository.updateProductMedia({
+        await customerRepository.updateCustomerMedia({
           updatePayload: {
-            productId: productId,
+            customerId: customerId,
             isEnabled: media.isEnabled || 1,
             isPrimary: media.isPrimary || 0,
             sortOrder: media.sortOrder || 0,
@@ -415,13 +483,14 @@ export class ProductService {
 
       // Execute DELETE operations (soft delete)
       if (mediaToDelete.length > 0) {
-        await productRepository.updateProductMedia({
+        await customerRepository.updateCustomerMedia({
           updatePayload: {
             isDeleted: 1,
             updatedAt: currentUnixTime
           },
           where: {
             id: mediaToDelete.map(m => Number(m.mediaId)),
+            customerId: customerId,
             hostId: otherPayload.hostId
           }
         });
@@ -429,25 +498,25 @@ export class ProductService {
     }
 
     // Handle Product Attributes - Add, Update, Delete
-    if (productAttribute || (existingProduct.data.productAttribute && existingProduct.data.productAttribute.length > 0)) {
-      const existingAttributeIds = existingProduct.data.productAttribute?.map((a: any) => a.id) || [];
-      const payloadAttributeIds = productAttribute?.map((a: any) => a.attributeId || a.id) || [];
+    if (customerAttribute || (existingCustomer.data.customerAttribute && existingCustomer.data.customerAttribute.length > 0)) {
+      const existingAttributeIds = existingCustomer.data.customerAttribute?.map((a: any) => a.id) || [];
+      const payloadAttributeIds = customerAttribute?.map((a: any) => a.attributeId || a.id) || [];
 
       // Attributes to ADD (in payload but not in existing)
-      const attributesToAdd = productAttribute?.filter((a: any) => !existingAttributeIds.includes(a.attributeId || a.id)) || [];
+      const attributesToAdd = customerAttribute?.filter((a: any) => !existingAttributeIds.includes(a.attributeId || a.id)) || [];
       if (attributesToAdd.length > 0) {
-        await productRepository.saveProductAttributes({
+        await customerRepository.saveCustomerAttributes({
           hostId: otherPayload.hostId,
-          productId: productId,
+          customerId: customerId,
           attributes: attributesToAdd,
           createdAt: currentUnixTime
         });
       }
 
       // Attributes to UPDATE (in both payload and existing)
-      const attributesToUpdate = productAttribute?.filter((a: any) => existingAttributeIds.includes(a.attributeId || a.id)) || [];
+      const attributesToUpdate = customerAttribute?.filter((a: any) => existingAttributeIds.includes(a.attributeId || a.id)) || [];
       for (const attr of attributesToUpdate) {
-        await productRepository.updateProductAttributes({
+        await customerRepository.updateCustomerAttributes({
           updatePayload: {
             attributeGroup: attr.attributeGroup,
             attributeName: attr.attributeName,
@@ -465,10 +534,10 @@ export class ProductService {
       }
 
       // Attributes to DELETE (in existing but not in payload)
-      const attributesToDelete = existingProduct.data.productAttribute?.filter((a: any) => !payloadAttributeIds.includes(a.id)) || [];
+      const attributesToDelete = existingCustomer.data.customerAttribute?.filter((a: any) => !payloadAttributeIds.includes(a.id)) || [];
 
       if(attributesToDelete.length > 0) {
-        await productRepository.updateProductAttributes({
+        await customerRepository.updateCustomerAttributes({
           updatePayload: {
             isDeleted: 1,
             deletedAt: currentUnixTime
@@ -484,19 +553,19 @@ export class ProductService {
     return {};
   }
 
-  async deleteProductMedia(payload: { hostId: number, mediaId: number }): Promise<any> {
+  async deleteCustomerMedia(payload: { hostId: number, mediaId: number }): Promise<any> {
     const { hostId, mediaId } = payload;
 
     // Fetch the media details to get the publicId for deletion
-    const mediaDetails = await productRepository.getProductMediaById({ hostId, mediaId });
+    const mediaDetails = await customerRepository.getCustomerMediaById({ hostId, mediaId });
     if (!mediaDetails || !mediaDetails.data) {
-      throw createConfiguredError("MEDIA_NOT_FOUND", 'Product media not found.');
+      throw createConfiguredError("MEDIA_NOT_FOUND", 'Customer media not found.');
     }
 
     // Ensure the media has a publicId for deletion
     const publicId = mediaDetails.data.publicId;
     if (!publicId) {
-      throw createConfiguredError("MEDIA_NOT_FOUND", 'Product media public ID not found.');
+      throw createConfiguredError("MEDIA_NOT_FOUND", 'Customer media public ID not found.');
     }
 
     // Delete media from storage
@@ -508,7 +577,7 @@ export class ProductService {
     }
 
     // Soft Delete media record from the database
-    const deleteMediaInDB = await productRepository.updateProductMedia({
+    const deleteMediaInDB = await customerRepository.updateCustomerMedia({
       updatePayload: {
         url: null,
         publicId: null,
@@ -524,42 +593,42 @@ export class ProductService {
     
     // Check if the database update was successful
     if (!deleteMediaInDB) {
-      throw createConfiguredError("DELETE_FAILED", 'Failed to delete product media.');
+      throw createConfiguredError("DELETE_FAILED", 'Failed to delete customer media.');
     }
     return true;
   }
 
-  async deleteProduct(payload: { hostId: number, productId: number }): Promise<any> {
-    const { hostId, productId } = payload;
+  async deleteCustomer(payload: { hostId: number, customerId: number }): Promise<any> {
+    const { hostId, customerId } = payload;
     const currentUnixTime = DateTimeFormatUtil.getCurrentUnixTime();
 
     // Check if the product exists before deleting
-    const existingProduct = await productRepository.getProductById({
+    const existingProduct = await customerRepository.getCustomerById({
       hostId,
-      productId
+      customerId
     });
     if (!existingProduct || !existingProduct.data) {
-      throw createConfiguredError("PRODUCT_NOT_FOUND", 'Product not found.');
+      throw createConfiguredError("CUSTOMER_NOT_FOUND", 'Customer not found.');
     }
     // Soft delete the product
-    const deleteResult = await productRepository.updateProduct({
+    const deleteResult = await customerRepository.updateCustomer({
       updatePayload: {
         isDeleted: 1,
         updatedAt: currentUnixTime
       },
       where: {
-        id: productId,
+        id: customerId,
         hostId
       }
     });
     if (!deleteResult) {
-      throw createConfiguredError("DELETE_FAILED", 'Failed to delete product.');
+      throw createConfiguredError("DELETE_FAILED", 'Failed to delete customer.');
     }
 
     // Soft delete associated media
-    if (existingProduct.data.productMedia && existingProduct.data.productMedia.length > 0) {
-      for (const media of existingProduct.data.productMedia) {
-        await this.deleteProductMedia({
+    if (existingProduct.data.customerMedia && existingProduct.data.customerMedia.length > 0) {
+      for (const media of existingProduct.data.customerMedia) {
+        await this.deleteCustomerMedia({
           hostId,
           mediaId: media.mediaId
         });
@@ -567,9 +636,9 @@ export class ProductService {
     }
 
     // Soft delete associated attributes
-    if (existingProduct.data.productAttribute && existingProduct.data.productAttribute.length > 0) {
-      const attributeIds = existingProduct.data.productAttribute.map((a: any) => a.attributeId || a.id);
-      await productRepository.updateProductAttributes({
+    if (existingProduct.data.customerAttribute && existingProduct.data.customerAttribute.length > 0) {
+      const attributeIds = existingProduct.data.customerAttribute.map((a: any) => a.attributeId || a.id);
+      await customerRepository.updateCustomerAttributes({
         updatePayload: {
           isDeleted: 1,
           updatedAt: currentUnixTime
@@ -585,4 +654,4 @@ export class ProductService {
   }
 }
 
-export default new ProductService();
+export default new CustomerService();

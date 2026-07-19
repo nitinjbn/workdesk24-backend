@@ -157,6 +157,29 @@ export interface GetProductsPayload {
   sortOrder?: string;
 }
 
+export interface GetCustomersPayload {
+  hostId: number;
+  page?: number;
+  limit?: number;
+  filter?: {
+    id?: number;
+    searchKey?: string;
+    customerId?: number;
+    customerCode?: string;
+    customerName?: string;
+    customerTypeId?: number;
+    contactPerson?: string;
+    email?: string;
+    mobile?: string;
+  };
+  sort?: {
+    by?: string;
+    order?: string;
+  }
+  sortBy?: string;
+  sortOrder?: string;
+}
+
 export interface GetProductDetailsByIdPayload {
   hostId: number;
   productId: number;
@@ -199,6 +222,21 @@ export interface SaveProductMediaPayload {
   createdAt?: number;
 }
 
+export interface SaveCustomerMediaPayload {
+  hostId: number;
+  customerId: number;
+  mediaUrl: string;
+  mediaType: "IMAGE" | "VIDEO" | "PDF" | "DOCUMENT" | "BROCHURE" | "CERTIFICATE" | "LABEL" | "MANUAL";
+  publicId?: string;
+  fileName?: string;
+  fileSizeInBytes?: number;
+  mimeType?: string;
+  isPrimary?: number;
+  sortOrder?: number;
+  isEnabled?: number;
+  createdAt?: number;
+}
+
 export interface SaveProductAttributePayload {
   hostId: number;
   productId: number;
@@ -211,6 +249,21 @@ export interface SaveProductAttributePayload {
 export interface SaveProductAttributesPayload {
   hostId: number;
   productId: number;
+  attributes: Array<{
+    attributeGroup: string;
+    attributeName: string;
+    attributeValue: string;
+    attributeType: 'TEXT' | 'NUMBER' | 'DECIMAL' | 'DATE' | 'BOOLEAN' | 'JSON';
+    attributeUomId?: number;
+    sortOrder?: number;
+    isEnabled?: number;
+  }>;
+  createdAt?: number;
+}
+
+export interface SaveCustomerAttributesPayload {
+  hostId: number;
+  customerId: number;
   attributes: Array<{
     attributeGroup: string;
     attributeName: string;

@@ -1,13 +1,14 @@
 import { FindAndCountOptions, Op} from 'sequelize';
-import db, { Product, ProductAttribute, ProductBrand, ProductMedia, ProductCategory, UOM } from '../../../models';
-import { GetProductsPayload, GetProductDetailsByIdPayload, ReportResponse, SingleRecordResponse, ProductMediaResponse, GetProductMediaDetailsByIdPayload, GetProductAttributesDetailsByIdPayload, SaveProductMediaPayload, SaveProductAttributesPayload} from '../types/master.types';
+import db, { Product, ProductAttribute, ProductBrand, ProductMedia, ProductCategory, UOM, CustomerType, Customer, CustomerMedia, CustomerAttribute } from '../../../models';
+import { GetCustomersPayload, GetProductDetailsByIdPayload, ReportResponse, SingleRecordResponse, ProductMediaResponse, GetProductMediaDetailsByIdPayload, GetProductAttributesDetailsByIdPayload, SaveProductMediaPayload, SaveProductAttributesPayload, SaveCustomerMediaPayload, SaveCustomerAttributesPayload} from '../types/master.types';
 import baseReportHelper from '../helpers/base-report.helper';
 import { buildCommonReportOrder } from './user-scoped-report.helper';
+import { DateTimeFormatUtil } from '../../../shared/utils/date-time-format.util';
 
-type ProductInstance = typeof Product.prototype;
+//type ProductInstance = typeof Product.prototype;
 
-export class productRepository {
-  async getCategories(params: { hostId: number, filter?: Record<string, unknown>, page?: number, limit?: number, sortBy?: string, sortOrder?: 'ASC' | 'DESC' }): Promise<ReportResponse<any>> {
+export class customerRepository {
+  async getCustomerTypes(params: { hostId: number, filter?: Record<string, unknown>, page?: number, limit?: number, sortBy?: string, sortOrder?: 'ASC' | 'DESC' }): Promise<ReportResponse<any>> {
     const { page, limit, filter, hostId, sortBy, sortOrder } = params;
     const { offset } = baseReportHelper.normalizePagination({ page, limit });
     // const order = buildCommonReportOrder(sortBy as any, sortOrder, {
@@ -26,9 +27,9 @@ export class productRepository {
       if(filter.id || filter.categoryId) {
         where.id = filter.categoryId || filter.id;
       }
-      if(filter.categoryName) {
-        where.categoryName = {
-          [Op.like]: `%${(filter.categoryName as string).trim()}%`,
+      if(filter.customerTypeName) {
+        where.customerTypeName = {
+          [Op.like]: `%${(filter.customerTypeName as string).trim()}%`,
         }
       }
     }
@@ -36,7 +37,7 @@ export class productRepository {
       attributes: {
         exclude: ['id', 'hostId', 'isDeleted', 'deletedAt'],
         include: [
-          [db.Sequelize.col('ProductCategory.id'), 'categoryId']
+          [db.Sequelize.col('CustomerType.id'), 'customerTypeId']
         ]
       },
       where,
@@ -48,20 +49,219 @@ export class productRepository {
       query.limit = limit;
       query.offset = offset;
 
-      const { rows, count } = await ProductCategory.findAndCountAll(query);
+      const { rows, count } = await CustomerType.findAndCountAll(query);
 
       return {
         data: rows,
         pagination: baseReportHelper.buildPagination(count, page, limit),
       };
     } else {
-      const rows = await ProductCategory.findAll(query);
+      const rows = await CustomerType.findAll(query);
       return {
         data: rows
       };
     }
   }
 
+  async getCustomers(params: GetCustomersPayload): Promise<ReportResponse<any>> {
+    const { page, limit, filter, hostId, sortBy, sortOrder } = params;
+    const { offset } = baseReportHelper.normalizePagination({ page, limit });
+    let order: any = [
+      ['updatedAt', 'DESC'],
+      ['createdAt', 'DESC']
+    ];
+
+    if(sortBy && sortOrder) {
+      order = [[sortBy, sortOrder]]
+    }
+    const where:any = {
+      hostId,
+      isDeleted:0
+    }
+    if(filter) {
+      if (filter.searchKey?.trim()) {
+        const searchKey = filter.searchKey.trim();
+        where[Op.or] = [
+          {
+            customerName: {
+              [Op.like]: `%${searchKey}%`,
+            },
+          },
+          {
+            customerCode: {
+              [Op.like]: `%${searchKey}%`,
+            },
+          },
+          {
+            contactPerson: {
+              [Op.like]: `%${searchKey}%`,
+            },
+          },
+          {
+            email: {
+              [Op.like]: `%${searchKey}%`,
+            },
+          },
+          {
+            mobile: {
+              [Op.like]: `%${searchKey}%`,
+            },
+          }
+        ];
+      }
+
+      if(filter.id || filter.customerId) {
+        where.id = filter.customerId || filter.id;
+      }
+      if(filter.customerName) {
+        where.customerName = {
+          [Op.like]: `%${(filter.customerName as string).trim()}%`,
+        }
+      }
+      if(filter.customerCode) {
+        where.customerCode = filter.customerCode;
+      }
+      if(filter.customerTypeId) {
+        where.customerTypeId = filter.customerTypeId;
+      }
+    }
+    const query: FindAndCountOptions<any> = {
+      attributes: {
+        include: [
+          [db.Sequelize.col('Customer.id'), 'customerId'],
+          [db.Sequelize.col('customerTypeDetails.customerTypeName'), 'customerTypeName']
+        ],
+        exclude: ['id', 'hostId', 'isDeleted', 'deletedAt']
+      },
+      where,
+      include:[
+        {
+          attributes: [],
+          model: CustomerType,
+          where: {
+            isDeleted: 0
+          },
+          as: "customerTypeDetails",
+          required: true
+        },
+        {
+          attributes: {
+            include: [["id", "mediaId"]],
+            exclude: ['id', 'hostId', 'customerId', 'isEnabled', 'isDeleted', 'deletedAt', 'createdAt', 'updatedAt'],
+          },
+          model: CustomerMedia,
+          where: {
+            isDeleted: 0,
+            isEnabled: 1
+          },
+          as: "customerMedia",
+          separate: true,
+          order: [["sortOrder", "ASC"]],
+          required: false
+        },
+        {
+          attributes: {
+            exclude: ['hostId', 'customerId', 'isEnabled', 'isDeleted', 'deletedAt', 'createdAt', 'updatedAt'],
+          },
+          model: CustomerAttribute,
+          where: {
+            isDeleted: 0
+          },
+          as: "customerAttribute",
+          separate: true,
+          order: [["sortOrder", "ASC"]],
+          required: false
+        }
+      ],
+      order,
+      logging: console.log, // Enable logging for debugging
+    };
+
+    if(page && limit) {
+      query.limit = limit;
+      query.offset = offset;
+
+      const { rows, count } = await Customer.findAndCountAll(query);
+
+      return {
+        data: rows,
+        pagination: baseReportHelper.buildPagination(count, page, limit),
+      };
+    } else {
+      const rows = await Customer.findAll(query);
+      return {
+        data: rows
+      };
+    }
+  }
+
+  async getCustomerById(params: { hostId: number, customerId: number }): Promise<any> {
+    const { hostId, customerId } = params;
+
+    const where:any = {
+      id: customerId,
+      hostId,
+      isDeleted:0
+    }
+   
+    const query: FindAndCountOptions<any> = {
+      attributes: {
+        exclude: ['id', 'isEnabled', 'isDeleted', 'deletedAt', 'createdAt', 'updatedAt'],
+        include: [
+          [db.Sequelize.col('Customer.id'), 'customerId'],
+          [db.Sequelize.col('customerTypeDetails.customerTypeName'), 'customerTypeName']
+        ]
+      },
+      where,
+      include:[
+        {
+          attributes:[],
+          model: CustomerType,
+          where: {
+            isDeleted: 0
+          },
+          as: "customerTypeDetails",
+          required: false
+        },
+        {
+          attributes: {
+            include: [["id", "mediaId"]],
+            exclude: ['id', 'hostId', 'customerId', 'isEnabled', 'isDeleted', 'deletedAt', 'createdAt', 'updatedAt'],
+          },
+          model: CustomerMedia,
+          where: {
+            isDeleted: 0,
+            isEnabled: 1
+          },
+          as: "customerMedia",
+          separate: true,
+          order: [["sortOrder", "ASC"]],
+          required: false
+        },
+        {
+          attributes: {
+            exclude: ['hostId', 'customerId', 'isEnabled', 'isDeleted', 'deletedAt', 'createdAt', 'updatedAt'],
+          },
+          model: CustomerAttribute,
+          where: {
+            isDeleted: 0
+          },
+          as: "customerAttribute",
+          separate: true,
+          order: [["sortOrder", "ASC"]],
+          required: false
+        }
+      ],
+      logging: console.log, // Enable logging for debugging
+    };
+
+    const customerDetails = await Customer.findOne(query);
+    return {
+      data: customerDetails?.toJSON() || {}
+    };
+  }
+
+  /*
   async getBrands(params: { hostId: number, filter?: Record<string, unknown>, page?: number, limit?: number, sortBy?: string, sortOrder?: 'ASC' | 'DESC' }): Promise<ReportResponse<any>> {
     const { page, limit, filter, hostId, sortBy, sortOrder } = params;
     const { offset } = baseReportHelper.normalizePagination({ page, limit });
@@ -193,11 +393,7 @@ export class productRepository {
     //   createdAt: 'createdAt'
     // });
 
-    let order: any = [
-      ['updatedAt', 'DESC'],
-      ['createdAt', 'DESC']
-    ];
-
+    let order=[["createdAt", "DESC"],["updatedAt", "DESC"]];
     if(sortBy && sortOrder) {
       order = [[sortBy, sortOrder]];
     }
@@ -495,12 +691,13 @@ export class productRepository {
       data: attributeDetails
     };
   }
+  */
 
-  async saveProductMedia(params: SaveProductMediaPayload): Promise<any> {
-    const { hostId, productId, mediaUrl, mediaType, publicId, fileName, fileSizeInBytes, mimeType, isPrimary, sortOrder, isEnabled, createdAt } = params;
-    const newMedia = await ProductMedia.create({
+  async saveCustomerMedia(params: SaveCustomerMediaPayload): Promise<any> {
+    const { hostId, customerId, mediaUrl, mediaType, publicId, fileName, fileSizeInBytes, mimeType, isPrimary, sortOrder, isEnabled, createdAt } = params;
+    const newMedia = await CustomerMedia.create({
       hostId,
-      productId,
+      customerId,
       mediaUrl,
       mediaType,
       publicId,
@@ -516,17 +713,19 @@ export class productRepository {
     return newMedia;
   }
 
-  async updateProductMedia(params: any): Promise<any> {
+  
+  async updateCustomerMedia(params: any): Promise<any> {
     const { updatePayload, where } = params;
-    const updateResult = await ProductMedia.update(updatePayload, {
+    const updateResult = await CustomerMedia.update(updatePayload, {
       where
     });
 
     return updateResult;
   }
 
-  async saveProductAttributes(params: SaveProductAttributesPayload): Promise<any[]> {
-    const { hostId, productId, attributes, createdAt } = params;
+  
+  async saveCustomerAttributes(params: SaveCustomerAttributesPayload): Promise<any[]> {
+    const { hostId, customerId, attributes, createdAt } = params;
 
     if (!attributes?.length) {
       return [];
@@ -534,7 +733,7 @@ export class productRepository {
 
     const rows = attributes.map((attribute) => ({
       hostId,
-      productId,
+      customerId,
       attributeGroup: attribute.attributeGroup || null,
       attributeName: attribute.attributeName,
       attributeValue: attribute.attributeValue,
@@ -545,35 +744,41 @@ export class productRepository {
       createdAt,
     }));
 
-    return ProductAttribute.bulkCreate(rows);
+    return CustomerAttribute.bulkCreate(rows);
   }
+  
 
-  async createProduct(params: any): Promise<any> {
-    const { hostId, productCode, productName, shortName, categoryId, brandId, uomId, sku, barcode, hsnCode, purchasePrice, sellingPrice, mrp, taxPercentage, remarks, isEnabled, createdAt } = params;
-    const newProduct = await Product.create({
+  async createCustomer(params: any): Promise<any> {
+    const { hostId, customerCode, customerName, customerTypeId, contactPerson, email, mobile, alternateMobile, gstNumber, panNumber, addressLine1, addressLine2, city, stateName, stateIsoCode, postalCode, countryName, countryIsoCode, remarks, isEnabled } = params;
+    const newCustomer = await Customer.create({
       hostId,
-      productCode,
-      productName,
-      shortName,
-      categoryId,
-      brandId,
-      uomId,
-      sku,
-      barcode,
-      hsnCode,
-      purchasePrice,
-      sellingPrice,
-      mrp,
-      taxPercentage,
+      customerCode,
+      customerName,
+      customerTypeId,
+      contactPerson,
+      email,
+      mobile,
+      alternateMobile,
+      gstNumber,
+      panNumber,
+      addressLine1,
+      addressLine2,
+      city,
+      stateName,
+      stateIsoCode,
+      postalCode,
+      countryName,
+      countryIsoCode,
       remarks,
       isEnabled,
-      createdAt
+      createdAt: DateTimeFormatUtil.getCurrentUnixTime()
     });
 
-    return newProduct;
+    return newCustomer;
   }
-
-  async getProductMediaById(params: { hostId: number, mediaId: number }): Promise<any> {
+  
+  
+  async getCustomerMediaById(params: { hostId: number, mediaId: number }): Promise<any> {
     const { hostId, mediaId } = params;
 
     const where:any = {
@@ -584,34 +789,34 @@ export class productRepository {
        
     const query: FindAndCountOptions<any> = {      
       attributes: {
-        exclude: ['hostId', 'productId', 'isDeleted', 'deletedAt'],
+        exclude: ['hostId', 'customerId', 'isDeleted', 'deletedAt'],
       },         
       where,
       raw: true,
       logging: console.log, // Enable logging for debugging
     };
 
-    const mediaDetails = await ProductMedia.findOne(query);
+    const mediaDetails = await CustomerMedia.findOne(query);
     return {
       data: mediaDetails
     };
   }
 
-  async updateProduct(params: any): Promise<any> {
+  async updateCustomer(params: any): Promise<any> {
     const { updatePayload, where } = params;
-    const updateResult = await Product.update(updatePayload, {
+    const updateResult = await Customer.update(updatePayload, {
       where
     });
     return updateResult;
   }
 
-  async updateProductAttributes(params: any): Promise<any> {
+  async updateCustomerAttributes(params: any): Promise<any> {
     const { updatePayload, where } = params;
-    const updateResult = await ProductAttribute.update(updatePayload, {
+    const updateResult = await CustomerAttribute.update(updatePayload, {
       where
     });
     return updateResult;
   }
 }
 
-export default new productRepository();
+export default new customerRepository();
