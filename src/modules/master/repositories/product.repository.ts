@@ -193,9 +193,9 @@ export class productRepository {
     //   createdAt: 'createdAt'
     // });
 
-    let order=[];
+    let order=[["createdAt", "DESC"],["updatedAt", "DESC"]];
     if(sortBy && sortOrder) {
-      order = [[sortBy, sortOrder]]
+      order = [[sortBy, sortOrder]];
     }
 
     const where:any = {
@@ -255,7 +255,7 @@ export class productRepository {
    
     const query: FindAndCountOptions<ProductInstance> = {
       attributes: {
-        exclude: ['id', 'isEnabled', 'isDeleted', 'deletedAt', 'createdAt', 'updatedAt'],
+        exclude: ['id', 'isEnabled', 'isDeleted', 'deletedAt'],
         include: [
           [db.Sequelize.col('Product.id'), 'productId'],
           [db.Sequelize.col('productCategoryDetails.categoryName'), 'category'],
@@ -294,7 +294,8 @@ export class productRepository {
         },
         {
           attributes: {
-            exclude: ['hostId', 'productId', 'isEnabled', 'isDeleted', 'deletedAt', 'createdAt', 'updatedAt'],
+            include: [["id", "mediaId"]],
+            exclude: ['id', 'hostId', 'productId', 'isEnabled', 'isDeleted', 'deletedAt', 'createdAt', 'updatedAt'],
           },
           model: ProductMedia,
           where: {
@@ -320,7 +321,7 @@ export class productRepository {
           required: false
         }
       ],
-      order,
+      order: order as any,
       logging: console.log, // Enable logging for debugging
     };
 
@@ -383,7 +384,8 @@ export class productRepository {
         },
         {
           attributes: {
-            exclude: ['hostId', 'productId', 'isEnabled', 'isDeleted', 'deletedAt', 'createdAt', 'updatedAt'],
+            include: [["id", "mediaId"]],
+            exclude: ['id', 'hostId', 'productId', 'isEnabled', 'isDeleted', 'deletedAt', 'createdAt', 'updatedAt'],
           },
           model: ProductMedia,
           where: {
