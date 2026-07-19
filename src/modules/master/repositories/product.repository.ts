@@ -416,7 +416,7 @@ export class productRepository {
 
     const productDetails = await Product.findOne(query);
     return {
-      data: productDetails || {}
+      data: productDetails?.toJSON() || {}
     };
   }
 

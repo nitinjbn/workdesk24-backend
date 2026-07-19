@@ -369,19 +369,21 @@ export class ProductService {
 
       // Media to ADD (in payload but not in existing)
       const mediaToAdd = productMedia?.filter((m: any) => !existingMediaIds.includes(m.mediaId)) || [];
-
+      
       // Media to UPDATE (in both payload and existing)
       const mediaToUpdate = productMedia?.filter((m: any) => existingMediaIds.includes(m.mediaId)) || [];
-      
+            
       // Media to DELETE (in existing but not in payload)
       const mediaToDelete = existingProduct.data.productMedia?.filter((m: any) => !payloadMediaIds.includes(m.mediaId)) || [];
-
+      
       // Execute ADD operations
       for (const media of mediaToAdd) {
         await productRepository.updateProductMedia({
           updatePayload: {
             productId: productId,
             isEnabled: media.isEnabled || 1, // Default to enabled if not provided
+            isPrimary: media.isPrimary || 0,
+            sortOrder: media.sortOrder || 0,
             updatedAt: currentUnixTime
           },
           where: {
