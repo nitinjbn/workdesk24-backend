@@ -354,7 +354,7 @@ export class productRepository {
    
     const query: FindAndCountOptions<ProductInstance> = {
       attributes: {
-        exclude: ['id', 'categoryId', 'brandId', 'uomId', 'isEnabled', 'isDeleted', 'deletedAt', 'createdAt', 'updatedAt'],
+        exclude: ['id', 'isEnabled', 'isDeleted', 'deletedAt', 'createdAt', 'updatedAt'],
         include: [
           [db.Sequelize.col('Product.id'), 'productId'],
           [db.Sequelize.col('productCategoryDetails.categoryName'), 'category'],
