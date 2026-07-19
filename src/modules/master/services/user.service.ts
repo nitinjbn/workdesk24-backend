@@ -18,6 +18,7 @@ import baseReportHelper from '../helpers/base-report.helper';
 import { createConfiguredError } from '../../../shared/utils/error.util';
 import { getHostDateTimeSettings } from '../../../shared/utils/host-settings.util';
 import { DateTimeFormatUtil, formatDateTimeFieldsBySettings } from '../../../shared/utils/date-time-format.util';
+import { formatStorageFieldsByConfig } from '../../../shared/utils/storage-format.util';
 import { CONFIG } from '../../../config/constants';
 import roleRepository from '../repositories/role-report.repository';
 import { CommonUtil } from '../../../shared/utils/common.util';
@@ -70,8 +71,12 @@ export class UserService {
     });
     //console.log("#################################### plainData after processing:", plainData);
 
+    // Format datetime fields first, then storage fields
+    const formattedByDateTime = formatDateTimeFieldsBySettings(plainData, dateTimeSettings);
+    const users = formatStorageFieldsByConfig(formattedByDateTime);
+
     return {
-      users: formatDateTimeFieldsBySettings(plainData, dateTimeSettings),
+      users,
       pagination: report.pagination,
     };
   }
@@ -99,8 +104,13 @@ export class UserService {
     }
 
     const dateTimeSettings = await getHostDateTimeSettings(hostId);
+    
+    // Format datetime fields first, then storage fields
+    const formattedByDateTime = formatDateTimeFieldsBySettings(userDetails, dateTimeSettings);
+    const user = formatStorageFieldsByConfig(formattedByDateTime);
+    
     return {
-      user: formatDateTimeFieldsBySettings(userDetails, dateTimeSettings),
+      user,
     };
   }
 

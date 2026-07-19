@@ -121,6 +121,11 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
       foreignKey: 'userId',
       as: 'settings',
     });
+
+    User.hasOne(models.UserDevice, {
+      foreignKey: 'userId',
+      as: 'device',
+    });
   }
 }
 

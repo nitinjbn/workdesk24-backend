@@ -1,5 +1,5 @@
 import { FindAndCountOptions, Includeable , Op} from 'sequelize';
-import db, { User, UserSettings, Role, Designation } from '../../../models';
+import db, { User, UserSettings, Role, Designation, UserDevice } from '../../../models';
 import { CommonReportSortBy, GetUsersFilter, ReportResponse, ReportSortDirection, SingleRecordResponse } from '../types/master.types';
 import baseReportHelper from '../helpers/base-report.helper';
 import { buildCommonReportOrder } from './user-scoped-report.helper';
@@ -115,6 +115,14 @@ export class usersRepository {
           },
           as: "designations",
           required: true
+        },
+        {
+          attributes: {
+            exclude: ['id', 'hostId',  'userId'],
+          },
+          model: UserDevice,
+          as: "device",
+          required: false
         }
       ],
       order,
@@ -139,6 +147,14 @@ export class usersRepository {
             isEnabled: s.isEnabled
           }));
         }
+        // Convert devices to plain object (single device per user)
+        if(jsonRow.device && typeof jsonRow.device.toJSON === 'function') {
+          jsonRow.device = jsonRow.device.toJSON();
+        } else if(jsonRow.device) {
+          jsonRow.device = jsonRow.device;
+        } else {
+          jsonRow.device = {};
+        }
         return jsonRow;
       });
 
@@ -157,6 +173,14 @@ export class usersRepository {
             settingValue: s.settingValue,
             isEnabled: s.isEnabled
           }));
+        }
+        // Convert devices to plain object (single device per user)
+        if(jsonRow.device && typeof jsonRow.device.toJSON === 'function') {
+          jsonRow.device = jsonRow.device.toJSON();
+        } else if(jsonRow.device) {
+          jsonRow.device = jsonRow.device;
+        } else {
+          jsonRow.device = {};
         }
         return jsonRow;
       });
@@ -213,6 +237,14 @@ export class usersRepository {
           },
           as: "designations",
           required: true
+        },
+        {
+          attributes: {
+            exclude: ['id', 'hostId',  'userId'],
+          },
+          model: UserDevice,
+          as: "device",
+          required: false
         }
       ],
       subQuery: false,
@@ -232,6 +264,14 @@ export class usersRepository {
         settingValue: s.settingValue,
         isEnabled: s.isEnabled
       }));
+    }
+    // Convert devices to plain object (single device per user)
+    if(jsonData.device && typeof jsonData.device.toJSON === 'function') {
+      jsonData.device = jsonData.device.toJSON();
+    } else if(jsonData.device) {
+      jsonData.device = jsonData.device;
+    } else {
+      jsonData.device = {};
     }
     return jsonData;
   }

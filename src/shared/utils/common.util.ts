@@ -150,4 +150,33 @@ export class CommonUtil {
 
         return `OTP sent to ${channels.slice(0, -1).join(', ')} and ${channels[channels.length - 1]}.`;
     }
+
+    /**
+     * Formats bytes into a human-readable size.
+     *
+     * Default uses decimal (1000), which matches Android/iPhone storage display.
+     * Pass base = 1024 for file sizes.
+     *
+     * Examples:
+     * formatBytes(111969009664)         => "111.97 GB"
+     * formatBytes(5242880)              => "5.24 MB"
+     * formatBytes(1536, 2, 1024)        => "1.5 KB"
+     */
+    static formatBytes(payload: {bytes: number, decimals?: number; base?: number;}): string {
+        const { bytes, decimals = 2, base = 1000 } = payload;
+        if (!Number.isFinite(bytes) || bytes <= 0) {
+            return '0 Bytes';
+        }
+
+        const units = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB'];
+
+        const unitIndex = Math.min(
+            Math.floor(Math.log(bytes) / Math.log(base)),
+            units.length - 1
+        );
+
+        const value = bytes / Math.pow(base, unitIndex);
+
+        return `${parseFloat(value.toFixed(decimals))} ${units[unitIndex]}`;
+    }
 }
