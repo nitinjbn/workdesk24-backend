@@ -364,14 +364,14 @@ export class ProductService {
 
     // Handle Product Media - Add, Update, Delete
     if (productMedia || (existingProduct.data.productMedia && existingProduct.data.productMedia.length > 0)) {
-      const existingMediaIds = existingProduct.data.productMedia?.map((m: any) => m.id) || [];
+      const existingMediaIds = existingProduct.data.productMedia?.map((m: any) => m.mediaId) || [];
       const payloadMediaIds = productMedia?.map((m: any) => m.mediaId) || [];
 
       // Media to UPDATE (in both payload and existing)
       const mediaToUpdate = productMedia?.filter((m: any) => existingMediaIds.includes(m.mediaId)) || [];
       
       // Media to DELETE (in existing but not in payload)
-      const mediaToDelete = existingProduct.data.productMedia?.filter((m: any) => !payloadMediaIds.includes(m.id)) || [];
+      const mediaToDelete = existingProduct.data.productMedia?.filter((m: any) => !payloadMediaIds.includes(m.mediaId)) || [];
 
       // Execute UPDATE operations
       for (const media of mediaToUpdate) {
@@ -398,7 +398,7 @@ export class ProductService {
             updatedAt: currentUnixTime
           },
           where: {
-            id: mediaToDelete.map(m => m.id),
+            id: mediaToDelete.map(m => m.mediaId),
             hostId: otherPayload.hostId
           }
         });
