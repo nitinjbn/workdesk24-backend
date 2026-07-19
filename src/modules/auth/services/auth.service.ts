@@ -456,8 +456,6 @@ export class AuthService {
     const refreshExpiresIn = getJwtRefreshExpiresIn(payload.deviceType);
     const { hostId, userId, tokenFamily } = payload;
     const finalTokenFamily = tokenFamily || crypto.randomBytes(16).toString('hex');
-
-    console.log(`Creating session tokens for userId: ${userId}, deviceType: ${payload.deviceType}, deviceId: ${payload.deviceId}, tokenFamily: ${finalTokenFamily}, expiresIn: ${refreshExpiresIn} seconds`);
     
     // Revoke any existing refresh token for this device before creating a new one
     await userRefreshTokenRepository.revokeTokenByDevice(hostId, userId, payload.deviceId);
@@ -511,16 +509,7 @@ export class AuthService {
         throw this.createHttpError('Invalid refresh token', 401);
       }
 
-      // Ensure userId is a number (handle string values from legacy tokens)
-      const userId = typeof decoded.userId === 'string' ? parseInt(decoded.userId, 10) : decoded.userId;
-      if (isNaN(userId)) {
-        throw this.createHttpError('Invalid refresh token', 401);
-      }
-
-      return {
-        ...decoded,
-        userId,
-      };
+      return decoded;
     } catch (error: unknown) {
       if (
         error instanceof jwt.TokenExpiredError ||
