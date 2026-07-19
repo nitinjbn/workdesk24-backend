@@ -507,6 +507,9 @@ export class ProductService {
     // Soft Delete media record from the database
     const deleteMediaInDB = await productRepository.updateProductMedia({
       updatePayload: {
+        url: null,
+        publicId: null,
+        isEnabled: 0,
         isDeleted: 1,
         updatedAt: DateTimeFormatUtil.getCurrentUnixTime()
       },
@@ -520,6 +523,61 @@ export class ProductService {
     if (!deleteMediaInDB) {
       throw createConfiguredError("DELETE_FAILED", 'Failed to delete product media.');
     }
+    return true;
+  }
+
+  async deleteProduct(payload: { hostId: number, productId: number }): Promise<any> {
+    const { hostId, productId } = payload;
+    const currentUnixTime = DateTimeFormatUtil.getCurrentUnixTime();
+
+    // Check if the product exists before deleting
+    const existingProduct = await productRepository.getProductById({
+      hostId,
+      productId
+    });
+    if (!existingProduct || !existingProduct.data) {
+      throw createConfiguredError("PRODUCT_NOT_FOUND", 'Product not found.');
+    }
+    // Soft delete the product
+    const deleteResult = await productRepository.updateProduct({
+      updatePayload: {
+        isDeleted: 1,
+        updatedAt: currentUnixTime
+      },
+      where: {
+        id: productId,
+        hostId
+      }
+    });
+    if (!deleteResult) {
+      throw createConfiguredError("DELETE_FAILED", 'Failed to delete product.');
+    }
+
+    // Soft delete associated media
+    if (existingProduct.data.productMedia && existingProduct.data.productMedia.length > 0) {
+      for (const media of existingProduct.data.productMedia) {
+        await this.deleteProductMedia({
+          hostId,
+          mediaId: media.mediaId
+        });
+      }
+    }
+
+    // Soft delete associated attributes
+    if (existingProduct.data.productAttribute && existingProduct.data.productAttribute.length > 0) {
+      const attributeIds = existingProduct.data.productAttribute.map((a: any) => a.attributeId || a.id);
+      await productRepository.updateProductAttributes({
+        updatePayload: {
+          isDeleted: 1,
+          updatedAt: currentUnixTime
+        },
+        where: {
+          id: attributeIds,
+          hostId
+        }
+      });
+    }
+
     return true;
   }
 }

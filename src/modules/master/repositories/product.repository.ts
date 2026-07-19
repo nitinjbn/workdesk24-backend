@@ -272,7 +272,7 @@ export class productRepository {
             isDeleted: 0
           },
           as: "productCategoryDetails",
-          required: true
+          required: false
         },
         {
           attributes:[],
@@ -281,7 +281,7 @@ export class productRepository {
             isDeleted: 0
           },
           as: "productBrandDetails",
-          required: true
+          required: false
         },
         {
           attributes:[],
@@ -371,7 +371,7 @@ export class productRepository {
             isDeleted: 0
           },
           as: "productCategoryDetails",
-          required: true
+          required: false
         },
         {
           attributes:[],
@@ -380,7 +380,7 @@ export class productRepository {
             isDeleted: 0
           },
           as: "productBrandDetails",
-          required: true
+          required: false
         },
         {
           attributes: {

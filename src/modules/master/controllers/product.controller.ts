@@ -190,6 +190,21 @@ export class ProductController {
       next(error);
     }
   }
+
+  async deleteProduct(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { hostId, productId } = req.body;
+      const deleteResult = await productService.deleteProduct({ hostId, productId });
+      res.json({
+        success: true,
+        message: 'Product deleted successfully',
+        data: deleteResult,
+      } as ApiResponse);
+
+    } catch (error: any) {
+      next(error);
+    }
+  }
 }
 
 export default new ProductController();
