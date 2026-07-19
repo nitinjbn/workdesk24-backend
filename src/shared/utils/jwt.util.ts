@@ -14,12 +14,36 @@ export const getJwtSecret = (): string => {
   return secret;
 };
 
-export const getJwtExpiresIn = (): jwt.SignOptions['expiresIn'] => {
+export const getJwtExpiresIn = (deviceType: 'WEB' | 'ANDROID' | 'IOS'): jwt.SignOptions['expiresIn'] => {
+  switch (deviceType) {
+    case 'WEB': {
+      const webExpiresIn = process.env.JWT_EXPIRES_IN_WEB?.trim();
+      if (webExpiresIn) {
+        return webExpiresIn as jwt.SignOptions['expiresIn'];
+      }
+      break;
+    }
+    case 'ANDROID': {
+      const androidExpiresIn = process.env.JWT_EXPIRES_IN_ANDROID?.trim();
+      if (androidExpiresIn) {
+        return androidExpiresIn as jwt.SignOptions['expiresIn'];
+      }
+      break;
+    }
+    case 'IOS': {
+      const iosExpiresIn = process.env.JWT_EXPIRES_IN_IOS?.trim();
+      if (iosExpiresIn) {
+        return iosExpiresIn as jwt.SignOptions['expiresIn'];
+      }
+      break;
+    }
+  }
+  
+  // Default fallback
   const expiresIn = process.env.JWT_EXPIRES_IN?.trim();
   if (!expiresIn) {
     return DEFAULT_JWT_EXPIRY;
   }
-
   return expiresIn as jwt.SignOptions['expiresIn'];
 };
 
@@ -32,13 +56,38 @@ export const getJwtRefreshSecret = (): string => {
   return secret;
 };
 
-export const getJwtRefreshExpiresIn = (): jwt.SignOptions['expiresIn'] => {
+export const getJwtRefreshExpiresIn = (deviceType: 'WEB' | 'ANDROID' | 'IOS'): jwt.SignOptions['expiresIn'] => {
+  switch (deviceType) {
+    case 'WEB': {
+      const webExpiresIn = process.env.JWT_REFRESH_EXPIRES_IN_WEB?.trim();
+      if (webExpiresIn) {
+        return webExpiresIn as jwt.SignOptions['expiresIn'];
+      }
+      break;
+    }
+    case 'ANDROID': {
+      const androidExpiresIn = process.env.JWT_REFRESH_EXPIRES_IN_ANDROID?.trim();
+      if (androidExpiresIn) {
+        return androidExpiresIn as jwt.SignOptions['expiresIn'];
+      }
+      break;
+    }
+    case 'IOS': {
+      const iosExpiresIn = process.env.JWT_REFRESH_EXPIRES_IN_IOS?.trim();
+      if (iosExpiresIn) {
+        return iosExpiresIn as jwt.SignOptions['expiresIn'];
+      }
+      break;
+    }
+  }
+  
+  // Default fallback
   const expiresIn = process.env.JWT_REFRESH_EXPIRES_IN?.trim();
-  if (!expiresIn) {
-    return DEFAULT_JWT_REFRESH_EXPIRY;
+  if (expiresIn) {
+    return expiresIn as jwt.SignOptions['expiresIn'];
   }
 
-  return expiresIn as jwt.SignOptions['expiresIn'];
+  return DEFAULT_JWT_REFRESH_EXPIRY;
 };
 
 export const hasRoleCode = async (

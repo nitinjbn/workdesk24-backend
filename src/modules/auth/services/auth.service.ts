@@ -214,7 +214,7 @@ export class AuthService {
       throw createConfiguredError('APP_LOGIN_ACCESS_DENIED');
     }
 
-    const sessionTokens = await this.createAdminSessionTokens({ hostId: user.hostId, userId: user.id, deviceType: 'ANDROID', deviceId: deviceDetails?.deviceId || 'app' });
+    const sessionTokens = await this.createUserSessionTokens({ hostId: user.hostId, userId: user.id, deviceType: 'ANDROID', deviceId: deviceDetails?.deviceId || 'app' });
     const permissionsByModule = await this.getPermissionsByModuleForUser(user.hostId, user.roleId, user.id);
     
     // Fetch user settings separately since they're in a different table
@@ -262,7 +262,7 @@ export class AuthService {
       throw createConfiguredError('ADMIN_PORTAL_ACCESS_DENIED');
     }
 
-    const sessionTokens = await this.createAdminSessionTokens({ hostId: user.hostId, userId: user.id, deviceType: 'WEB', deviceId: 'default' });
+    const sessionTokens = await this.createUserSessionTokens({ hostId: user.hostId, userId: user.id, deviceType: 'WEB', deviceId: 'default' });
     const permissionsByModule = await this.getPermissionsByModuleForUser(user.hostId, user.roleId, user.id);
 
     return {
@@ -317,7 +317,7 @@ export class AuthService {
       throw createConfiguredError('ADMIN_PORTAL_ACCESS_DENIED');
     }
 
-    const rotatedTokens = await this.createAdminSessionTokens({ hostId: user.hostId, userId: user.id, tokenFamily: payload.tokenFamily, deviceType: 'WEB', deviceId: 'default' });
+    const rotatedTokens = await this.createUserSessionTokens({ hostId: user.hostId, userId: user.id, tokenFamily: payload.tokenFamily, deviceType: 'WEB', deviceId: 'default' });
     await userRefreshTokenRepository.revokeTokenById(tokenRecord.id, rotatedTokens.refreshTokenHash);
     const permissionsByModule = await this.getPermissionsByModuleForUser(user.hostId, user.roleId, user.id);
 
@@ -399,7 +399,7 @@ export class AuthService {
       throw createConfiguredError('APP_LOGIN_ACCESS_DENIED');
     }
 
-    const rotatedTokens = await this.createAdminSessionTokens({ hostId: user.hostId, userId: user.id, tokenFamily: payload.tokenFamily, deviceType: 'ANDROID', deviceId: 'app' });
+    const rotatedTokens = await this.createUserSessionTokens({ hostId: user.hostId, userId: user.id, tokenFamily: payload.tokenFamily, deviceType: 'ANDROID', deviceId: 'app' });
     await userRefreshTokenRepository.revokeTokenById(tokenRecord.id, rotatedTokens.refreshTokenHash);
     const permissionsByModule = await this.getPermissionsByModuleForUser(user.hostId, user.roleId, user.id);
     
@@ -444,16 +444,16 @@ export class AuthService {
     return user;
   }
 
-  private generateAccessToken(userId: number): string {
+  private generateAccessToken(userId: number, deviceType: 'WEB' | 'ANDROID' | 'IOS' = 'WEB'): string {
     const secret = getJwtSecret();
-    const expiresIn = getJwtExpiresIn();
+    const expiresIn = getJwtExpiresIn(deviceType);
 
     return jwt.sign({ userId, tokenType: 'access' }, secret, { expiresIn });
   }
 
-  private async createAdminSessionTokens(payload:{hostId: number, userId: number, tokenFamily?: string, deviceType?: 'WEB' | 'ANDROID' | 'IOS', deviceId: string, deviceName?: string | null, appVersion?: string | null, lastUsedAt?: number | null }): Promise<AdminSessionTokens> {
+  private async createUserSessionTokens(payload:{hostId: number, userId: number, tokenFamily?: string, deviceType?: 'WEB' | 'ANDROID' | 'IOS', deviceId: string, deviceName?: string | null, appVersion?: string | null, lastUsedAt?: number | null }): Promise<AdminSessionTokens> {
     const refreshSecret = getJwtRefreshSecret();
-    const refreshExpiresIn = getJwtRefreshExpiresIn();
+    const refreshExpiresIn = getJwtRefreshExpiresIn(payload.deviceType);
     const { hostId, userId, tokenFamily } = payload;
     const finalTokenFamily = tokenFamily || crypto.randomBytes(16).toString('hex');
     
@@ -492,7 +492,7 @@ export class AuthService {
     });
 
     return {
-      accessToken: this.generateAccessToken(userId),
+      accessToken: this.generateAccessToken(userId, payload.deviceType || 'WEB'),
       refreshToken,
       refreshTokenHash,
       tokenFamily: finalTokenFamily,
