@@ -236,8 +236,8 @@ export class UserController {
 
   async validateUserMobile(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { hostId, mobile, country: defaultCountry } = req.body;
-      const validationResult = await this.validateMobile({ hostId, mobile, countryIsoCode: defaultCountry });
+      const { hostId, mobile, country: defaultCountry, userId } = req.body;
+      const validationResult = await this.validateMobile({ hostId, mobile, countryIsoCode: defaultCountry, userId });
       
       if (!validationResult.isValid) {
         throw new Error('Invalid mobile number');
@@ -404,8 +404,8 @@ export class UserController {
 
   async validateUserEmail(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { hostId, email } = req.body;
-      const validationResult = await this.validateEmail({ email, hostId });
+      const { hostId, email, userId } = req.body;
+      const validationResult = await this.validateEmail({ email, hostId, userId });
       
       if (validationResult.isValid) {
         res.json({
