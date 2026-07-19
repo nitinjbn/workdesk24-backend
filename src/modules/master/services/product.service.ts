@@ -367,11 +367,29 @@ export class ProductService {
       const existingMediaIds = existingProduct.data.productMedia?.map((m: any) => m.mediaId) || [];
       const payloadMediaIds = productMedia?.map((m: any) => m.mediaId) || [];
 
+      // Media to ADD (in payload but not in existing)
+      const mediaToAdd = productMedia?.filter((m: any) => !existingMediaIds.includes(m.mediaId)) || [];
+
       // Media to UPDATE (in both payload and existing)
       const mediaToUpdate = productMedia?.filter((m: any) => existingMediaIds.includes(m.mediaId)) || [];
       
       // Media to DELETE (in existing but not in payload)
       const mediaToDelete = existingProduct.data.productMedia?.filter((m: any) => !payloadMediaIds.includes(m.mediaId)) || [];
+
+      // Execute ADD operations
+      for (const media of mediaToAdd) {
+        await productRepository.updateProductMedia({
+          updatePayload: {
+            productId: productId,
+            isEnabled: media.isEnabled || 1, // Default to enabled if not provided
+            updatedAt: currentUnixTime
+          },
+          where: {
+            id: media.mediaId,
+            hostId: otherPayload.hostId
+          }
+        });
+      }
 
       // Execute UPDATE operations
       for (const media of mediaToUpdate) {
