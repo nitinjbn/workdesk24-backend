@@ -5,6 +5,7 @@ import bcrypt from 'bcryptjs';
 import userRefreshTokenRepository from '../repositories/user-refresh-token.repository';
 import rolePermissionRepository, { RolePermissionAssignmentView, RolePermissionView } from '../repositories/role-permission.repository';
 import userPermissionRepository, { UserPermissionAssignmentView } from '../repositories/user-permission.repository';
+import { UserSettings } from '../../../models';
 import {
   getJwtExpiresIn,
   getJwtRefreshExpiresIn,
@@ -16,6 +17,9 @@ import {
 import { createConfiguredError } from '../../../shared/utils/error.util';
 import { CommonUtil } from '../../../shared/utils/common.util';
 import { CONFIG } from '../../../config/constants';
+import { DateTimeFormatUtil, formatDateTimeFieldsBySettings } from '../../../shared/utils/date-time-format.util';
+import { formatStorageFieldsByConfig } from '../../../shared/utils/storage-format.util';
+import { getHostDateTimeSettings } from '../../../shared/utils/host-settings.util';
 
 interface RegisterDto {
   hostId?: number;
@@ -189,7 +193,7 @@ export class AuthService {
     if (!loginUser) {
       throw createConfiguredError('USER_NOT_FOUND', 'User not found', 404, 'NOT_FOUND');
     }
-
+    
     // Update user device details
     if(payload.deviceDetails) {
       await userRepository.updateUserDeviceDetails({
@@ -202,7 +206,9 @@ export class AuthService {
     return this.buildAppLoginResponse(loginUser as unknown as LoginUser, payload.deviceDetails);
   }
 
-  private async buildAppLoginResponse(user: { id: number; hostId: number; roleId: number; toJSON: () => unknown }, deviceDetails?: any): Promise<AuthResponse> {
+  private async buildAppLoginResponse(user: any, deviceDetails?: any): Promise<AuthResponse> {
+    // Try to get plain object if method exists, otherwise use as-is
+    user = (user?.get ? user.get({ plain: true }) : user) as unknown as LoginUser;
     const isAllowedAppLogin = await isAppLoginRole(user.hostId, user.roleId);
     if (!isAllowedAppLogin) {
       throw createConfiguredError('APP_LOGIN_ACCESS_DENIED');
@@ -210,13 +216,41 @@ export class AuthService {
 
     const sessionTokens = await this.createAdminSessionTokens({ hostId: user.hostId, userId: user.id, deviceType: 'ANDROID', deviceId: deviceDetails?.deviceId || 'app' });
     const permissionsByModule = await this.getPermissionsByModuleForUser(user.hostId, user.roleId, user.id);
-
+    
+    // Fetch user settings separately since they're in a different table
+    const userSettings = await UserSettings.findAll({
+      where: { userId: user.id, isDeleted: 0 },
+      attributes: ['settingName', 'settingValue', 'isEnabled'],
+      raw: true,
+    });
+    
+    // Attach settings array to user object
+    (user as any).settings = userSettings || [];
+    
+    // Format user data with settings, datetime, and storage fields
+    const formattedUser = await this.formatUserWithSettings(user);
+    
     return {
-      user: user.toJSON(),
+      user: formattedUser,
       accessToken: sessionTokens.accessToken,
       refreshToken: sessionTokens.refreshToken,
       permissionsByModule,
     };
+  }
+
+  private async formatUserWithSettings(user: { id: number; hostId: number; toJSON: () => any }): Promise<unknown> {
+    const userData = user as any;
+    // Convert settings array to key-value object
+    if (userData.settings && Array.isArray(userData.settings)) {
+      userData.settings = CommonUtil.convertSettingsToObject(userData.settings);
+
+      // If weeklyOffMask is present, convert it to weeklyOffDays and remove weeklyOffMask
+      if (userData.settings?.weeklyOffMask) {
+        userData.settings.weeklyOffDays = DateTimeFormatUtil.getWeeklyOffDays(userData.settings.weeklyOffMask);
+        delete userData.settings.weeklyOffMask;
+      }
+    }
+    return userData;
   }
 
   async adminLogin(data: LoginDto): Promise<AdminAuthResponse> {
@@ -347,7 +381,8 @@ export class AuthService {
       throw createConfiguredError('INVALID_REFRESH_TOKEN');
     }
 
-    const user = await userRepository.findById(payload.userId);
+    let user = await userRepository.findById(payload.userId);
+    user = (user?.get ? user.get({ plain: true }) : user) as unknown as LoginUser;
     if (!user) {
       await userRefreshTokenRepository.revokeAllActiveForUser(payload.userId);
       throw createConfiguredError('INVALID_REFRESH_TOKEN');
@@ -367,9 +402,22 @@ export class AuthService {
     const rotatedTokens = await this.createAdminSessionTokens({ hostId: user.hostId, userId: user.id, tokenFamily: payload.tokenFamily, deviceType: 'ANDROID', deviceId: 'app' });
     await userRefreshTokenRepository.revokeTokenById(tokenRecord.id, rotatedTokens.refreshTokenHash);
     const permissionsByModule = await this.getPermissionsByModuleForUser(user.hostId, user.roleId, user.id);
+    
+    // Fetch user settings separately since they're in a different table
+    const userSettings = await UserSettings.findAll({
+      where: { userId: user.id, isDeleted: 0 },
+      attributes: ['settingName', 'settingValue', 'isEnabled'],
+      raw: true,
+    });
+    
+    // Attach settings array to user object
+    (user as any).settings = userSettings || [];
+    
+    // Format user data with settings, datetime, and storage fields
+    const formattedUser = await this.formatUserWithSettings(user);
 
     return {
-      user: user.toJSON(),
+      user: formattedUser,
       accessToken: rotatedTokens.accessToken,
       refreshToken: rotatedTokens.refreshToken,
       permissionsByModule,
