@@ -166,6 +166,16 @@ export class ProductController {
     );
   }
 
+  async updateProduct(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    await this.executeUserScopedReport(
+      req,
+      res,
+      next,
+      (payload, scope) => productService.updateProduct(payload as any, scope),
+      'Product updated successfully'
+    );
+  }
+
   async deleteMedia(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const { hostId, mediaId } = req.body;

@@ -248,9 +248,21 @@ export class ProductService {
     return result;
   }
 
+  private validateProduct(payload: any): void {
+    const requiredFields = ['hostId', 'productName', 'sellingPrice', 'mrp'];
+    for (const field of requiredFields) {
+      if (!payload[field]) {
+        throw createConfiguredError("VALIDATION_ERROR", `Missing required field: ${field}`);
+      }
+    }
+  }
+
   async createProduct(payload: any, scope: ReportScope): Promise<any> {
     const { productMedia, productAttribute, ...otherPayload } = payload;
     const currentUnixTime = DateTimeFormatUtil.getCurrentUnixTime();
+
+    // Validate required fields
+    this.validateProduct(payload);
 
     const createProductResult = await productRepository.createProduct({
       hostId: otherPayload.hostId,
@@ -302,6 +314,151 @@ export class ProductService {
     }
 
     return createProductResult;
+  }
+
+  async updateProduct(payload: any, scope: ReportScope): Promise<any> {
+    const { productId, productMedia, productAttribute, ...otherPayload } = payload;
+    const currentUnixTime = DateTimeFormatUtil.getCurrentUnixTime();
+
+    // Validate required fields
+    if (!productId) {
+      throw createConfiguredError("VALIDATION_ERROR", 'Missing required field: productId');
+    }
+
+    // Validate other required fields for update
+    this.validateProduct(payload);
+
+    // Check if the product exists before updating
+    const existingProduct = await productRepository.getProductById({
+      hostId: otherPayload.hostId,
+      productId: productId
+    });
+    if (!existingProduct || !existingProduct.data) {
+      throw createConfiguredError("PRODUCT_NOT_FOUND", 'Product not found.');
+    }
+
+    const updateProductResult = await productRepository.updateProduct({
+      updatePayload: {
+        productCode: otherPayload.productCode,
+        productName: otherPayload.productName,
+        shortName: otherPayload.shortName,
+        remarks: otherPayload.remarks,
+        categoryId: otherPayload.categoryId,
+        brandId: otherPayload.brandId,
+        uomId: otherPayload.uomId,
+        sku: otherPayload.sku,
+        barcode: otherPayload.barcode,
+        hsnCode: otherPayload.hsnCode,
+        purchasePrice: otherPayload.purchasePrice,
+        sellingPrice: otherPayload.sellingPrice,
+        mrp: otherPayload.mrp,
+        taxPercentage: otherPayload.taxPercentage,
+        isEnabled: otherPayload.isEnabled !== undefined ? otherPayload.isEnabled : existingProduct.data.isEnabled,
+        updatedAt: currentUnixTime
+      },
+      where: {
+        id: productId,
+        hostId: otherPayload.hostId
+      }
+    });
+
+    // Handle Product Media - Add, Update, Delete
+    if (productMedia || (existingProduct.data.productMedia && existingProduct.data.productMedia.length > 0)) {
+      const existingMediaIds = existingProduct.data.productMedia?.map((m: any) => m.id) || [];
+      const payloadMediaIds = productMedia?.map((m: any) => m.mediaId) || [];
+
+      // Media to UPDATE (in both payload and existing)
+      const mediaToUpdate = productMedia?.filter((m: any) => existingMediaIds.includes(m.mediaId)) || [];
+      
+      // Media to DELETE (in existing but not in payload)
+      const mediaToDelete = existingProduct.data.productMedia?.filter((m: any) => !payloadMediaIds.includes(m.id)) || [];
+
+      // Execute UPDATE operations
+      for (const media of mediaToUpdate) {
+        await productRepository.updateProductMedia({
+          updatePayload: {
+            productId: productId,
+            isEnabled: media.isEnabled || 1,
+            isPrimary: media.isPrimary || 0,
+            sortOrder: media.sortOrder || 0,
+            updatedAt: currentUnixTime
+          },
+          where: {
+            id: media.mediaId,
+            hostId: otherPayload.hostId
+          }
+        });
+      }
+
+      // Execute DELETE operations (soft delete)
+      if (mediaToDelete.length > 0) {
+        await productRepository.updateProductMedia({
+          updatePayload: {
+            isDeleted: 1,
+            updatedAt: currentUnixTime
+          },
+          where: {
+            id: mediaToDelete.map(m => m.id),
+            hostId: otherPayload.hostId
+          }
+        });
+      }
+    }
+
+    // Handle Product Attributes - Add, Update, Delete
+    if (productAttribute || (existingProduct.data.productAttribute && existingProduct.data.productAttribute.length > 0)) {
+      const existingAttributeIds = existingProduct.data.productAttribute?.map((a: any) => a.id) || [];
+      const payloadAttributeIds = productAttribute?.map((a: any) => a.attributeId || a.id) || [];
+
+      // Attributes to ADD (in payload but not in existing)
+      const attributesToAdd = productAttribute?.filter((a: any) => !existingAttributeIds.includes(a.attributeId || a.id)) || [];
+      if (attributesToAdd.length > 0) {
+        await productRepository.saveProductAttributes({
+          hostId: otherPayload.hostId,
+          productId: productId,
+          attributes: attributesToAdd,
+          createdAt: currentUnixTime
+        });
+      }
+
+      // Attributes to UPDATE (in both payload and existing)
+      const attributesToUpdate = productAttribute?.filter((a: any) => existingAttributeIds.includes(a.attributeId || a.id)) || [];
+      for (const attr of attributesToUpdate) {
+        await productRepository.updateProductAttributes({
+          updatePayload: {
+            attributeGroup: attr.attributeGroup,
+            attributeName: attr.attributeName,
+            attributeValue: attr.attributeValue,
+            attributeType: attr.attributeType,
+            attributeUomId: attr.attributeUomId,
+            isEnabled: attr.isEnabled !== undefined ? attr.isEnabled : 1,
+            updatedAt: currentUnixTime
+          },
+          where: {
+            id: attr.attributeId || attr.id,
+            hostId: otherPayload.hostId
+          }
+        });
+      }
+
+      // Attributes to DELETE (in existing but not in payload)
+      const attributesToDelete = existingProduct.data.productAttribute?.filter((a: any) => !payloadAttributeIds.includes(a.id)) || [];
+
+      if(attributesToDelete.length > 0) {
+        await productRepository.updateProductAttributes({
+          updatePayload: {
+            isDeleted: 1,
+            deletedAt: currentUnixTime
+          },
+          where: {
+            id: attributesToDelete.map(a => a.attributeId || a.id),
+            hostId: otherPayload.hostId
+          }
+        });
+      }
+    }
+
+    return {};
   }
 
   async deleteProductMedia(payload: { hostId: number, mediaId: number }): Promise<any> {

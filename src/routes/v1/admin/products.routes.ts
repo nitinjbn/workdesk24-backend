@@ -15,5 +15,6 @@ router.post('/products/getProductAttributes', productController.getProductAttrib
 router.post('/products/uploadMedia', upload.single('media'), productController.uploadMedia.bind(productController));
 router.post('/products/deleteMedia', productController.deleteMedia.bind(productController));
 router.post('/products/createProduct', productController.createProduct.bind(productController));
+router.post('/products/updateProduct', productController.updateProduct.bind(productController));
 
 export default router;

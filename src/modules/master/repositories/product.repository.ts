@@ -343,7 +343,7 @@ export class productRepository {
     }
   }
 
-  async getProductById(params: GetProductDetailsByIdPayload): Promise<SingleRecordResponse<ProductInstance>> {
+  async getProductById(params: GetProductDetailsByIdPayload): Promise<any> {
     const { hostId, productId } = params;
 
     const where:any = {
@@ -589,6 +589,22 @@ export class productRepository {
     return {
       data: mediaDetails
     };
+  }
+
+  async updateProduct(params: any): Promise<any> {
+    const { updatePayload, where } = params;
+    const updateResult = await Product.update(updatePayload, {
+      where
+    });
+    return updateResult;
+  }
+
+  async updateProductAttributes(params: any): Promise<any> {
+    const { updatePayload, where } = params;
+    const updateResult = await ProductAttribute.update(updatePayload, {
+      where
+    });
+    return updateResult;
   }
 }
 
