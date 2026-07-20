@@ -142,7 +142,7 @@ export class customerRepository {
             isDeleted: 0
           },
           as: "customerTypeDetails",
-          required: true
+          required: false
         },
         {
           attributes: {
