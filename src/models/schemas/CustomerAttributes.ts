@@ -45,7 +45,7 @@ export function initCustomerAttribute(sequelize: Sequelize): typeof CustomerAttr
       },
       attributeGroup: {
         type: DataTypes.STRING(50),
-        allowNull: false,
+        allowNull: true,
       },
       attributeName: {
         type: DataTypes.STRING(50),
@@ -57,7 +57,7 @@ export function initCustomerAttribute(sequelize: Sequelize): typeof CustomerAttr
       },
       attributeType: {
         type: DataTypes.ENUM('TEXT','NUMBER','DECIMAL','DATE','BOOLEAN','JSON'),
-        allowNull: false,
+        allowNull: true,
       },
       attributeUomId: {
         type: DataTypes.BIGINT,
