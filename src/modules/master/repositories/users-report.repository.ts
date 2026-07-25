@@ -3,6 +3,7 @@ import db, { User, UserSettings, Role, Designation, UserDevice } from '../../../
 import { CommonReportSortBy, GetUsersFilter, ReportResponse, ReportSortDirection, SingleRecordResponse } from '../types/master.types';
 import baseReportHelper from '../helpers/base-report.helper';
 import { buildCommonReportOrder } from './user-scoped-report.helper';
+import { DateTimeFormatUtil } from '../../../shared/utils/date-time-format.util';
 
 type UserInstance = typeof User.prototype;
 
@@ -535,6 +536,56 @@ export class usersRepository {
     return {
       id: filter.userId
     };
+  }
+
+  async updateUserDeviceDetails(payload: {
+    hostId: number;
+    userId: number;
+    deviceId: string;
+    deviceName?: string;
+    deviceModel?: string;
+    manufacturer?: string;
+    brand?: string;
+    device?: string;
+    product?: string;
+    hardware?: string | null;
+    osVersion?: string;
+    sdkInt?: number;
+    appVersion?: string | null;
+    storageTotalBytes?: number | null;
+    storageAvailableBytes?: number | null;
+    storageUsedBytes?: number | null;
+    fcmToken?: string | null;
+    createdAt?: number;
+  }): Promise<any> {
+    const { hostId, userId, deviceId, ...deviceData } = payload;
+
+    if(!deviceData.createdAt) {
+      deviceData.createdAt = DateTimeFormatUtil.getCurrentUnixTime();
+    }
+
+    // Try to find existing device record
+    const existingDevice = await UserDevice.findOne({
+      where: {
+        hostId,
+        userId,
+        deviceId,
+      },
+    });
+
+    if (existingDevice) {
+      // Update existing record
+      await existingDevice.update(deviceData);
+      return existingDevice;
+    } else {
+      // Create new record
+      return await UserDevice.create({
+        hostId,
+        userId,
+        deviceId,
+        ...deviceData,
+      });
+    }
   }
 }
 

@@ -422,6 +422,34 @@ export class UserController {
       next(error);
     }
   }
+
+  async updateFcmToken(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { hostId, userId, deviceId, fcmToken } = req.body;
+
+      if (!hostId || !userId || !deviceId || !fcmToken) {
+        res.status(400).json({
+          success: false,
+          message: 'hostId, userId, deviceId, and fcmToken are required',
+        } as ApiResponse);
+        return;
+      }
+
+      await userService.updateUserDeviceDetails({
+        hostId,
+        userId,
+        deviceId,
+        fcmToken,
+      });
+
+      res.json({
+        success: true,
+        message: 'FCM token updated successfully',
+      } as ApiResponse);
+    } catch (error: any) {
+      next(error);
+    }
+  }
 }
 
 export default new UserController();

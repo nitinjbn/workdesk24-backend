@@ -457,6 +457,29 @@ export class UserService {
       users: users,
     };
   }
+
+  async updateUserDeviceDetails(payload: {
+      hostId: number;
+      userId: number;
+      deviceId: string;
+      deviceName?: string;
+      deviceModel?: string;
+      manufacturer?: string;
+      brand?: string;
+      device?: string;
+      product?: string;
+      hardware?: string | null;
+      osVersion?: string;
+      sdkInt?: number;
+      appVersion?: string | null;
+      storageTotalBytes?: number | null;
+      storageAvailableBytes?: number | null;
+      storageUsedBytes?: number | null;
+      fcmToken?: string | null;
+      createdAt?: number;
+    }): Promise<void> {
+      await usersRepository.updateUserDeviceDetails(payload);
+    }
 }
 
 export default new UserService();
