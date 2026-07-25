@@ -46,7 +46,8 @@ export class UserRepository extends BaseRepository<typeof User.prototype> {
     if(!filter) {
       throw new Error('Filter is required');
     }
-    const where:any = filter;
+    const { deviceId, ...where } = filter;
+    // const where:any = {deviceId, ...filter}; // Remove this line as it's redundant
     
     // Ensure that isDeleted is always checked to be 0 unless explicitly provided in the filter
     if(!Object.prototype.hasOwnProperty.call(where, 'isDeleted')) {
@@ -54,10 +55,18 @@ export class UserRepository extends BaseRepository<typeof User.prototype> {
     }
     const users = await User.findAll({
       where,
-      raw: true,
+      //raw: true,
       logging: console.log, // Enable logging for debugging
+      include: [
+        {
+          model: UserDevice,
+          as: 'device',
+          where: { deviceId: filter.deviceId }, // Filter by deviceId if provided
+          required: false, // Left join to include users even if they have no devices
+        },
+      ],
     });
-    return users || [];
+    return users?.map(user => user.get({ plain: true })) || [];
   }
 
   async saveOtpForUser(payload: { hostId: number, userId: number; identifierType: string; identifierValue: string; otpCode: string; expiresAt: number; purpose: string; messageId?: string; maxAttempts: number; requestIp: string; createdAt: number; otpDeliveries: Array<{ deliveryChannel: string; destination: string; messageId?: string; provider?: string; status?: string | null; failedReason?: string | null, sentAt?: number | null }> }): Promise<any> {

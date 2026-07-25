@@ -11,6 +11,7 @@ export class PushService {
 
   async sendAuthOtpPush(payload: OtpPushPayload): Promise<PushSendResult> {
     const message = buildAuthOtpPushMessage(payload);
+    console.log("################ PushService.sendAuthOtpPush called with message:", message);
     return this.send(message);
   }
 }

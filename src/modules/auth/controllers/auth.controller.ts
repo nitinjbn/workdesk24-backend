@@ -10,7 +10,8 @@ export class AuthController {
   async requestOtp(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       let { identifier, deviceDetails } = req.body;
-      const user = await authService.getUserByIdentifier({ identifier });
+      const user = await authService.getUserByIdentifier({ identifier, deviceId: deviceDetails?.deviceId });
+      console.log(`################ AuthController.requestOtp: User lookup for identifier "${identifier}" returned:`, user);
       if (!user) {
         res.status(404).json({
           success: false,
@@ -20,6 +21,8 @@ export class AuthController {
       }
 
       // Save fcmToken if provided in the request body
+      // Token will update only after the user has been found and verified, so we can safely update the device details here
+      /*
       if (deviceDetails?.fcmToken) {
         await authService.updateUserDeviceDetails({
           hostId: user.hostId,
@@ -41,6 +44,7 @@ export class AuthController {
           fcmToken: deviceDetails.fcmToken,
         });
       }
+      */
       
       //console.log("################ AuthController.requestOtp: User found:", user);
       const { email, mobile } = user;
@@ -54,7 +58,7 @@ export class AuthController {
         return;
       }
 
-      const fcmToken = deviceDetails?.fcmToken?.trim();
+      const fcmToken = user.device?.fcmToken?.trim();
       const currentTime = DateTimeFormatUtil.getCurrentUnixTime();
 
       let sendEmailOtpResult: { deliveryChannel: "EMAIL", destination: string; messageId?: string; provider?: string; status?: string | null; failedReason?: string | null; sentAt?: number | null } = { deliveryChannel: "EMAIL", destination: email, messageId: null, provider: null, status: null, failedReason: null, sentAt: null };
@@ -85,7 +89,7 @@ export class AuthController {
             appName: CONFIG.APP_CONFIG.NAME,
             expiryMinutes: CONFIG.OTP.AUTH.EXPIRY_MINUTES,
           });
-          //console.log("################ AuthController.requestOtp: OTP push notification sent successfully:", sendPushOtpResult);
+          console.log("################ AuthController.requestOtp: OTP push notification sent successfully:", sendPushOtpResult);
           console.log(`OTP push notification sent for user ${user.id}. Message ID: ${sendPushOtpResult.messageId || 'N/A'}`);
         } catch (pushError: any) {
           console.error(`Failed to send OTP push notification for user ${user.id}:`, pushError?.message || pushError);

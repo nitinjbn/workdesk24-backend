@@ -85,6 +85,7 @@ export const CONFIG = {
       EXPIRY_MINUTES: 10,
       MAX_ATTEMPTS: 5,
       MAX_RESENDS: 3,
+      ALLOW_AUTO_FILL: true, // Whether to allow auto-fill of OTP in client apps
     },
     PASSWORD_RESET: {
       PURPOSE_KEY: 'PASSWORD_RESET',

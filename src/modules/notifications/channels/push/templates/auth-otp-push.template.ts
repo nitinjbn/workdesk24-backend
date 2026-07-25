@@ -1,3 +1,4 @@
+import { CONFIG } from '../../../../../config/constants';
 import { OtpPushTemplateInput, PushTemplateData } from '../types/push.types';
 
 export const buildAuthOtpPushTemplate = (input: OtpPushTemplateInput): PushTemplateData => {
@@ -9,6 +10,7 @@ export const buildAuthOtpPushTemplate = (input: OtpPushTemplateInput): PushTempl
       otpCode: input.otpCode,
       purpose: input.purpose,
       expiryMinutes: String(input.expiryMinutes),
+      allowAutoFill: String(!!(CONFIG.OTP.AUTH.ALLOW_AUTO_FILL || false)), // This can be used by the client app to determine if it should auto-fill the OTP
     },
   };
 };

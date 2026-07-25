@@ -665,8 +665,8 @@ export class AuthService {
     return await userRepository.saveOtpForUser(payload);
   }
 
-  async getUserByIdentifier(payload: { identifier: string }): Promise<any> {
-    let { identifier } = payload;
+  async getUserByIdentifier(payload: { identifier: string, deviceId?: string }): Promise<any> {
+    let { identifier, deviceId } = payload;
     identifier = identifier?.trim(); // Trim whitespace from the identifier
     
     // Validate the identifier exists and is not empty
@@ -682,6 +682,7 @@ export class AuthService {
 
     let whereClause: Record<string, any> = {
       accountStatus: 'ACTIVE',
+      deviceId: deviceId || null, // Include deviceId in the filter if provided
       isDeleted: 0
     };
 
