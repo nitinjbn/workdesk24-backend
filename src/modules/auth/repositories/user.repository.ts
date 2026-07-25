@@ -127,19 +127,20 @@ export class UserRepository extends BaseRepository<typeof User.prototype> {
     hostId: number;
     userId: number;
     deviceId: string;
-    deviceName: string;
-    deviceModel: string;
-    manufacturer: string;
-    brand: string;
-    device: string;
-    product: string;
+    deviceName?: string;
+    deviceModel?: string;
+    manufacturer?: string;
+    brand?: string;
+    device?: string;
+    product?: string;
     hardware?: string | null;
-    osVersion: string;
-    sdkInt: number;
+    osVersion?: string;
+    sdkInt?: number;
     appVersion?: string | null;
     storageTotalBytes?: number | null;
     storageAvailableBytes?: number | null;
     storageUsedBytes?: number | null;
+    fcmToken?: string | null;
     createdAt?: number;
   }): Promise<UserDevice> {
     const { hostId, userId, deviceId, ...deviceData } = payload;

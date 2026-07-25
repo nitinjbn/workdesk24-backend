@@ -18,6 +18,7 @@ interface UserDeviceAttributes {
   storageTotalBytes?: number | null;
   storageAvailableBytes?: number | null;
   storageUsedBytes?: number | null;
+  fcmToken?: string | null;
   createdAt: number;
   updatedAt?: number | null;
 }
@@ -45,6 +46,7 @@ class UserDevice
   public storageTotalBytes?: number | null;
   public storageAvailableBytes?: number | null;
   public storageUsedBytes?: number | null;
+  public fcmToken?: string | null;
   public createdAt!: number;
   public updatedAt?: number | null;
 
@@ -83,27 +85,27 @@ export function initUserDevice(sequelize: Sequelize): typeof UserDevice {
       },
       deviceName: {
         type: DataTypes.STRING(100),
-        allowNull: false,
+        allowNull: true,
       },
       deviceModel: {
         type: DataTypes.STRING(100),
-        allowNull: false,
+        allowNull: true,
       },
       manufacturer: {
         type: DataTypes.STRING(100),
-        allowNull: false,
+        allowNull: true,
       },
       brand: {
         type: DataTypes.STRING(100),
-        allowNull: false,
+        allowNull: true,
       },
       device: {
         type: DataTypes.STRING(100),
-        allowNull: false,
+        allowNull: true,
       },
       product: {
         type: DataTypes.STRING(100),
-        allowNull: false,
+        allowNull: true,
       },
       hardware: {
         type: DataTypes.STRING(255),
@@ -111,11 +113,11 @@ export function initUserDevice(sequelize: Sequelize): typeof UserDevice {
       },
       osVersion: {
         type: DataTypes.STRING(50),
-        allowNull: false,
+        allowNull: true,
       },
       sdkInt: {
         type: DataTypes.SMALLINT,
-        allowNull: false,
+        allowNull: true,
       },
       appVersion: {
         type: DataTypes.STRING(20),
@@ -133,9 +135,13 @@ export function initUserDevice(sequelize: Sequelize): typeof UserDevice {
         type: DataTypes.BIGINT,
         allowNull: true,
       },
+      fcmToken: {
+        type: DataTypes.STRING(255),
+        allowNull: true,
+      },
       createdAt: {
         type: DataTypes.BIGINT,
-        allowNull: false,
+        allowNull: true,
       },
       updatedAt: {
         type: DataTypes.BIGINT,

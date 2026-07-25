@@ -9,7 +9,7 @@ import { DateTimeFormatUtil } from '../../../shared/utils/date-time-format.util'
 export class AuthController {
   async requestOtp(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      let { identifier } = req.body;
+      let { identifier, deviceDetails } = req.body;
       const user = await authService.getUserByIdentifier({ identifier });
       if (!user) {
         res.status(404).json({
@@ -17,6 +17,29 @@ export class AuthController {
           message: 'User not found',
         } as ApiResponse);
         return;
+      }
+
+      // Save fcmToken if provided in the request body
+      if (deviceDetails?.fcmToken) {
+        await authService.updateUserDeviceDetails({
+          hostId: user.hostId,
+          userId: user.id,
+          deviceId: deviceDetails.deviceId,
+          deviceName: deviceDetails.deviceName,
+          deviceModel: deviceDetails.deviceModel,
+          manufacturer: deviceDetails.manufacturer,
+          brand: deviceDetails.brand,
+          device: deviceDetails.device,
+          product: deviceDetails.product,
+          hardware: deviceDetails.hardware,
+          osVersion: deviceDetails.osVersion,
+          sdkInt: deviceDetails.sdkInt,
+          appVersion: deviceDetails.appVersion,
+          storageTotalBytes: deviceDetails.storageTotalBytes,
+          storageAvailableBytes: deviceDetails.storageAvailableBytes,
+          storageUsedBytes: deviceDetails.storageUsedBytes,
+          fcmToken: deviceDetails.fcmToken,
+        });
       }
       
       //console.log("################ AuthController.requestOtp: User found:", user);
@@ -204,6 +227,34 @@ export class AuthController {
           refreshToken: result.refreshToken,
           permissions: result.permissionsByModule,
         },
+      } as ApiResponse);
+    } catch (error: any) {
+      next(error);
+    }
+  }
+
+  async updateFcmToken(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { hostId, userId, deviceId, fcmToken } = req.body;
+
+      if (!hostId || !userId || !deviceId || !fcmToken) {
+        res.status(400).json({
+          success: false,
+          message: 'hostId, userId, deviceId, and fcmToken are required',
+        } as ApiResponse);
+        return;
+      }
+
+      await authService.updateUserDeviceDetails({
+        hostId,
+        userId,
+        deviceId,
+        fcmToken,
+      });
+
+      res.json({
+        success: true,
+        message: 'FCM token updated successfully',
       } as ApiResponse);
     } catch (error: any) {
       next(error);

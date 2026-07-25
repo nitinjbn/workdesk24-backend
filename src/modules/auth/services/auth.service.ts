@@ -206,6 +206,29 @@ export class AuthService {
     return this.buildAppLoginResponse(loginUser as unknown as LoginUser, payload.deviceDetails);
   }
 
+  async updateUserDeviceDetails(payload: {
+    hostId: number;
+    userId: number;
+    deviceId: string;
+    deviceName?: string;
+    deviceModel?: string;
+    manufacturer?: string;
+    brand?: string;
+    device?: string;
+    product?: string;
+    hardware?: string | null;
+    osVersion?: string;
+    sdkInt?: number;
+    appVersion?: string | null;
+    storageTotalBytes?: number | null;
+    storageAvailableBytes?: number | null;
+    storageUsedBytes?: number | null;
+    fcmToken?: string | null;
+    createdAt?: number;
+  }): Promise<void> {
+    await userRepository.updateUserDeviceDetails(payload);
+  }
+
   private async buildAppLoginResponse(user: any, deviceDetails?: any): Promise<AuthResponse> {
     // Try to get plain object if method exists, otherwise use as-is
     user = (user?.get ? user.get({ plain: true }) : user) as unknown as LoginUser;
