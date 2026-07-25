@@ -23,6 +23,7 @@ import { CONFIG } from '../../../config/constants';
 import roleRepository from '../repositories/role-report.repository';
 import { CommonUtil } from '../../../shared/utils/common.util';
 import { PhoneUtil } from '../../../shared/utils/phone.util';
+import userNotificationService from '../../notifications/master/userNotificationService';
 
 type UserInstance = typeof User.prototype;
 type DesignationInstance = typeof Designation.prototype;
@@ -388,6 +389,28 @@ export class UserService {
       settings: CommonUtil.convertSettingsToArray(settings),
       updatedAt: currentUnixTime
     });
+
+    // Notify user app to refresh settings if the user has an active FCM token.
+    try {
+      const updatedUserDetails = await usersRepository.getUserById({
+        hostId,
+        userId: updateAppUserResult.id,
+      });
+      console.log("###################### updatedUserDetails:", updatedUserDetails);
+
+      const fcmToken = updatedUserDetails?.device?.fcmToken?.trim();
+      console.log("###################### fcmToken:", fcmToken);
+      if (fcmToken) {
+        const notificationResult = await userNotificationService.syncUserSettings({
+          fcmToken,
+        });
+        console.log("###################### notificationResult:", notificationResult);
+      }
+    } catch (notificationError: any) {
+      console.error('Failed to send user settings sync notification:', notificationError?.message || notificationError);
+    }
+
+    
 
     return { user: updateAppUserResult, settings: updateUserSettingsResult };
   }

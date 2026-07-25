@@ -22,8 +22,5 @@ export interface OtpEmailPayload {
 
 export interface OtpPushPayload {
   token: string;
-  otpCode: string;
-  appName: string;
-  purpose: string;
-  expiryMinutes: number;
+  data: Record<string, string>;
 }

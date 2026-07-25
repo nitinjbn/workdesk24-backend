@@ -179,4 +179,8 @@ export class CommonUtil {
 
         return `${parseFloat(value.toFixed(decimals))} ${units[unitIndex]}`;
     }
+
+    static generateUUID(): string {
+        return crypto.randomUUID();
+    }
 }

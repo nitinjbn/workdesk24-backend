@@ -26,13 +26,8 @@ class UserOTPDeliveries extends Model<UserOTPDeliveriesAttributes, UserOTPDelive
   public deliveryChannel!: string;
   public providerMessageId?: string | null;
   public status!: string;
-  public attemptCount!: number;
-  public maxAttempts!: number;
-  public resendCount!: number;
-  public verifiedAt?: number | null;
   public createdAt!: number;
   public updatedAt!: number;
-  public requestIp?: string | null;
   public destination!: string;
   public provider?: string | null;
   public failureReason?: string | null;
@@ -128,7 +123,6 @@ export function initUserOTPDeliveries(sequelize: Sequelize): typeof UserOTPDeliv
         { fields: ['userId'] },
         { fields: ['otpId'] },
         { fields: ['deliveryChannel'] },
-        { fields: ['destination'] },
         { fields: ['providerMessageId'] }
       ],
       hooks: {

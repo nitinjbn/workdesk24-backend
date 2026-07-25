@@ -4,6 +4,8 @@ import { CONFIG } from '../../../config/constants';
 import notificationFacade from '../NotificationFacade';
 import { SendOtpNotificationPayload, SendOtpPushNotificationPayload } from './types/auth-notification.types';
 import { DateTimeFormatUtil } from '../../../shared/utils/date-time-format.util';
+import { CommonUtil } from '../../../shared/utils/common.util';
+import { NotificationType, NotificationAction } from '../channels/push/types/push.types';
 
 class AuthNotificationService {
 	async sendOtpEmail(payload: SendOtpNotificationPayload): Promise<{ deliveryChannel: "EMAIL", destination: string; messageId?: string; provider?: string; status?: string | null; failedReason?: string | null , sentAt?: number | null }> {
@@ -79,13 +81,22 @@ class AuthNotificationService {
 			);
 		}
 
-		const sendResult = await notificationFacade.sendAuthOtpPush({
+		const notificationPayload = {
 			token: fcmToken,
-			otpCode,
-			appName: payload.appName || CONFIG.APP_CONFIG.NAME,
-			purpose: payload.purpose || CONFIG.OTP.AUTH.LABEL,
-			expiryMinutes: payload.expiryMinutes || CONFIG.OTP.AUTH.EXPIRY_MINUTES,
-		});
+			data: {
+				notificationId: CommonUtil.generateUUID(),
+				notificationType: NotificationType.AUTH_OTP,
+				action: NotificationAction.VERIFY_OTP,
+				otpCode,
+				appName: payload.appName || CONFIG.APP_CONFIG.NAME,
+				purpose: payload.purpose || CONFIG.OTP.AUTH.LABEL,
+				expiryMinutes: (payload.expiryMinutes || CONFIG.OTP.AUTH.EXPIRY_MINUTES).toString(),
+				allowAutoFill: String(!!(CONFIG.OTP.AUTH.ALLOW_AUTO_FILL || false)), // This can be used by the client app to determine if it should auto-fill the OTP
+				timestamp: DateTimeFormatUtil.getCurrentUnixTime().toString(),
+			}
+		};
+
+		const sendResult = await notificationFacade.sendAuthOtpPush(notificationPayload);
 
 		if (!sendResult.success) {
 			return {
