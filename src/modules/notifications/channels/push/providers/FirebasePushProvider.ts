@@ -7,8 +7,8 @@ export class FirebasePushProvider implements PushProvider {
       const response = await getFirebaseMessaging().send({
         token: message.token,
         notification: {
-          title: message.title,
-          body: message.body,
+          title: message.data?.title,
+          body: message.data?.body,
         },
         data: message.data,
       });
