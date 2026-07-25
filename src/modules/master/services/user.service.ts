@@ -396,15 +396,19 @@ export class UserService {
         hostId,
         userId: updateAppUserResult.id,
       });
-      console.log("###################### updatedUserDetails:", updatedUserDetails);
+      //console.log("###################### updatedUserDetails:", updatedUserDetails);
 
       const fcmToken = updatedUserDetails?.device?.fcmToken?.trim();
-      console.log("###################### fcmToken:", fcmToken);
-      if (fcmToken) {
+      const deviceId = updatedUserDetails?.device?.deviceId?.trim();
+      //console.log("###################### fcmToken:", fcmToken);
+      if (fcmToken && deviceId) {
         const notificationResult = await userNotificationService.syncUserSettings({
+          hostId,
+          userId: updateAppUserResult.id,
+          deviceId,
           fcmToken,
         });
-        console.log("###################### notificationResult:", notificationResult);
+        //console.log("###################### notificationResult:", notificationResult);
       }
     } catch (notificationError: any) {
       console.error('Failed to send user settings sync notification:', notificationError?.message || notificationError);

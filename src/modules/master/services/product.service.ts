@@ -231,7 +231,7 @@ export class ProductService {
   }
 
   async saveProductMedia(payload: SaveProductMediaPayload): Promise<any> {
-    console.log('############################# saveProductMedia payload:', payload);
+    //console.log('############################# saveProductMedia payload:', payload);
     const { hostId, productId, mediaUrl, mediaType, publicId, fileName, fileSizeInBytes, mimeType, isPrimary, sortOrder, isEnabled  } = payload;
       const result = await productRepository.saveProductMedia({
         hostId,

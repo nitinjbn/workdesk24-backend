@@ -28,7 +28,7 @@ class NotificationFacade {
 	}
 
 	async sendAuthOtpEmail(payload: OtpEmailPayload): Promise<NotificationResult> {
-        console.log("################ NotificationFacade.sendAuthOtpEmail called with payload:", payload);
+        //console.log("################ NotificationFacade.sendAuthOtpEmail called with payload:", payload);
 		return emailService.sendAuthOtpEmail(payload);
 	}
 

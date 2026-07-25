@@ -4,12 +4,27 @@ import notificationFacade from '../NotificationFacade';
 import { SyncUserSettingsNotificationPayload, PushNotificationDeliveryResult } from './types/user-notification.types';
 import { CommonUtil } from '../../../shared/utils/common.util';
 import { NotificationType, NotificationAction } from '../channels/push/types/push.types';
+import pushNotificationsRepository from '../repositories/push.notifications.repository';
 
 class UserNotificationService {
   async syncUserSettings(payload: SyncUserSettingsNotificationPayload): Promise<PushNotificationDeliveryResult> {
+    const { hostId, userId, deviceId } = payload;
     const fcmToken = `${payload.fcmToken || ''}`.trim();
-    if (!fcmToken) {
-      throw createConfiguredError('VALIDATION_ERROR', 'FCM token is required');
+    
+    if (!hostId || !userId || !deviceId || !fcmToken) {
+      //throw createConfiguredError('VALIDATION_ERROR', 'hostId, userId, deviceId and FCM token are required');
+      console.warn('Missing required parameters for syncUserSettings notification:', { hostId, userId, deviceId, fcmToken });
+        return {
+            deliveryChannel: 'PUSH',
+            notificationId: null,
+            notificationLogId: null,
+            destination: fcmToken,
+            messageId: null,
+            provider: null,
+            status: 'FAILED',
+            failedReason: 'Missing required parameters for syncUserSettings notification',
+            sentAt: null,
+        }; 
     }
 
     const notificationPayload = {
@@ -34,9 +49,30 @@ class UserNotificationService {
       payload: notificationPayload,
     });
 
+    const notificationLog = await pushNotificationsRepository.savePushNotification({
+      hostId,
+      userId,
+      deviceId,
+      fcmToken,
+      notificationId: notificationPayload.data.notificationId,
+      notificationType: NotificationType.SETTINGS,
+      action: NotificationAction.REFRESH_USER_SETTINGS,
+      status: sendResult.success ? 'SENT' : 'FAILED',
+      providerMessageId: sendResult.messageId || null,
+      provider: sendResult.provider || null,
+      failureReason: sendResult.error || null,
+      sentAt: sendResult.success ? DateTimeFormatUtil.getCurrentUnixTime() : null,
+      payload: notificationPayload.data,
+      deliveryMode: 'SILENT',
+      priority: 'HIGH',
+    });
+    //console.log("###################### notificationLog:", notificationLog);
+
     if (!sendResult.success) {
       return {
         deliveryChannel: 'PUSH',
+        notificationId: notificationPayload.data.notificationId,
+        notificationLogId: notificationLog?.id || null,
         destination: fcmToken,
         messageId: sendResult.messageId || null,
         provider: sendResult.provider || null,
@@ -48,6 +84,8 @@ class UserNotificationService {
 
     return {
       deliveryChannel: 'PUSH',
+      notificationId: notificationPayload.data.notificationId,
+      notificationLogId: notificationLog?.id || null,
       destination: fcmToken,
       messageId: sendResult.messageId || null,
       provider: sendResult.provider || null,

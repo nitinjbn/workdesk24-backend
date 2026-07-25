@@ -283,7 +283,7 @@ export class CustomerService {
 
   
   async saveCustomerMedia(payload: SaveCustomerMediaPayload): Promise<any> {
-    console.log('############################# saveCustomerMedia payload:', payload);
+    //console.log('############################# saveCustomerMedia payload:', payload);
     const { hostId, customerId, mediaUrl, mediaType, publicId, fileName, fileSizeInBytes, mimeType, isPrimary, sortOrder, isEnabled  } = payload;
       const result = await customerRepository.saveCustomerMedia({
         hostId,
@@ -393,7 +393,7 @@ export class CustomerService {
       hostId: otherPayload.hostId,
       customerId: customerId
     });
-    console.log('############################# existingCustomer:', existingCustomer);
+    //console.log('############################# existingCustomer:', existingCustomer);
     if (!existingCustomer || !existingCustomer.data) {
       throw createConfiguredError("CUSTOMER_NOT_FOUND", 'Customer not found.');
     }
@@ -431,8 +431,8 @@ export class CustomerService {
     if (customerMedia || (existingCustomer.data.customerMedia && existingCustomer.data.customerMedia.length > 0)) {
       const existingMediaIds = existingCustomer.data.customerMedia?.map((m: any) => Number(m.mediaId)) || [];
       const payloadMediaIds = customerMedia?.map((m: any) => Number(m.mediaId)) || [];
-      console.log('############################# existingMediaIds:', existingMediaIds);
-      console.log('############################# payloadMediaIds:', payloadMediaIds);
+      //console.log('############################# existingMediaIds:', existingMediaIds);
+      //console.log('############################# payloadMediaIds:', payloadMediaIds);
 
       // Media to ADD (in payload but not in existing)
       const mediaToAdd = customerMedia?.filter((m: any) => !existingMediaIds.includes(Number(m.mediaId))) || [];
@@ -443,9 +443,9 @@ export class CustomerService {
       // Media to DELETE (in existing but not in payload)
       const mediaToDelete = existingCustomer.data.customerMedia?.filter((m: any) => !payloadMediaIds.includes(Number(m.mediaId))) || [];
       
-      console.log('############################# mediaToAdd:', mediaToAdd);
-      console.log('############################# mediaToUpdate:', mediaToUpdate);
-      console.log('############################# mediaToDelete:', mediaToDelete);
+      //console.log('############################# mediaToAdd:', mediaToAdd);
+      //console.log('############################# mediaToUpdate:', mediaToUpdate);
+      //console.log('############################# mediaToDelete:', mediaToDelete);
 
       // Execute ADD operations
       for (const media of mediaToAdd) {
