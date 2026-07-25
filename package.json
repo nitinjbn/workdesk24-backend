@@ -36,6 +36,7 @@
     "dotenv": "^16.6.1",
     "express": "^4.21.0",
     "express-rate-limit": "^8.5.2",
+    "firebase-admin": "^14.2.0",
     "jsonwebtoken": "^9.0.2",
     "libphonenumber-js": "^1.13.8",
     "moment-timezone": "^0.6.2",

@@ -68,6 +68,12 @@ export const CONFIG = {
         SECRET_ACCESS_KEY: process.env.AWS_SES_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY || '',
         SESSION_TOKEN: process.env.AWS_SES_SESSION_TOKEN || process.env.AWS_SESSION_TOKEN || ''
       }
+    },
+    PUSH: {
+      PROVIDER: (process.env.NOTIFICATIONS_PUSH_PROVIDER || 'FIREBASE').toUpperCase(),
+      FIREBASE: {
+        SERVICE_ACCOUNT_PATH: process.env.FIREBASE_SERVICE_ACCOUNT_PATH || '',
+      },
     }
   },
   OTP: {

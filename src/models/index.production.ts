@@ -33,6 +33,7 @@ import { initProductMedia } from './schemas/ProductMedia';
 import { initUOM } from './schemas/UOM';
 import { initUserOTP } from './schemas/UserOTP';
 import { initUserDevice } from './schemas/UserDevices';
+import { initUserOTPDeliveries } from './schemas/UserOTPDeliveries';
 dotenv.config();
 
 /**
@@ -120,6 +121,7 @@ const ProductAttribute = initProductAttribute(sequelize);
 const ProductMedia = initProductMedia(sequelize);
 const UOM = initUOM(sequelize);
 const UserOTP = initUserOTP(sequelize);
+const UserOTPDeliveries = initUserOTPDeliveries(sequelize);
 
 // Store models in an object
 const db: any = {
@@ -156,6 +158,7 @@ const db: any = {
   Sequelize,
   UserOTP,
   UserDevice,
+  UserOTPDeliveries,
   connectionManager,
 };
 
@@ -240,6 +243,7 @@ export {
   UserOTP,
   UserDevice,
   connectionManager,
+  UserOTPDeliveries,
 };
 
 export default db;

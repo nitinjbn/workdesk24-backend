@@ -8,10 +8,8 @@ interface UserOTPAttributes extends BaseModel {
   otpHash: string;
   identifierType: string; // Type of identifier (e.g., 'EMAIL', 'MOBILE')
   identifierValue?: string | null;
-  messageId?: string | null; // Optional message ID returned by the notification service
   expiresAt: number;
   purpose: string; // Purpose of the OTP (e.g., 'LOGIN', 'PASSWORD_RESET', etc.)
-  deliveryChannel: string; // Channel through which the OTP was sent (e.g., 'EMAIL', 'SMS', 'WHATSAPP', 'PUSH')
   resendCount: number; // Number of times the OTP has been resent
   status: string; // Status of the OTP (e.g., 'PENDING', 'VERIFIED', 'EXPIRED')
   attemptCount: number; // Number of attempts made to verify the OTP
@@ -31,8 +29,6 @@ class UserOTP extends Model<UserOTPAttributes, UserOTPCreationAttributes> implem
   public identifierValue?: string | null;
   public expiresAt!: number;
   public purpose!: string;
-  public deliveryChannel!: string;
-  public messageId?: string | null;
   public status!: string;
   public attemptCount!: number;
   public maxAttempts!: number;
@@ -101,14 +97,6 @@ export function initUserOTP(sequelize: Sequelize): typeof UserOTP {
         type: DataTypes.STRING(50),
         allowNull: false,
       },
-      deliveryChannel: { // Channel through which the OTP was sent (e.g., 'EMAIL', 'SMS', 'WHATSAPP', 'PUSH')
-        type: DataTypes.STRING(30),
-        allowNull: false,
-      },
-      messageId: { // Optional message ID returned by the notification service
-        type: DataTypes.STRING(255),
-        allowNull: true,
-      },
       resendCount: { // Number of times the OTP has been resent
         type: DataTypes.SMALLINT,
         allowNull: false,
@@ -157,7 +145,6 @@ export function initUserOTP(sequelize: Sequelize): typeof UserOTP {
         { fields: ['status'] },
         { fields: ['identifierType'] },
         { fields: ['identifierValue'] },
-        { fields: ['deliveryChannel'] },
         { fields: ['purpose'] },
         { fields: ['expiresAt'] }
       ],

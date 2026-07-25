@@ -54,19 +54,50 @@ export class AuthController {
         return;
       }
 
-      const sendEmailOtpResult = await authNotificationService.sendOtpEmail({
-        email,
-        otpCode,
-        purpose: CONFIG.OTP.AUTH.LABEL,
-        appName: CONFIG.APP_CONFIG.NAME,
-        expiryMinutes: CONFIG.OTP.AUTH.EXPIRY_MINUTES,
-      });
-      //console.log("################ AuthController.requestOtp: OTP email sent successfully:", sendEmailOtpResult);
+      const fcmToken = deviceDetails?.fcmToken?.trim();
+      const currentTime = DateTimeFormatUtil.getCurrentUnixTime();
 
-      if (!sendEmailOtpResult || !sendEmailOtpResult.messageId) {
+      let sendEmailOtpResult: { deliveryChannel: "EMAIL", destination: string; messageId?: string; provider?: string; status?: string | null; failedReason?: string | null; sentAt?: number | null } = { deliveryChannel: "EMAIL", destination: email, messageId: null, provider: null, status: null, failedReason: null, sentAt: null };
+      try {
+        console.log(`Sending OTP email to ${email} for user ${user.id}. OTP Code: ${otpCode}`);
+        sendEmailOtpResult = await authNotificationService.sendOtpEmail({
+          email,
+          otpCode,
+          purpose: CONFIG.OTP.AUTH.LABEL,
+          appName: CONFIG.APP_CONFIG.NAME,
+          expiryMinutes: CONFIG.OTP.AUTH.EXPIRY_MINUTES,
+        });
+        console.log(`OTP email sent for user ${user.id}. Message ID: ${sendEmailOtpResult.messageId || 'N/A'}`);
+        //console.log("################ AuthController.requestOtp: OTP email sent successfully:", sendEmailOtpResult);
+      } catch (logError) {
+        console.error(`Failed to log OTP sending attempt for user ${user.id}:`, logError);
+        sendEmailOtpResult = { deliveryChannel: "EMAIL", destination: email, messageId: null, provider: null, status: "FAILED", failedReason: logError?.message || 'Failed to send OTP email', sentAt: null };
+      }
+      
+
+      let sendPushOtpResult: { deliveryChannel: "PUSH", destination: string; messageId?: string; provider?: string; status?: string | null; failedReason?: string | null, sentAt?: number | null } | null = { deliveryChannel: "PUSH", destination: fcmToken || '', messageId: null, provider: null, status: null, failedReason: null, sentAt: null };
+      if (fcmToken) {
+        try {
+          sendPushOtpResult = await authNotificationService.sendOtpPushNotification({
+            fcmToken,
+            otpCode,
+            purpose: CONFIG.OTP.AUTH.LABEL,
+            appName: CONFIG.APP_CONFIG.NAME,
+            expiryMinutes: CONFIG.OTP.AUTH.EXPIRY_MINUTES,
+          });
+          //console.log("################ AuthController.requestOtp: OTP push notification sent successfully:", sendPushOtpResult);
+          console.log(`OTP push notification sent for user ${user.id}. Message ID: ${sendPushOtpResult.messageId || 'N/A'}`);
+        } catch (pushError: any) {
+          console.error(`Failed to send OTP push notification for user ${user.id}:`, pushError?.message || pushError);
+          sendPushOtpResult = { deliveryChannel: "PUSH", destination: fcmToken || '', messageId: null, provider: null, status: "FAILED", failedReason: pushError?.message || 'Failed to send OTP push notification', sentAt: null };
+        }
+      }
+
+      // If both email and push OTP sending failed, return an error response
+      if (sendEmailOtpResult?.status === "FAILED" && sendPushOtpResult?.status === "FAILED") {
         res.status(500).json({
           success: false,
-          message: 'Failed to send OTP email. Please try again later.',
+          message: 'Failed to send OTP. Please try again later.',
         } as ApiResponse);
         return;
       }
@@ -74,12 +105,18 @@ export class AuthController {
       // Determine the status of email OTP sending
       const emailOtpStatus = sendEmailOtpResult.messageId ? true : false;
       const smsOtpStatus = false; // SMS sending is not implemented yet
+      const pushOtpStatus = !!sendPushOtpResult?.messageId;
 
-      if(emailOtpStatus) {
-        console.log(`OTP email sent successfully to ${email}. Message ID: ${sendEmailOtpResult.messageId}`);
+      if(emailOtpStatus || pushOtpStatus) {
+        const otpDeliveriesResults = [];
+        if(email) {
+          otpDeliveriesResults.push(sendEmailOtpResult);
+        }
+        if(fcmToken) {
+          otpDeliveriesResults.push(sendPushOtpResult);
+        }
 
         // Save the OTP code and its expiry time in the database for the user
-        const currentTime = DateTimeFormatUtil.getCurrentUnixTime();
         const otpExpiryTime = currentTime + (CONFIG.OTP.AUTH.EXPIRY_MINUTES * 60);
         const saveOtpResult = await authService.saveOtpForUser({
           hostId: user.hostId,
@@ -90,10 +127,10 @@ export class AuthController {
           messageId: sendEmailOtpResult.messageId,
           expiresAt: otpExpiryTime,
           purpose: CONFIG.OTP.AUTH.PURPOSE_KEY,
-          deliveryChannel: 'EMAIL',
           maxAttempts: CONFIG.OTP.AUTH.MAX_ATTEMPTS,
           requestIp: req.ip,
-          createdAt: currentTime
+          createdAt: currentTime,
+          otpDeliveries: otpDeliveriesResults || []
         });
         console.log(`OTP code saved for user ${user.id}. Save result:`, saveOtpResult);
       }
@@ -109,9 +146,11 @@ export class AuthController {
         data: {
           email: emailOtpStatus,
           sms: smsOtpStatus,
+          push: pushOtpStatus,
           deliveryTargets: {
             email: emailOtpStatus && email ? CommonUtil.maskEmail(email) : null,
             mobile: smsOtpStatus && mobile ? CommonUtil.maskMobile(mobile) : null,
+            push: pushOtpStatus,
           }
         }
       } as ApiResponse);

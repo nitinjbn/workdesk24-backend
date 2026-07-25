@@ -4,6 +4,7 @@ import UserDevice from '../../../models/schemas/UserDevices';
 import { WhereOptions } from 'sequelize';
 import { UserOTP } from '../../../models';
 import { DateTimeFormatUtil } from '../../../shared/utils/date-time-format.util';
+import UserOTPDeliveries from '../../../models/schemas/UserOTPDeliveries';
 
 export class UserRepository extends BaseRepository<typeof User.prototype> {
   constructor() {
@@ -59,9 +60,9 @@ export class UserRepository extends BaseRepository<typeof User.prototype> {
     return users || [];
   }
 
-  async saveOtpForUser(payload: { hostId: number, userId: number; identifierType: string; identifierValue: string; otpCode: string; expiresAt: number; purpose: string; deliveryChannel: string; messageId?: string; maxAttempts: number; requestIp: string; createdAt: number }): Promise<any> {
-    const { hostId, userId, identifierType, identifierValue, otpCode, expiresAt, purpose, deliveryChannel, messageId, maxAttempts, requestIp, createdAt } = payload;
-    return UserOTP.create({
+  async saveOtpForUser(payload: { hostId: number, userId: number; identifierType: string; identifierValue: string; otpCode: string; expiresAt: number; purpose: string; messageId?: string; maxAttempts: number; requestIp: string; createdAt: number; otpDeliveries: Array<{ deliveryChannel: string; destination: string; messageId?: string; provider?: string; status?: string | null; failedReason?: string | null, sentAt?: number | null }> }): Promise<any> {
+    const { hostId, userId, identifierType, identifierValue, otpCode, expiresAt, purpose, maxAttempts, requestIp, createdAt, otpDeliveries } = payload;
+    const createdOtpResult = await UserOTP.create({
       hostId,
       userId,
       identifierType,
@@ -69,12 +70,30 @@ export class UserRepository extends BaseRepository<typeof User.prototype> {
       otpHash: otpCode, // Store the OTP code directly; hashing can be done in the model hook if needed
       expiresAt,
       purpose,
-      deliveryChannel,
-      messageId,
       maxAttempts,
       requestIp,
       createdAt
     });
+
+    // Save OTP deliveries if provided
+    if (otpDeliveries && otpDeliveries.length > 0) {
+      const otpDeliveryRecords = otpDeliveries.map(delivery => ({
+        hostId,
+        userId,
+        otpId: createdOtpResult.id,
+        deliveryChannel: delivery.deliveryChannel,
+        destination: delivery.destination,
+        providerMessageId: delivery.messageId || null,
+        provider: delivery.provider || null,
+        status: delivery.status || 'PENDING',
+        failureReason: delivery.failedReason || null,
+        sentAt: delivery.sentAt || null,
+        createdAt
+      }));
+      await UserOTPDeliveries.bulkCreate(otpDeliveryRecords);
+    }
+
+    return createdOtpResult;
   }
 
   async findLatestOtpByIdentifier(payload: {

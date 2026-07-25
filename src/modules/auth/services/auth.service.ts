@@ -656,7 +656,7 @@ export class AuthService {
     };
   }
 
-  async saveOtpForUser(payload: { hostId: number, userId: number; identifierType: string; identifierValue: string; otpCode: string; expiresAt: number; purpose: string; deliveryChannel: string; messageId?: string; maxAttempts: number; requestIp: string; createdAt: number }): Promise<void> {
+  async saveOtpForUser(payload: { hostId: number, userId: number; identifierType: string; identifierValue: string; otpCode: string; expiresAt: number; purpose: string; messageId?: string; maxAttempts: number; requestIp: string; createdAt: number; otpDeliveries: Array<{ deliveryChannel: string; destination: string; messageId?: string; provider?: string; status?: string | null; failedReason?: string | null }> }): Promise<void> {
     const { userId } = payload;
     const user = await userRepository.findById(userId);
     if (!user) {
