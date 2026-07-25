@@ -342,6 +342,32 @@ export class SyncController {
       next(error);
     }
   }
+
+  async getUserSettings(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      
+      const { hostId, userId } = req.body;
+      if (!hostId || !userId) {
+        res.status(400).json({
+          success: false,
+          message: 'hostId and userId are required',
+        } as ApiResponse);
+        return;
+      }
+
+      const result = await syncService.getUserDetails({hostId, userId});
+
+      res.json({
+        success: true,
+        message: 'User settings retrieved successfully',
+        data: {
+          user: result || {},
+        },
+      } as ApiResponse);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default new SyncController();

@@ -27,6 +27,7 @@ router.post('/sync/getCustomers', syncController.getCustomers.bind(syncControlle
 router.post('/sync/getProducts', syncController.getProducts.bind(syncController));
 router.post('/sync/uploadMedia', upload.single('media'), syncController.uploadMedia.bind(syncController));
 router.post('/sync/uploadMultipleMedia', upload.array('media', 10), syncController.uploadMultipleMedia.bind(syncController));
+router.post('/sync/userSettings', syncController.getUserSettings.bind(syncController));
 
 // Report related routes
 router.post('/reports/getGPSHistory', reportController.getAppGpsHistory.bind(reportController));

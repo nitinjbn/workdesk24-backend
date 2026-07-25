@@ -10,6 +10,9 @@ import {
   CustomerRepository, 
   ProductRepository } from '../repositories';
 import { resolveVisitLocalIdForRecord } from '../../../shared/utils/visit-local-id-resolver';
+import userRepository from '../repositories/users.repository';
+import { CommonUtil } from '../../../shared/utils/common.util';
+import { DateTimeFormatUtil } from '../../../shared/utils/date-time-format.util';
 
 const attendanceRepository = new AttendanceRepository();
 const gpsHistoryRepository = new GpsHistoryRepository();
@@ -298,6 +301,28 @@ export class SyncService {
   async getProducts(payload: {userId: number, hostId: number}): Promise<any> {
     return await productRepository.getProducts(payload);
   }
+
+  async getUserDetails(payload: {userId: number, hostId: number}): Promise<any> {
+    // Fetch user settings from the database or any other source
+    const userDetails = await userRepository.getUserById(payload);
+    //console.log('User details retrieved:', userDetails);
+    return userDetails ? this.formatUserWithSettings(userDetails) : {};
+  }
+
+  private async formatUserWithSettings(user: { id: number; hostId: number; toJSON: () => any }): Promise<unknown> {
+      const userData = user as any;
+      // Convert settings array to key-value object
+      if (userData.settings && Array.isArray(userData.settings)) {
+        userData.settings = CommonUtil.convertSettingsToObject(userData.settings);
+  
+        // If weeklyOffMask is present, convert it to weeklyOffDays and remove weeklyOffMask
+        if (userData.settings?.weeklyOffMask) {
+          userData.settings.weeklyOffDays = DateTimeFormatUtil.getWeeklyOffDays(userData.settings.weeklyOffMask);
+          delete userData.settings.weeklyOffMask;
+        }
+      }
+      return userData;
+    }
 }
 
 export default new SyncService();

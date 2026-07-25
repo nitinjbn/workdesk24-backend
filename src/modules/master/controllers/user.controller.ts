@@ -450,6 +450,8 @@ export class UserController {
       next(error);
     }
   }
+
+  
 }
 
 export default new UserController();
