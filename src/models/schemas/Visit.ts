@@ -66,6 +66,10 @@ class Visit extends Model<VisitAttributes, VisitCreationAttributes> implements V
       foreignKey: 'visitId',
       as: 'payments',
     });
+    Visit.hasOne(models.VisitSummary, {
+      foreignKey: 'visitId',
+      as: 'visitSummary',
+    });
   }
 }
 

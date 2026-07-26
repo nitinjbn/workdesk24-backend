@@ -14,6 +14,13 @@ export const NUMERIC_FIELD_CONFIG: Record<string, 'number' | 'bigint'> = {
   customerId: 'bigint',
   parentCustomerId: 'bigint',
   mediaId: 'bigint',
+  // Visit and order related fields
+  visitId: 'bigint',
+  orderId: 'bigint',
+  paymentId: 'bigint',
+  feedbackId: 'bigint',
+  imageId: 'bigint',
+  productId: 'bigint',
 
   // Timestamps (stored as Unix timestamps)
   createdAt: 'bigint',

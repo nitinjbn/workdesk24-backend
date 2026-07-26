@@ -37,6 +37,10 @@ class Order extends Model<OrderAttributes, OrderCreationAttributes> implements O
       foreignKey: 'orderId',
       as: 'products',
     });
+    Order.belongsTo(models.Customer, {
+      foreignKey: 'customerId',
+      as: 'customer',
+    });
   }
 }
 

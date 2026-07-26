@@ -81,3 +81,102 @@ export interface ReportScope {
   hostId: number;
   requestUserId?: number;
 }
+
+export interface GetVisitsReportPayload extends ReportPaginationParams, ReportSortParams {
+  hostId: number;
+  filter?: {
+    userId?: number;
+    customerId?: number;
+    customerName?: string;
+    checkInTime?: {
+      from?: number;
+      to?: number;
+    };
+    checkOutTime?: {
+      from?: number;
+      to?: number;
+    };
+  };
+  sortBy?: string;
+  sortOrder?: ReportSortDirectionInput;
+  sorting?: {
+    by?: string;
+    order?: ReportSortDirectionInput;
+  };
+}
+
+export interface GetOrdersReportPayload extends ReportPaginationParams, ReportSortParams {
+  hostId: number;
+  filter?: {
+    userId?: number;
+    customerId?: number;
+    customerName?: string;
+    orderTime?: {
+      from?: number;
+      to?: number;
+    };
+  };
+  sortBy?: string;
+  sortOrder?: ReportSortDirectionInput;
+  sorting?: {
+    by?: string;
+    order?: ReportSortDirectionInput;
+  };
+}
+
+export interface GetPaymentsReportPayload extends ReportPaginationParams, ReportSortParams {
+  hostId: number;
+  filter?: {
+    userId?: number;
+    customerId?: number;
+    customerName?: string;
+    paymentCaptureTime?: {
+      from?: number;
+      to?: number;
+    };
+  };
+  sortBy?: string;
+  sortOrder?: ReportSortDirectionInput;
+  sorting?: {
+    by?: string;
+    order?: ReportSortDirectionInput;
+  };
+}
+
+export interface GetFeedbacksReportPayload extends ReportPaginationParams, ReportSortParams {
+  hostId: number;
+  filter?: {
+    userId?: number;
+    customerId?: number;
+    customerName?: string;
+    feedbackTime?: {
+      from?: number;
+      to?: number;
+    };
+  };
+  sortBy?: string;
+  sortOrder?: ReportSortDirectionInput;
+  sorting?: {
+    by?: string;
+    order?: ReportSortDirectionInput;
+  };
+}
+
+export interface GetImagesReportPayload extends ReportPaginationParams, ReportSortParams {
+  hostId: number;
+  filter?: {
+    userId?: number;
+    customerId?: number;
+    customerName?: string;
+    capturedAt?: {
+      from?: number;
+      to?: number;
+    };
+  };
+  sortBy?: string;
+  sortOrder?: ReportSortDirectionInput;
+  sorting?: {
+    by?: string;
+    order?: ReportSortDirectionInput;
+  };
+}

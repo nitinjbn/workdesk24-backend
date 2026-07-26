@@ -70,6 +70,81 @@ export class ReportController {
       next(error);
     }
   }
+
+  async getVisits(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const payload = req.body;
+      const result = await reportService.getVisitsReport(payload);
+
+      res.json({
+        success: true,
+        message: 'Visits report retrieved successfully',
+        data: result,
+      } as ApiResponse);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getOrders(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const payload = req.body;
+      const result = await reportService.getOrdersReport(payload);
+
+      res.json({
+        success: true,
+        message: 'Orders report retrieved successfully',
+        data: result,
+      } as ApiResponse);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getPayments(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const payload = req.body;
+      const result = await reportService.getPaymentsReport(payload);
+
+      res.json({
+        success: true,
+        message: 'Payments report retrieved successfully',
+        data: result,
+      } as ApiResponse);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getFeedbacks(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const payload = req.body;
+      const result = await reportService.getFeedbacksReport(payload);
+
+      res.json({
+        success: true,
+        message: 'Feedbacks report retrieved successfully',
+        data: result,
+      } as ApiResponse);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getImages(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const payload = req.body;
+      const result = await reportService.getImagesReport(payload);
+
+      res.json({
+        success: true,
+        message: 'Images report retrieved successfully',
+        data: result,
+      } as ApiResponse);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default new ReportController();

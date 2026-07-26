@@ -13,6 +13,11 @@ import {
   ReportScope,
   UserScopedReportFilter,
   UserScopedReportPayload,
+  GetVisitsReportPayload,
+  GetOrdersReportPayload,
+  GetPaymentsReportPayload,
+  GetFeedbacksReportPayload,
+  GetImagesReportPayload
 } from '../types/report.types';
 import { GpsHistory, Attendance, User } from '../../../models/schemas';
 import baseReportHelper from '../helpers/base-report.helper';
@@ -20,6 +25,11 @@ import { createConfiguredError } from '../../../shared/utils/error.util';
 import { getHostDateTimeSettings } from '../../../shared/utils/host-settings.util';
 import { formatDateTimeFieldsBySettings } from '../../../shared/utils/date-time-format.util';
 import { CONFIG } from '../../../config/constants';
+import visitsReportRepository from '../repositories/visits-report.repository';
+import ordersReportRepository from '../repositories/orders-report.repository';
+import paymentsReportRepository from '../repositories/payments-report.repository';
+import feedbacksReportRepository from '../repositories/feedbacks-report.repository';
+import imagesReportRepository from '../repositories/images-report.repository';
 
 type GpsHistoryInstance = typeof GpsHistory.prototype;
 type AttendanceInstance = typeof Attendance.prototype;
@@ -153,6 +163,135 @@ export class ReportService {
     return {
       sortBy,
       sortOrder: baseReportHelper.normalizeSortDirection(requestedSortOrder),
+    };
+  }
+
+  async getVisitsReport(
+    payload: GetVisitsReportPayload
+  ): Promise<{ visits: any[]; pagination: any }> {
+    const { page, limit } = baseReportHelper.normalizePagination(payload);
+    const { hostId, filter } = payload;
+
+    const report = await visitsReportRepository.getVisitsReport({
+      hostId,
+      page,
+      limit,
+      filter,
+      sortBy: payload.sort?.by || payload.sortBy || 'createdAt',
+      sortOrder: baseReportHelper.normalizeSortDirection(payload.sort?.order || payload.sortOrder),
+    });
+
+    const dateTimeSettings = await getHostDateTimeSettings(hostId);
+    const plainData = report.data.map((item: any) =>
+      item && typeof item.toJSON === 'function' ? item.toJSON() : item
+    );
+
+    return {
+      visits: formatDateTimeFieldsBySettings(plainData, dateTimeSettings),
+      pagination: report.pagination,
+    };
+  }
+
+  async getOrdersReport(
+    payload: GetOrdersReportPayload
+  ): Promise<{ orders: any[]; pagination: any }> {
+    const { page, limit } = baseReportHelper.normalizePagination(payload);
+    const { hostId, filter } = payload;
+
+    const report = await ordersReportRepository.getOrdersReport({
+      hostId,
+      page,
+      limit,
+      filter,
+      sortBy: payload.sort?.by || payload.sortBy || 'createdAt',
+      sortOrder: baseReportHelper.normalizeSortDirection(payload.sort?.order || payload.sortOrder),
+    });
+
+    const dateTimeSettings = await getHostDateTimeSettings(hostId);
+    const plainData = report.data.map((item: any) =>
+      item && typeof item.toJSON === 'function' ? item.toJSON() : item
+    );
+
+    return {
+      orders: formatDateTimeFieldsBySettings(plainData, dateTimeSettings),
+      pagination: report.pagination,
+    };
+  }
+
+  async getPaymentsReport(
+    payload: GetPaymentsReportPayload
+  ): Promise<{ payments: any[]; pagination: any }> {
+    const { page, limit } = baseReportHelper.normalizePagination(payload);
+    const { hostId, filter } = payload;
+
+    const report = await paymentsReportRepository.getPaymentsReport({
+      hostId,
+      page,
+      limit,
+      filter,
+      sortBy: payload.sort?.by || payload.sortBy || 'createdAt',
+      sortOrder: baseReportHelper.normalizeSortDirection(payload.sort?.order || payload.sortOrder),
+    });
+    const dateTimeSettings = await getHostDateTimeSettings(hostId);
+    const plainData = report.data.map((item: any) =>
+      item && typeof item.toJSON === 'function' ? item.toJSON() : item
+    );
+
+    return {
+      payments: formatDateTimeFieldsBySettings(plainData, dateTimeSettings),
+      pagination: report.pagination,
+    };
+  }
+
+  async getFeedbacksReport(
+    payload: GetFeedbacksReportPayload
+  ): Promise<{ feedbacks: any[]; pagination: any }> {
+    const { page, limit } = baseReportHelper.normalizePagination(payload);
+    const { hostId, filter } = payload;
+
+    const report = await feedbacksReportRepository.getFeedbacksReport({
+      hostId,
+      page,
+      limit,
+      filter,
+      sortBy: payload.sort?.by || payload.sortBy || 'createdAt',
+      sortOrder: baseReportHelper.normalizeSortDirection(payload.sort?.order || payload.sortOrder),
+    });
+
+    const dateTimeSettings = await getHostDateTimeSettings(hostId);
+    const plainData = report.data.map((item: any) =>
+      item && typeof item.toJSON === 'function' ? item.toJSON() : item
+    );
+
+    return {
+      feedbacks: formatDateTimeFieldsBySettings(plainData, dateTimeSettings),
+      pagination: report.pagination,
+    };
+  }
+
+  async getImagesReport(
+    payload: GetImagesReportPayload
+  ): Promise<{ images: any[]; pagination: any }> {
+    const { page, limit } = baseReportHelper.normalizePagination(payload);
+    const { hostId, filter } = payload;
+
+    const report = await imagesReportRepository.getImagesReport({
+      hostId,
+      page,
+      limit,
+      filter,
+      sortBy: payload.sort?.by || payload.sortBy || 'createdAt',
+      sortOrder: baseReportHelper.normalizeSortDirection(payload.sort?.order || payload.sortOrder),
+    });
+
+    const dateTimeSettings = await getHostDateTimeSettings(hostId);
+    const plainData = report.data.map((item: any) =>
+      item && typeof item.toJSON === 'function' ? item.toJSON() : item
+    );
+
+    return {
+      images: formatDateTimeFieldsBySettings(plainData, dateTimeSettings),
+      pagination: report.pagination,
     };
   }
 }
