@@ -49,7 +49,7 @@ export class VisitsReportRepository {
         {
           model: db.VisitSummary,
           as: 'visitSummary',
-          attributes: ['totalOrders', 'totalPayments', 'totalFeedbacks'],
+          attributes: ['totalOrders', 'totalPayments', 'totalFeedbacks', 'totalImages'],
           where: {
             isDeleted: 0,
           },
