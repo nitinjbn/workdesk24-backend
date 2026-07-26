@@ -1,4 +1,5 @@
 import { VisitRepository } from '../../modules/sync/repositories';
+import { Transaction } from 'sequelize';
 const visitRepository = new VisitRepository();
 
 export type RecordWithVisitLocalId = {
@@ -10,7 +11,8 @@ export type RecordWithVisitLocalId = {
 export async function resolveVisitLocalIdForRecord(
   userId: number,
   record: RecordWithVisitLocalId,
-  cache = new Map<string, number>()
+  cache = new Map<string, number>(),
+  transaction?: Transaction
 ): Promise<void> {
   if (!record.visitLocalId || record.visitId) {
     return;
@@ -23,7 +25,10 @@ export async function resolveVisitLocalIdForRecord(
     return;
   }
 
-  const visit = await visitRepository.findByLocalId(userId, record.visitLocalId);
+  const visit = await visitRepository.findOne({
+    userId,
+    localId: record.visitLocalId,
+  } as any, transaction);
 
   if (!visit) {
     throw new Error(`Visit not found for visitLocalId: ${record.visitLocalId}`);

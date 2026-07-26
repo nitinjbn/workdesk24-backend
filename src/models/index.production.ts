@@ -34,7 +34,10 @@ import { initUOM } from './schemas/UOM';
 import { initUserOTP } from './schemas/UserOTP';
 import { initUserDevice } from './schemas/UserDevices';
 import { initUserOTPDeliveries } from './schemas/UserOTPDeliveries';
-import { initUserPushNotifications } from './schemas/UserPUSHNotifications';
+import { initUserPushNotifications } from './schemas/UserPushNotifications';
+import { initUserDailySummary } from './schemas/UserDailySummary';
+import { initVisitSummary } from './schemas/VisitSummary';
+
 dotenv.config();
 
 /**
@@ -124,6 +127,8 @@ const UOM = initUOM(sequelize);
 const UserOTP = initUserOTP(sequelize);
 const UserOTPDeliveries = initUserOTPDeliveries(sequelize);
 const UserPushNotifications = initUserPushNotifications(sequelize);
+const UserDailySummary = initUserDailySummary(sequelize);
+const VisitSummary = initVisitSummary(sequelize);
 
 // Store models in an object
 const db: any = {
@@ -162,6 +167,8 @@ const db: any = {
   UserDevice,
   UserOTPDeliveries,
   UserPushNotifications,
+  UserDailySummary,
+  VisitSummary,
   connectionManager,
 };
 
@@ -248,6 +255,8 @@ export {
   connectionManager,
   UserOTPDeliveries,
   UserPushNotifications,
+  UserDailySummary,
+  VisitSummary,
 };
 
 export default db;

@@ -1,8 +1,12 @@
-import { Model, ModelStatic, WhereOptions, FindOptions, Op } from 'sequelize';
+import { Model, ModelStatic, WhereOptions, FindOptions, Op, Transaction } from 'sequelize';
 import { BaseModel, PaginatedResponse, PaginationParams } from '../types/base.types';
 
 export abstract class BaseRepository<T extends Model & BaseModel> {
   constructor(protected model: ModelStatic<T>) {}
+
+  getSequelize() {
+    return this.model.sequelize;
+  }
 
   private supportsSoftDelete(): boolean {
     const attributes = ((this.model as any).getAttributes?.() || (this.model as any).rawAttributes || {}) as Record<string, unknown>;
@@ -20,9 +24,10 @@ export abstract class BaseRepository<T extends Model & BaseModel> {
     } as WhereOptions<T>;
   }
 
-  async findById(id: number): Promise<T | null> {
+  async findById(id: number, transaction?: Transaction): Promise<T | null> {
     return this.model.findOne({
       where: this.withSoftDelete({ id } as WhereOptions<T>),
+      transaction,
     });
   }
 
@@ -33,13 +38,14 @@ export abstract class BaseRepository<T extends Model & BaseModel> {
     });
   }
 
-  async findOne(where: WhereOptions<T>): Promise<T | null> {
+  async findOne(where: WhereOptions<T>, transaction?: Transaction): Promise<T | null> {
     return this.model.findOne({
       where: this.withSoftDelete(where),
+      transaction,
     });
   }
 
-  async create(data: Partial<T>): Promise<T> {
+  async create(data: Partial<T>, transaction?: Transaction): Promise<T> {
     const now = Math.floor(Date.now() / 1000);
 
     const payload: Record<string, unknown> = {
@@ -53,28 +59,28 @@ export abstract class BaseRepository<T extends Model & BaseModel> {
       payload.deletedAt = null;
     }
 
-    return this.model.create(payload as any);
+    return this.model.create(payload as any, { transaction });
   }
 
-  async update(id: number, data: Partial<T>): Promise<T | null> {
-    const instance = await this.findById(id);
+  async update(id: number, data: Partial<T>, transaction?: Transaction): Promise<T | null> {
+    const instance = await this.findById(id, transaction);
     if (!instance) return null;
 
     const now = Math.floor(Date.now() / 1000);
     await instance.update({
       ...data,
       updatedAt: (data as any).updatedAt || now,
-    } as any);
+    } as any, { transaction });
 
     return instance;
   }
 
-  async delete(id: number): Promise<boolean> {
-    const instance = await this.findById(id);
+  async delete(id: number, transaction?: Transaction): Promise<boolean> {
+    const instance = await this.findById(id, transaction);
     if (!instance) return false;
 
     if (!this.supportsSoftDelete()) {
-      await instance.destroy();
+      await instance.destroy({ transaction });
       return true;
     }
 
@@ -82,7 +88,7 @@ export abstract class BaseRepository<T extends Model & BaseModel> {
     await instance.update({
       isDeleted: 1,
       deletedAt: now
-    } as any);
+    } as any, { transaction });
 
     return true;
   }

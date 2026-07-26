@@ -730,3 +730,49 @@ export interface UserSettingsAttributes {
   deletedAt?: number | null;
   isDeleted?: number;
 }
+
+// Visit summary attributes
+export interface VisitSummaryAttributes {
+  id?: number;
+  hostId: number;
+  userId: number;
+  visitId: number;
+  totalOrders?: number;
+  orderAmount?: number;
+  totalUniqueProducts?: number;
+  totalQuantity?: number;
+  totalPayments?: number;
+  paymentAmount?: number;
+  totalFeedbacks?: number;
+  totalImages?: number;
+  createdAt?: number;
+  updatedAt?: number;
+  isDeleted?: number;
+  deletedAt?: number | null;
+}
+
+// User daily summary attributes
+export interface UserDailySummaryAttributes {
+  id?: number;
+  hostId: number;
+  userId: number;
+  reportDate: number;
+  attendanceStatus: string;
+  workingMinutes: number;
+  travelDistance: number;
+  attendanceTime: number;
+  dayoverTime?: number;
+  totalVisits: number;
+  totalOrders?: number;
+  orderAmount?: number;
+  totalUniqueProducts?: number;
+  totalQuantity?: number;
+  totalPayments?: number;
+  paymentAmount?: number;
+  totalFeedbacks?: number;
+  totalImages?: number;
+  createdAt?: number;
+  updatedAt?: number;
+  isDeleted?: number;
+  deletedAt?: number | null;
+}

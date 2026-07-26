@@ -8,11 +8,16 @@ import {
   FeedbackRepository, 
   ImageRepository, 
   CustomerRepository, 
-  ProductRepository } from '../repositories';
+  ProductRepository,
+  UserDailySummaryRepository,
+  VisitSummaryRepository } from '../repositories';
 import { resolveVisitLocalIdForRecord } from '../../../shared/utils/visit-local-id-resolver';
 import userRepository from '../repositories/users.repository';
 import { CommonUtil } from '../../../shared/utils/common.util';
 import { DateTimeFormatUtil } from '../../../shared/utils/date-time-format.util';
+import moment from 'moment-timezone';
+import { CONFIG } from '../../../config/constants';
+import { Op, Transaction } from 'sequelize';
 
 const attendanceRepository = new AttendanceRepository();
 const gpsHistoryRepository = new GpsHistoryRepository();
@@ -24,6 +29,8 @@ const feedbackRepository = new FeedbackRepository();
 const imageRepository = new ImageRepository();
 const customerRepository = new CustomerRepository();
 const productRepository = new ProductRepository();
+const userDailySummaryRepository = new UserDailySummaryRepository();
+const visitSummaryRepository = new VisitSummaryRepository();
 
 interface SyncRecord {
   localId?: string;
@@ -37,7 +44,12 @@ interface SyncResult {
 }
 
 export class SyncService {
-  async syncData(repository: any, userId: number, records: SyncRecord[]): Promise<SyncResult> {
+  async syncData(
+    repository: any,
+    userId: number,
+    records: SyncRecord[],
+    afterPersist?: (record: SyncRecord, transaction: Transaction, previousRecord?: SyncRecord) => Promise<void>
+  ): Promise<SyncResult> {
     const results: SyncResult = {
       success: [],
       failed: [],
@@ -48,37 +60,41 @@ export class SyncService {
       try {
         const { localId, ...data } = record;
         const now = Math.floor(Date.now() / 1000);
+        const syncResult = await repository.getSequelize().transaction(async (transaction: Transaction) => {
+          const instance = localId
+            ? await repository.findOne({ userId, localId }, transaction)
+            : null;
 
-        let instance = null;
+          if (instance) {
+            const previousRecord = instance.toJSON();
+            const updatedRecord = await repository.update(instance.id, {
+              ...data,
+              userId,
+              syncedAt: now,
+            }, transaction);
 
-        if (localId) {
-          instance = await repository.findByLocalId(userId, localId);
-        }
+            if (!updatedRecord) {
+              throw new Error(`Unable to update record ${instance.id}`);
+            }
 
-        if (instance) {
-          await repository.update(instance.id, {
-            ...data,
-            userId,
-            syncedAt: now,
-          });
-          results.updated.push({
-            localId,
-            serverId: instance.id,
-          });
-        } else {
-
-          //console.log('Creating new record with data:', { ...data, userId, localId, syncedAt: now });
+            await afterPersist?.(updatedRecord.toJSON(), transaction, previousRecord);
+            return { status: 'updated' as const, serverId: instance.id };
+          }
 
           const newRecord = await repository.create({
             ...data,
             userId,
             localId,
             syncedAt: now,
-          });
-          results.success.push({
-            localId,
-            serverId: newRecord.id,
-          });
+          }, transaction);
+          await afterPersist?.(newRecord.toJSON(), transaction);
+          return { status: 'created' as const, serverId: newRecord.id };
+        });
+
+        if (syncResult.status === 'updated') {
+          results.updated.push({ localId, serverId: syncResult.serverId });
+        } else {
+          results.success.push({ localId, serverId: syncResult.serverId });
         }
       } catch (error: any) {
         results.failed.push({
@@ -92,7 +108,67 @@ export class SyncService {
   }
 
   async syncAttendance(userId: number, records: SyncRecord[]): Promise<SyncResult> {
-    return this.syncData(attendanceRepository, userId, records);
+    return this.syncData(
+      attendanceRepository,
+      userId,
+      records,
+      this.syncUserDailySummary.bind(this)
+    );
+  }
+
+  private async syncUserDailySummary(attendance: SyncRecord, transaction: Transaction): Promise<void> {
+    const hostId = Number(attendance.hostId);
+    const attendanceTime = Number(attendance.attendanceTime);
+
+    if (!Number.isInteger(hostId) || hostId <= 0) {
+      throw new Error('hostId is required to sync the user daily summary');
+    }
+
+    if (!Number.isFinite(attendanceTime) || attendanceTime <= 0) {
+      throw new Error('attendanceTime is required to sync the user daily summary');
+    }
+
+    const attendanceStatus = attendance.attendanceStatus;
+    if (typeof attendanceStatus !== 'string' || !attendanceStatus) {
+      throw new Error('attendanceStatus is required to sync the user daily summary');
+    }
+
+    const workingHours = Number(attendance.workingHours);
+    const workingMinutes = Number.isFinite(workingHours)
+      ? Math.round(workingHours * 60)
+      : 0;
+    const reportDate = moment
+      .unix(attendanceTime)
+      .tz(CONFIG.REPORTING.TIMEZONE)
+      .startOf('day')
+      .unix();
+    const summaryData = {
+      attendanceStatus,
+      attendanceTime,
+      dayoverTime: attendance.dayoverTime ?? null,
+      workingMinutes,
+    };
+    const existingSummary = await userDailySummaryRepository.findByReportDate(
+      hostId,
+      Number(attendance.userId),
+      reportDate,
+      transaction
+    );
+
+    if (existingSummary) {
+      await userDailySummaryRepository.update(existingSummary.id, summaryData as any, transaction);
+      await this.refreshUserDailySummary(hostId, Number(attendance.userId), reportDate, transaction);
+      return;
+    }
+
+    await userDailySummaryRepository.create({
+      hostId,
+      userId: Number(attendance.userId),
+      reportDate,
+      ...summaryData,
+    } as any, transaction);
+
+    await this.refreshUserDailySummary(hostId, Number(attendance.userId), reportDate, transaction);
   }
 
   async syncGpsHistory(userId: number, records: SyncRecord[]): Promise<SyncResult> {
@@ -100,7 +176,15 @@ export class SyncService {
   }
 
   async syncVisits(userId: number, records: SyncRecord[]): Promise<SyncResult> {
-    return this.syncData(visitRepository, userId, records);
+    return this.syncData(
+      visitRepository,
+      userId,
+      records,
+      async (visit, transaction, previousVisit) => {
+        await this.syncVisitSummaryForVisit(visit, transaction);
+        await this.syncDailySummaryForActivity(visit, 'checkInTime', transaction, previousVisit);
+      }
+    );
   }
 
   async syncOrders(userId: number, records: SyncRecord[]): Promise<SyncResult> {
@@ -113,77 +197,66 @@ export class SyncService {
     for (const record of records) {
       try {
         const { localId, products, items, ...orderData } = record;
-        await resolveVisitLocalIdForRecord(userId, orderData);
-
         const now = Math.floor(Date.now() / 1000);
         const orderProducts = Array.isArray(products) ? products : Array.isArray(items) ? items : undefined;
-        let visitId = orderData.visitId;
+        const syncResult = await orderRepository.getSequelize().transaction(async (transaction: Transaction) => {
+          await resolveVisitLocalIdForRecord(userId, orderData, new Map(), transaction);
+          const visitId = orderData.visitId;
 
-        if (!visitId) {
-          throw new Error('visitLocalId or visitId is required');
-        }
+          if (!visitId) {
+            throw new Error('visitLocalId or visitId is required');
+          }
 
-        const { visitLocalId, ...orderPayload } = orderData;
-        const resolvedOrderData: SyncRecord = {
-          ...orderPayload,
-          visitId,
-        };
+          const { visitLocalId, ...orderPayload } = orderData;
+          const resolvedOrderData: SyncRecord = {
+            ...orderPayload,
+            visitId,
+          };
+          const instance = localId
+            ? await orderRepository.findOne({ userId, localId } as any, transaction)
+            : null;
+          const previousOrder = instance?.toJSON();
+          const order = instance
+            ? await orderRepository.update(instance.id, {
+                ...resolvedOrderData,
+                userId,
+                syncedAt: now,
+              }, transaction)
+            : await orderRepository.create({
+                ...resolvedOrderData,
+                userId,
+                localId,
+                syncedAt: now,
+              }, transaction);
 
-        let instance = null;
-
-        if (localId) {
-          instance = await orderRepository.findByLocalId(userId, localId);
-        }
-
-        if (instance) {
-          await orderRepository.update(instance.id, {
-            ...resolvedOrderData,
-            userId,
-            syncedAt: now,
-          });
+          if (!order) {
+            throw new Error('Unable to save order');
+          }
 
           if (orderProducts) {
             await orderProductRepository.replaceForOrder(
-              instance.id,
+              order.id,
               userId,
               orderProducts.map((product) => ({
                 ...product,
                 visitId,
                 customerId: product.customerId ?? resolvedOrderData.customerId,
               })),
-              now
+              now,
+              transaction
             );
           }
 
-          results.updated.push({
-            localId,
-            serverId: instance.id,
-          });
+          await this.syncVisitSummaryForActivity(order.toJSON(), transaction, previousOrder);
+          await this.syncDailySummaryForActivity(order.toJSON(), 'orderTime', transaction, previousOrder);
+
+          return { status: instance ? 'updated' as const : 'created' as const, serverId: order.id };
+        });
+
+        if (syncResult.status === 'updated') {
+          results.updated.push({ localId, serverId: syncResult.serverId });
         } else {
-          const newRecord = await orderRepository.create({
-            ...resolvedOrderData,
-            userId,
-            localId,
-            syncedAt: now,
-          });
-
-          if (orderProducts) {
-            await orderProductRepository.replaceForOrder(
-              newRecord.id,
-              userId,
-              orderProducts.map((product) => ({
-                ...product,
-                visitId,
-                customerId: product.customerId ?? resolvedOrderData.customerId,
-              })),
-              now
-            );
-          }
-
-          results.success.push({
-            localId,
-            serverId: newRecord.id,
-          });
+          results.success.push({ localId, serverId: syncResult.serverId });
         }
       } catch (error: any) {
         results.failed.push({
@@ -197,15 +270,211 @@ export class SyncService {
   }
 
   async syncPayments(userId: number, records: SyncRecord[]): Promise<SyncResult> {
-    return this.syncData(paymentRepository, userId, records);
+    return this.syncData(
+      paymentRepository,
+      userId,
+      records,
+      async (payment, transaction, previousPayment) => {
+        await this.syncVisitSummaryForActivity(payment, transaction, previousPayment);
+        await this.syncDailySummaryForActivity(payment, 'paymentDate', transaction, previousPayment);
+      }
+    );
   }
 
   async syncFeedback(userId: number, records: SyncRecord[]): Promise<SyncResult> {
-    return this.syncData(feedbackRepository, userId, records);
+    return this.syncData(
+      feedbackRepository,
+      userId,
+      records,
+      async (feedback, transaction, previousFeedback) => {
+        await this.syncVisitSummaryForActivity(feedback, transaction, previousFeedback);
+        await this.syncDailySummaryForActivity(feedback, 'feedbackTime', transaction, previousFeedback);
+      }
+    );
   }
 
   async syncImages(userId: number, records: SyncRecord[]): Promise<SyncResult> {
-    return this.syncData(imageRepository, userId, records);
+    return this.syncData(
+      imageRepository,
+      userId,
+      records,
+      async (image, transaction, previousImage) => {
+        await this.syncVisitSummaryForActivity(image, transaction, previousImage);
+        await this.syncDailySummaryForActivity(image, 'capturedAt', transaction, previousImage);
+      }
+    );
+  }
+
+  private async syncVisitSummaryForVisit(visit: SyncRecord, transaction: Transaction): Promise<void> {
+    const hostId = Number(visit.hostId);
+    const userId = Number(visit.userId);
+    const visitId = Number(visit.id);
+
+    if (!Number.isInteger(hostId) || hostId <= 0 || !Number.isInteger(userId) || userId <= 0 || !Number.isInteger(visitId) || visitId <= 0) {
+      throw new Error('hostId, userId, and visitId are required to sync the visit summary');
+    }
+
+    const summary = await visitSummaryRepository.findByVisit(hostId, userId, visitId, transaction);
+    if (!summary) {
+      await visitSummaryRepository.create({ hostId, userId, visitId } as any, transaction);
+    }
+
+    await this.refreshVisitSummary(hostId, userId, visitId, transaction);
+  }
+
+  private async syncVisitSummaryForActivity(
+    record: SyncRecord,
+    transaction: Transaction,
+    previousRecord?: SyncRecord
+  ): Promise<void> {
+    const hostId = Number(record.hostId);
+    const userId = Number(record.userId);
+    const visitId = Number(record.visitId);
+
+    if (!Number.isInteger(hostId) || hostId <= 0 || !Number.isInteger(userId) || userId <= 0 || !Number.isInteger(visitId) || visitId <= 0) {
+      throw new Error('hostId, userId, and visitId are required to sync the visit summary');
+    }
+
+    await this.refreshVisitSummary(hostId, userId, visitId, transaction);
+
+    if (previousRecord) {
+      const previousHostId = Number(previousRecord.hostId);
+      const previousUserId = Number(previousRecord.userId);
+      const previousVisitId = Number(previousRecord.visitId);
+      if (previousHostId !== hostId || previousUserId !== userId || previousVisitId !== visitId) {
+        await this.refreshVisitSummary(previousHostId, previousUserId, previousVisitId, transaction);
+      }
+    }
+  }
+
+  private async refreshVisitSummary(
+    hostId: number,
+    userId: number,
+    visitId: number,
+    transaction: Transaction
+  ): Promise<void> {
+    const summary = await visitSummaryRepository.findByVisit(hostId, userId, visitId, transaction);
+    if (!summary) {
+      throw new Error(`Visit summary not found for visitId ${visitId}; sync the visit before its related activity`);
+    }
+
+    const where = { hostId, userId, visitId };
+    const [orders, payments, feedbacks, images] = await Promise.all([
+      orderRepository.findAll({ where: where as any, transaction }),
+      paymentRepository.findAll({ where: where as any, transaction }),
+      feedbackRepository.findAll({ where: where as any, transaction }),
+      imageRepository.findAll({ where: where as any, transaction }),
+    ]);
+    const orderIds = orders.map((order) => order.id);
+    const orderProducts = orderIds.length
+      ? await orderProductRepository.findAll({
+          where: { orderId: { [Op.in]: orderIds } } as any,
+          transaction,
+        })
+      : [];
+    const uniqueProducts = new Set(
+      orderProducts.map((product: any) => product.productId ?? product.productName).filter(Boolean)
+    );
+    const total = (records: any[], field: string) => records.reduce((sum, record) => sum + (Number(record[field]) || 0), 0);
+
+    await visitSummaryRepository.update(summary.id, {
+      totalOrders: orders.length,
+      orderAmount: total(orders, 'totalAmount'),
+      totalUniqueProducts: uniqueProducts.size,
+      totalQuantity: total(orderProducts, 'quantity'),
+      totalPayments: payments.length,
+      paymentAmount: total(payments, 'amount'),
+      totalFeedbacks: feedbacks.length,
+      totalImages: images.length,
+    } as any, transaction);
+  }
+
+  private async syncDailySummaryForActivity(
+    record: SyncRecord,
+    timestampField: string,
+    transaction: Transaction,
+    previousRecord?: SyncRecord
+  ): Promise<void> {
+    const hostId = Number(record.hostId);
+    const userId = Number(record.userId);
+    const timestamp = Number(record[timestampField]);
+
+    if (!Number.isInteger(hostId) || hostId <= 0 || !Number.isInteger(userId) || userId <= 0 || !Number.isFinite(timestamp) || timestamp <= 0) {
+      throw new Error(`hostId, userId, and ${timestampField} are required to sync the user daily summary`);
+    }
+
+    const reportDate = moment
+      .unix(timestamp)
+      .tz(CONFIG.REPORTING.TIMEZONE)
+      .startOf('day')
+      .unix();
+    await this.refreshUserDailySummary(hostId, userId, reportDate, transaction);
+
+    if (previousRecord) {
+      const previousTimestamp = Number(previousRecord[timestampField]);
+      const previousHostId = Number(previousRecord.hostId);
+      const previousUserId = Number(previousRecord.userId);
+      if (Number.isFinite(previousTimestamp) && previousTimestamp > 0) {
+        const previousReportDate = moment
+          .unix(previousTimestamp)
+          .tz(CONFIG.REPORTING.TIMEZONE)
+          .startOf('day')
+          .unix();
+
+        if (previousReportDate !== reportDate || previousHostId !== hostId || previousUserId !== userId) {
+          await this.refreshUserDailySummary(previousHostId, previousUserId, previousReportDate, transaction);
+        }
+      }
+    }
+  }
+
+  private async refreshUserDailySummary(
+    hostId: number,
+    userId: number,
+    reportDate: number,
+    transaction: Transaction
+  ): Promise<void> {
+    const summary = await userDailySummaryRepository.findByReportDate(hostId, userId, reportDate, transaction);
+
+    // A daily summary is created from attendance. Activity synced before attendance
+    // is picked up when that attendance record is subsequently synced.
+    if (!summary) {
+      return;
+    }
+
+    const nextReportDate = moment.unix(reportDate).tz(CONFIG.REPORTING.TIMEZONE).add(1, 'day').unix();
+    const dateRange = { [Op.gte]: reportDate, [Op.lt]: nextReportDate };
+    const where = { hostId, userId };
+    const [visits, orders, payments, feedbacks, images] = await Promise.all([
+      visitRepository.findAll({ where: { ...where, checkInTime: dateRange } as any, transaction }),
+      orderRepository.findAll({ where: { ...where, orderTime: dateRange } as any, transaction }),
+      paymentRepository.findAll({ where: { ...where, paymentDate: dateRange } as any, transaction }),
+      feedbackRepository.findAll({ where: { ...where, feedbackTime: dateRange } as any, transaction }),
+      imageRepository.findAll({ where: { ...where, capturedAt: dateRange } as any, transaction }),
+    ]);
+    const orderIds = orders.map((order) => order.id);
+    const orderProducts = orderIds.length
+      ? await orderProductRepository.findAll({
+          where: { orderId: { [Op.in]: orderIds } } as any,
+          transaction,
+        })
+      : [];
+    const uniqueProducts = new Set(
+      orderProducts.map((product: any) => product.productId ?? product.productName).filter(Boolean)
+    );
+    const total = (records: any[], field: string) => records.reduce((sum, record) => sum + (Number(record[field]) || 0), 0);
+
+    await userDailySummaryRepository.update(summary.id, {
+      totalVisits: visits.length,
+      totalOrders: orders.length,
+      orderAmount: total(orders, 'totalAmount'),
+      totalUniqueProducts: uniqueProducts.size,
+      totalQuantity: total(orderProducts, 'quantity'),
+      totalPayments: payments.length,
+      paymentAmount: total(payments, 'amount'),
+      totalFeedbacks: feedbacks.length,
+      totalImages: images.length,
+    } as any, transaction);
   }
 
   async syncAll(userId: number, data: any): Promise<any> {
