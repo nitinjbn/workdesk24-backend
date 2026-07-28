@@ -4,7 +4,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import routes from './routes';
 import healthRoutes from './routes/health.routes';
-import { bullBoardBasePath, createBullBoardRouter } from './modules/bull-board';
+//import { bullBoardBasePath, createBullBoardRouter } from './modules/bull-board';
 import { errorHandler } from './shared/middleware/error-handler.middleware';
 import responseSerializerMiddleware from './shared/middleware/response-serializer.middleware';
 
@@ -48,11 +48,11 @@ app.use(responseSerializerMiddleware);
 // Trust proxy for correct IP addresses
 app.set('trust proxy', true);
 
-console.log("bull-board base path:", bullBoardBasePath);
+//console.log("bull-board base path:", bullBoardBasePath);
 
 // Routes
-app.use(bullBoardBasePath, createBullBoardRouter(bullBoardBasePath));
-app.use('/background-jobs', createBullBoardRouter('/background-jobs'));
+//app.use(bullBoardBasePath, createBullBoardRouter(bullBoardBasePath));
+//app.use('/background-jobs', createBullBoardRouter('/background-jobs'));
 app.use('/api', healthRoutes);
 app.use('/api', routes);
 
