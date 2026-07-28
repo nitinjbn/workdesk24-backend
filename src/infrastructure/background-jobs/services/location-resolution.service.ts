@@ -43,7 +43,7 @@ function buildJobId(request: LocationResolutionRequest, latitude: number, longit
 		request.addressField,
 		latitude,
 		longitude,
-	].join(':');
+	].join('|');
 }
 
 export class LocationResolutionService {

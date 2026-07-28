@@ -278,7 +278,7 @@ export class BullMQBackgroundJobManager implements BackgroundJobManager {
         job: JOB_NAMES.DEAD_LETTER,
         payload: deadLetterPayload,
         options: {
-          jobId: `dead-letter:${queue}:${jobId}`,
+            jobId: `dead-letter|${queue}|${jobId}`,
           correlationId: job.data.metadata.correlationId,
           requestId: job.data.metadata.requestId,
           metadata: {
