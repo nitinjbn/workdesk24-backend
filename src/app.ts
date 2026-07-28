@@ -4,6 +4,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import routes from './routes';
 import healthRoutes from './routes/health.routes';
+import { bullBoardBasePath, createBullBoardRouter } from './modules/bull-board';
 import { errorHandler } from './shared/middleware/error-handler.middleware';
 import responseSerializerMiddleware from './shared/middleware/response-serializer.middleware';
 
@@ -48,6 +49,7 @@ app.use(responseSerializerMiddleware);
 app.set('trust proxy', true);
 
 // Routes
+app.use(bullBoardBasePath, createBullBoardRouter());
 app.use('/api', healthRoutes);
 app.use('/api', routes);
 
