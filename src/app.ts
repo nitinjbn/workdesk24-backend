@@ -49,7 +49,8 @@ app.use(responseSerializerMiddleware);
 app.set('trust proxy', true);
 
 // Routes
-app.use(bullBoardBasePath, createBullBoardRouter());
+app.use(bullBoardBasePath, createBullBoardRouter(bullBoardBasePath));
+app.use('/background-jobs', createBullBoardRouter('/background-jobs'));
 app.use('/api', healthRoutes);
 app.use('/api', routes);
 
