@@ -201,6 +201,7 @@ export class SyncService {
         entityType: target.entityType,
         addressField: target.addressField,
         error: error?.message || String(error),
+        cause: error?.cause?.message || error?.cause || undefined,
       });
     }
   }

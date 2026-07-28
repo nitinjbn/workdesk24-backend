@@ -29,7 +29,11 @@ export class BackgroundJobNotFoundError extends BackgroundJobFrameworkError {
 /** Wraps provider failures so BullMQ details never become the feature-module API. */
 export class BackgroundJobProviderError extends BackgroundJobFrameworkError {
   public constructor(operation: string, cause: unknown) {
-    super('BACKGROUND_JOB_PROVIDER_ERROR', `Unable to ${operation} background job work.`, cause);
+    const causeMessage = cause instanceof Error && typeof cause.message === 'string' && cause.message.trim() !== ''
+      ? `: ${cause.message}`
+      : '';
+
+    super('BACKGROUND_JOB_PROVIDER_ERROR', `Unable to ${operation} background job work${causeMessage}.`, cause);
     this.name = 'BackgroundJobProviderError';
   }
 }
