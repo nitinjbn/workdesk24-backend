@@ -48,6 +48,8 @@ app.use(responseSerializerMiddleware);
 // Trust proxy for correct IP addresses
 app.set('trust proxy', true);
 
+console.log("bull-board base path:", bullBoardBasePath);
+
 // Routes
 app.use(bullBoardBasePath, createBullBoardRouter(bullBoardBasePath));
 app.use('/background-jobs', createBullBoardRouter('/background-jobs'));

@@ -3,6 +3,7 @@ import authRoutes from './auth';
 import publicRoutes from './public';
 import appRoutes from './app';
 import adminRoutes from './admin';
+import { bullBoardBasePath, createBullBoardRouter } from '../../modules/bull-board';
 
 const router = Router();
 
@@ -11,5 +12,9 @@ router.use('/auth', authRoutes);
 router.use('/app', appRoutes);
 router.use('/admin', adminRoutes);
 router.use('/public', publicRoutes);
+
+// Routes
+router.use(bullBoardBasePath, createBullBoardRouter(bullBoardBasePath));
+router.use('/background-jobs', createBullBoardRouter('/background-jobs'));
 
 export default router;
