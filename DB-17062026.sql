@@ -62,6 +62,7 @@ CREATE TABLE `wd_attendance` (
   `attendanceLocationAltitude` float DEFAULT NULL,
   `attendanceLocationSpeed` float DEFAULT NULL,
   `attendanceLocationProvider` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `attendanceLocation` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `attendanceBatteryPercentage` smallint(6) DEFAULT NULL,
   `isChargingOnAttendance` tinyint(4) DEFAULT NULL,
   `dayoverLatitude` decimal(10,8) DEFAULT NULL,
@@ -70,6 +71,7 @@ CREATE TABLE `wd_attendance` (
   `dayoverLocationAltitude` float DEFAULT NULL,
   `dayoverLocationSpeed` float DEFAULT NULL,
   `dayoverLocationProvider` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `dayoverLocation` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `dayoverBatteryPercentage` smallint(6) DEFAULT NULL,
   `isChargingOnDayover` tinyint(4) DEFAULT NULL,
   `dayoverRemarks` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
@@ -94,7 +96,7 @@ CREATE TABLE `wd_attendance` (
 
 LOCK TABLES `wd_attendance` WRITE;
 /*!40000 ALTER TABLE `wd_attendance` DISABLE KEYS */;
-INSERT INTO `wd_attendance` VALUES (1,2,'att_001','Present','TWO Wheeler','PRIVATE',123456,'','Attendance Remarks',28.61390000,77.20910000,5.7,123,5.4,'FUSED',89,1,28.61390000,77.20910000,5.7,123,5.4,'FUSED',89,1,'Dayover Remarks',1234567890,9876543210,8.5,1780827983,1780827983,1780827983,0,NULL),(2,2,'att_1','Present','Two Wheeler','Private',123456,'','',37.42199830,-122.08400000,5,5,0,'fused',100,0,37.42199830,-122.08400000,5,5,0,'fused',100,0,'',1779077828,1779078307,0.133129,1780828681,1780828681,1780828681,0,NULL),(3,2,'att_2','Present','Two Wheeler','Private',NULL,'','',37.42199830,-122.08400000,5,5,0,'fused',100,0,37.42199830,-122.08400000,5,5,0,'fused',100,0,'',1779085121,1779116820,8.80534,1780830845,1780830845,1780830845,0,NULL);
+INSERT INTO `wd_attendance` VALUES (1,2,'att_001','Present','TWO Wheeler','PRIVATE',123456,'','Attendance Remarks',28.61390000,77.20910000,5.7,123,5.4,'FUSED',NULL,89,1,28.61390000,77.20910000,5.7,123,5.4,'FUSED',NULL,89,1,'Dayover Remarks',1234567890,9876543210,8.5,1780827983,1780827983,1780827983,0,NULL),(2,2,'att_1','Present','Two Wheeler','Private',123456,'','',37.42199830,-122.08400000,5,5,0,'fused',NULL,100,0,37.42199830,-122.08400000,5,5,0,'fused',NULL,100,0,'',1779077828,1779078307,0.133129,1780828681,1780828681,1780828681,0,NULL),(3,2,'att_2','Present','Two Wheeler','Private',NULL,'','',37.42199830,-122.08400000,5,5,0,'fused',NULL,100,0,37.42199830,-122.08400000,5,5,0,'fused',NULL,100,0,'',1779085121,1779116820,8.80534,1780830845,1780830845,1780830845,0,NULL);
 /*!40000 ALTER TABLE `wd_attendance` ENABLE KEYS */;
 UNLOCK TABLES;
 

@@ -8,6 +8,9 @@ export const CONFIG = {
     TIME_FORMAT: 'hh:mm A',
     DATE_TIME_FORMAT: 'DD-MMM-YYYY hh:mm A',
   },
+  LOCATION: {
+    GOOGLE_GEOCODING_API_KEY: process.env.GOOGLE_GEOCODING_API_KEY || '',
+  },
   AUTH: {
     APP: {
       LOGIN: {

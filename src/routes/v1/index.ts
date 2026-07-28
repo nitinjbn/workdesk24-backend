@@ -17,6 +17,4 @@ router.use('/public', publicRoutes);
 router.use(bullBoardBasePath, createBullBoardRouter(bullBoardBasePath));
 router.use('/background-jobs', createBullBoardRouter('/background-jobs'));
 
-console.log(router);
-
 export default router;

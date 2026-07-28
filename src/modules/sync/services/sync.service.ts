@@ -17,7 +17,9 @@ import { CommonUtil } from '../../../shared/utils/common.util';
 import { DateTimeFormatUtil } from '../../../shared/utils/date-time-format.util';
 import moment from 'moment-timezone';
 import { CONFIG } from '../../../config/constants';
+import { logger } from '../../../config/database';
 import { Op, Transaction } from 'sequelize';
+import { locationResolutionService, type LocationResolutionTarget } from '../../../infrastructure/background-jobs/services/location-resolution.service';
 
 const attendanceRepository = new AttendanceRepository();
 const gpsHistoryRepository = new GpsHistoryRepository();
@@ -43,12 +45,24 @@ interface SyncResult {
   updated: Array<{ localId?: string; serverId: number }>;
 }
 
+interface SyncTransactionResult {
+  status: 'created' | 'updated';
+  serverId: number;
+  persistedRecord: SyncRecord;
+  previousRecord?: SyncRecord;
+}
+
+interface LocationSyncConfig extends LocationResolutionTarget {
+  readonly recordId: number;
+}
+
 export class SyncService {
   async syncData(
     repository: any,
     userId: number,
     records: SyncRecord[],
-    afterPersist?: (record: SyncRecord, transaction: Transaction, previousRecord?: SyncRecord) => Promise<void>
+    afterPersist?: (record: SyncRecord, transaction: Transaction, previousRecord?: SyncRecord) => Promise<void>,
+    afterCommit?: (record: SyncRecord, previousRecord?: SyncRecord) => Promise<void>
   ): Promise<SyncResult> {
     const results: SyncResult = {
       success: [],
@@ -60,7 +74,7 @@ export class SyncService {
       try {
         const { localId, ...data } = record;
         const now = Math.floor(Date.now() / 1000);
-        const syncResult = await repository.getSequelize().transaction(async (transaction: Transaction) => {
+        const syncResult = await repository.getSequelize().transaction(async (transaction: Transaction): Promise<SyncTransactionResult> => {
           const instance = localId
             ? await repository.findOne({ userId, localId }, transaction)
             : null;
@@ -77,8 +91,9 @@ export class SyncService {
               throw new Error(`Unable to update record ${instance.id}`);
             }
 
-            await afterPersist?.(updatedRecord.toJSON(), transaction, previousRecord);
-            return { status: 'updated' as const, serverId: instance.id };
+            const persistedRecord = updatedRecord.toJSON();
+            await afterPersist?.(persistedRecord, transaction, previousRecord);
+            return { status: 'updated', serverId: instance.id, persistedRecord, previousRecord };
           }
 
           const newRecord = await repository.create({
@@ -87,9 +102,14 @@ export class SyncService {
             localId,
             syncedAt: now,
           }, transaction);
-          await afterPersist?.(newRecord.toJSON(), transaction);
-          return { status: 'created' as const, serverId: newRecord.id };
+          const persistedRecord = newRecord.toJSON();
+          await afterPersist?.(persistedRecord, transaction);
+          return { status: 'created', serverId: newRecord.id, persistedRecord };
         });
+
+        if (afterCommit) {
+          await afterCommit(syncResult.persistedRecord, syncResult.previousRecord);
+        }
 
         if (syncResult.status === 'updated') {
           results.updated.push({ localId, serverId: syncResult.serverId });
@@ -112,8 +132,77 @@ export class SyncService {
       attendanceRepository,
       userId,
       records,
-      this.syncUserDailySummary.bind(this)
+      this.syncUserDailySummary.bind(this),
+      async (record, previousRecord) => {
+        await this.scheduleAttendanceLocationJobs(record, previousRecord);
+      }
     );
+  }
+
+  private async scheduleAttendanceLocationJobs(record: SyncRecord, previousRecord?: SyncRecord): Promise<void> {
+    const locationTargets: ReadonlyArray<LocationSyncConfig> = [
+      {
+        recordId: Number(record.id),
+        entityType: 'attendance',
+        addressField: 'attendanceLocation',
+        latitudeField: 'attendanceLatitude',
+        longitudeField: 'attendanceLongitude',
+      },
+      {
+        recordId: Number(record.id),
+        entityType: 'attendance',
+        addressField: 'dayoverLocation',
+        latitudeField: 'dayoverLatitude',
+        longitudeField: 'dayoverLongitude',
+      },
+    ];
+
+    for (const target of locationTargets) {
+      await this.scheduleLocationResolution(record, target);
+    }
+  }
+
+  private async scheduleLocationResolution(record: SyncRecord, target: LocationSyncConfig): Promise<void> {
+    const recordId = Number(record.id ?? target.recordId);
+    const hostId = Number(record.hostId);
+    const userId = Number(record.userId);
+
+    if (!Number.isInteger(recordId) || recordId <= 0 || !Number.isInteger(hostId) || hostId <= 0 || !Number.isInteger(userId) || userId <= 0) {
+      return;
+    }
+
+    try {
+      const dispatchedJob = await locationResolutionService.schedule({
+        hostId,
+        userId,
+        recordId,
+        entityType: target.entityType,
+        addressField: target.addressField,
+        latitudeField: target.latitudeField,
+        longitudeField: target.longitudeField,
+        record,
+      });
+
+      if (dispatchedJob) {
+        logger.info('Location resolution job scheduled.', {
+          recordId,
+          hostId,
+          userId,
+          entityType: target.entityType,
+          addressField: target.addressField,
+          jobId: dispatchedJob.id,
+        });
+      }
+    } catch (error: any) {
+      logger.error('Failed to schedule location resolution job.', {
+        recordId,
+        hostId,
+        userId,
+        entityType: target.entityType,
+        addressField: target.addressField,
+        error: error?.message || String(error),
+      });
+    }
   }
 
   private async syncUserDailySummary(attendance: SyncRecord, transaction: Transaction): Promise<void> {

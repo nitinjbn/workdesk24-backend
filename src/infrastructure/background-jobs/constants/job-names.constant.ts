@@ -4,6 +4,7 @@
  */
 export const JOB_NAMES = {
   EXECUTE: 'execute',
+  RESOLVE_LOCATION: 'resolve-location',
   RESOLVE_ATTENDANCE_LOCATION: 'resolve-attendance-location',
   DEAD_LETTER: 'dead-letter',
 } as const;

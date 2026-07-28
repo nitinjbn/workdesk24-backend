@@ -391,6 +391,10 @@ module.exports = {
         type: Sequelize.STRING(100),
         allowNull: true,
       },
+      attendanceLocation: {
+        type: Sequelize.STRING(255),
+        allowNull: true,
+      },
       attendanceBatteryPercentage: {
         type: Sequelize.SMALLINT,
         allowNull: true,
@@ -429,6 +433,10 @@ module.exports = {
       },
       dayoverLocationProvider: {
         type: Sequelize.STRING(100),
+        allowNull: true,
+      },
+      dayoverLocation: {
+        type: Sequelize.STRING(255),
         allowNull: true,
       },
       dayoverBatteryPercentage: {

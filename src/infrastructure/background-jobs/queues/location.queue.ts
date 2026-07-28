@@ -4,14 +4,21 @@ import type { BackgroundJobManager } from '../interfaces/background-job-manager.
 import type { BackgroundJobState } from '../interfaces/background-job-manager.interface';
 import type { JobPayload } from '../interfaces/background-job.interface';
 import type { ManagedBackgroundJob } from '../interfaces/background-job-manager.interface';
+import type { QueueJobOptions } from '../interfaces/queue-job-options.interface';
 import { backgroundJobManager } from '../managers/BackgroundJobManager';
 
-export interface ResolveAttendanceLocationPayload extends JobPayload {
-	readonly attendanceId: string;
+export interface ResolveLocationPayload extends JobPayload {
+	readonly hostId: number;
+	readonly userId: number;
+	readonly recordId: number;
+	readonly entityType: string;
+	readonly addressField: string;
 	readonly latitude: number;
 	readonly longitude: number;
 	readonly requestedAt: string;
 }
+
+export type ResolveAttendanceLocationPayload = ResolveLocationPayload;
 
 /**
  * Framework queue adapter used by feature modules to enqueue location jobs
@@ -23,12 +30,21 @@ export class LocationQueue {
 	) {}
 
 	public async dispatchResolveAttendanceLocation(
-		payload: ResolveAttendanceLocationPayload,
-	): Promise<ManagedBackgroundJob<ResolveAttendanceLocationPayload, typeof JOB_NAMES.RESOLVE_ATTENDANCE_LOCATION>> {
+		payload: ResolveLocationPayload,
+		options?: QueueJobOptions,
+	): Promise<ManagedBackgroundJob<ResolveLocationPayload, typeof JOB_NAMES.RESOLVE_LOCATION>> {
+		return this.dispatchResolveLocation(payload, options);
+	}
+
+	public async dispatchResolveLocation(
+		payload: ResolveLocationPayload,
+		options?: QueueJobOptions,
+	): Promise<ManagedBackgroundJob<ResolveLocationPayload, typeof JOB_NAMES.RESOLVE_LOCATION>> {
 		return this.jobManager.dispatch({
 			queue: QUEUE_NAMES.LOCATION,
-			job: JOB_NAMES.RESOLVE_ATTENDANCE_LOCATION,
+			job: JOB_NAMES.RESOLVE_LOCATION,
 			payload,
+			options,
 		});
 	}
 

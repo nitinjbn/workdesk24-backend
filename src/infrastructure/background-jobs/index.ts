@@ -60,6 +60,7 @@ export {
 export {
   LocationQueue,
   locationQueue,
+  type ResolveLocationPayload,
   type ResolveAttendanceLocationPayload,
 } from './queues';
 export {
