@@ -48,7 +48,7 @@ export function createBullBoardRouter(basePath: string = DEFAULT_BULL_BOARD_BASE
   const bullBoardManager = initializeBullBoard(basePath);
 
   const router = Router();
-  router.use(authMiddleware);
+  //router.use(authMiddleware);
   //router.use(requireSuperAdminRole);
   router.use('/', bullBoardManager.getRouter());
 
