@@ -1,0 +1,57 @@
+import { PROCESSOR_NAMES } from '../constants/processor-names.constant';
+import type { WorkerDefinition } from '../interfaces/worker.interface';
+import type { ProcessorResolver } from '../managers/ProcessorResolver';
+import { emailWorkerDefinition } from './email.worker';
+import { imageWorkerDefinition } from './image.worker';
+import { locationWorkerDefinition } from './location.worker';
+import { notificationWorkerDefinition } from './notification.worker';
+import { createWorkerProcessor } from './worker-processor.factory';
+import { reportWorkerDefinition } from './report.worker';
+
+export {
+	emailWorkerDefinition,
+	imageWorkerDefinition,
+	locationWorkerDefinition,
+	notificationWorkerDefinition,
+	reportWorkerDefinition,
+};
+
+export function createWorkerDefinitions(resolver: ProcessorResolver): ReadonlyArray<WorkerDefinition> {
+	return [
+		{
+			...locationWorkerDefinition,
+			processor: createWorkerProcessor({
+				processorId: PROCESSOR_NAMES.LOCATION,
+				resolver,
+			}),
+		},
+		{
+			...notificationWorkerDefinition,
+			processor: createWorkerProcessor({
+				processorId: PROCESSOR_NAMES.NOTIFICATION,
+				resolver,
+			}),
+		},
+		{
+			...emailWorkerDefinition,
+			processor: createWorkerProcessor({
+				processorId: PROCESSOR_NAMES.EMAIL,
+				resolver,
+			}),
+		},
+		{
+			...reportWorkerDefinition,
+			processor: createWorkerProcessor({
+				processorId: PROCESSOR_NAMES.REPORT,
+				resolver,
+			}),
+		},
+		{
+			...imageWorkerDefinition,
+			processor: createWorkerProcessor({
+				processorId: PROCESSOR_NAMES.IMAGE,
+				resolver,
+			}),
+		},
+	];
+}
