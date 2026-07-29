@@ -99,6 +99,10 @@ export function initImage(sequelize: Sequelize): typeof Image {
         type: DataTypes.STRING(100),
         allowNull: true
       },
+      address: { // Its the address of the location (device) where the image was captured, if available
+        type: DataTypes.STRING(255),
+        allowNull: true,
+      },
       batteryPercentage: {
         type: DataTypes.TINYINT,
         allowNull: true

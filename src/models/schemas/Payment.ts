@@ -123,6 +123,10 @@ export function initPayment(sequelize: Sequelize): typeof Payment {
         type: DataTypes.STRING(100),
         allowNull: true
       },
+      address: { // Its the address of the location (device) where the payment was made, if available
+        type: DataTypes.STRING(255),
+        allowNull: true,
+      },
       batteryPercentage: {
         type: DataTypes.TINYINT,
         allowNull: true

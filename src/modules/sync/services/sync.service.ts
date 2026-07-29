@@ -145,14 +145,14 @@ export class SyncService {
       {
         recordId: Number(record.id),
         entityType: 'attendance',
-        addressField: 'attendanceLocation',
+        addressField: 'attendanceAddress',
         latitudeField: 'attendanceLatitude',
         longitudeField: 'attendanceLongitude',
       },
       {
         recordId: Number(record.id),
         entityType: 'attendance',
-        addressField: 'dayoverLocation',
+        addressField: 'dayoverAddress',
         latitudeField: 'dayoverLatitude',
         longitudeField: 'dayoverLongitude',
       },
@@ -276,8 +276,34 @@ export class SyncService {
       async (visit, transaction, previousVisit) => {
         await this.syncVisitSummaryForVisit(visit, transaction);
         await this.syncDailySummaryForActivity(visit, 'checkInTime', transaction, previousVisit);
+      },
+      async (record, previousRecord) => {
+        await this.scheduleVisitLocationJobs(record, previousRecord);
       }
     );
+  }
+
+  private async scheduleVisitLocationJobs(record: SyncRecord, previousRecord?: SyncRecord): Promise<void> {
+    const locationTargets: ReadonlyArray<LocationSyncConfig> = [
+      {
+        recordId: Number(record.id),
+        entityType: 'visit',
+        addressField: 'checkInAddress',
+        latitudeField: 'checkInLatitude',
+        longitudeField: 'checkInLongitude',
+      },
+      {
+        recordId: Number(record.id),
+        entityType: 'visit',
+        addressField: 'checkOutAddress',
+        latitudeField: 'checkOutLatitude',
+        longitudeField: 'checkOutLongitude',
+      },
+    ];
+
+    for (const target of locationTargets) {
+      await this.scheduleLocationResolution(record, target);
+    }
   }
 
   async syncOrders(userId: number, records: SyncRecord[]): Promise<SyncResult> {
@@ -343,8 +369,15 @@ export class SyncService {
           await this.syncVisitSummaryForActivity(order.toJSON(), transaction, previousOrder);
           await this.syncDailySummaryForActivity(order.toJSON(), 'orderTime', transaction, previousOrder);
 
-          return { status: instance ? 'updated' as const : 'created' as const, serverId: order.id };
+          return {
+            status: instance ? 'updated' as const : 'created' as const,
+            serverId: order.id,
+            persistedRecord: order.toJSON(),
+            previousRecord: previousOrder,
+          };
         });
+
+        await this.scheduleOrderLocationJobs(syncResult.persistedRecord, syncResult.previousRecord);
 
         if (syncResult.status === 'updated') {
           results.updated.push({ localId, serverId: syncResult.serverId });
@@ -362,6 +395,22 @@ export class SyncService {
     return results;
   }
 
+  private async scheduleOrderLocationJobs(record: SyncRecord, previousRecord?: SyncRecord): Promise<void> {
+    const locationTargets: ReadonlyArray<LocationSyncConfig> = [
+      {
+        recordId: Number(record.id),
+        entityType: 'order',
+        addressField: 'address',
+        latitudeField: 'latitude',
+        longitudeField: 'longitude',
+      },
+    ];
+
+    for (const target of locationTargets) {
+      await this.scheduleLocationResolution(record, target);
+    }
+  }
+
   async syncPayments(userId: number, records: SyncRecord[]): Promise<SyncResult> {
     return this.syncData(
       paymentRepository,
@@ -370,8 +419,27 @@ export class SyncService {
       async (payment, transaction, previousPayment) => {
         await this.syncVisitSummaryForActivity(payment, transaction, previousPayment);
         await this.syncDailySummaryForActivity(payment, 'paymentDate', transaction, previousPayment);
+      },
+      async (record, previousRecord) => {
+        await this.schedulePaymentLocationJobs(record, previousRecord);
       }
     );
+  }
+
+  private async schedulePaymentLocationJobs(record: SyncRecord, previousRecord?: SyncRecord): Promise<void> {
+    const locationTargets: ReadonlyArray<LocationSyncConfig> = [
+      {
+        recordId: Number(record.id),
+        entityType: 'payment',
+        addressField: 'address',
+        latitudeField: 'latitude',
+        longitudeField: 'longitude',
+      },
+    ];
+
+    for (const target of locationTargets) {
+      await this.scheduleLocationResolution(record, target);
+    }
   }
 
   async syncFeedback(userId: number, records: SyncRecord[]): Promise<SyncResult> {
@@ -382,8 +450,27 @@ export class SyncService {
       async (feedback, transaction, previousFeedback) => {
         await this.syncVisitSummaryForActivity(feedback, transaction, previousFeedback);
         await this.syncDailySummaryForActivity(feedback, 'feedbackTime', transaction, previousFeedback);
+      },
+      async (record, previousRecord) => {
+        await this.scheduleFeedbackLocationJobs(record, previousRecord);
       }
     );
+  }
+
+  private async scheduleFeedbackLocationJobs(record: SyncRecord, previousRecord?: SyncRecord): Promise<void> {
+    const locationTargets: ReadonlyArray<LocationSyncConfig> = [
+      {
+        recordId: Number(record.id),
+        entityType: 'feedback',
+        addressField: 'address',
+        latitudeField: 'latitude',
+        longitudeField: 'longitude',
+      },
+    ];
+
+    for (const target of locationTargets) {
+      await this.scheduleLocationResolution(record, target);
+    }
   }
 
   async syncImages(userId: number, records: SyncRecord[]): Promise<SyncResult> {
@@ -394,8 +481,27 @@ export class SyncService {
       async (image, transaction, previousImage) => {
         await this.syncVisitSummaryForActivity(image, transaction, previousImage);
         await this.syncDailySummaryForActivity(image, 'capturedAt', transaction, previousImage);
+      },
+      async (record, previousRecord) => {
+        await this.scheduleImageLocationJobs(record, previousRecord);
       }
     );
+  }
+
+  private async scheduleImageLocationJobs(record: SyncRecord, previousRecord?: SyncRecord): Promise<void> {
+    const locationTargets: ReadonlyArray<LocationSyncConfig> = [
+      {
+        recordId: Number(record.id),
+        entityType: 'image',
+        addressField: 'address',
+        latitudeField: 'latitude',
+        longitudeField: 'longitude',
+      },
+    ];
+
+    for (const target of locationTargets) {
+      await this.scheduleLocationResolution(record, target);
+    }
   }
 
   private async syncVisitSummaryForVisit(visit: SyncRecord, transaction: Transaction): Promise<void> {

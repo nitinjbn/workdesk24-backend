@@ -98,6 +98,7 @@ export interface VisitAttributes {
   checkInLocationAltitude?: number;
   checkInLocationSpeed?: number;
   checkInLocationProvider?: string;
+  checkInAddress?: string;
   checkInBatteryPercentage?: number;
   isChargingOnCheckIn?: number;
   checkOutLatitude?: number;
@@ -107,6 +108,7 @@ export interface VisitAttributes {
   checkOutLocationSpeed?: number;
   checkOutLocationProvider?: string;
   checkOutBatteryPercentage?: number;
+  checkOutAddress?: string;
   isChargingOnCheckOut?: number;
   purpose?: string;
   remarks?: string;
@@ -142,6 +144,7 @@ export interface OrderAttributes {
   locationAltitude?: number;
   locationSpeed?: number;
   locationProvider?: string;
+  address?: string;
   batteryPercentage?: number;
   isCharging?: number;
   syncedAt?: number;
@@ -223,6 +226,7 @@ export interface PaymentAttributes {
   locationAltitude?: number;
   locationSpeed?: number;
   locationProvider?: string;
+  address?: string;
   batteryPercentage?: number;
   isChargingOnPayment?: number;
   syncedAt?: number;
@@ -249,6 +253,7 @@ export interface FeedbackAttributes {
   locationAltitude?: number;
   locationSpeed?: number;
   locationProvider?: string;
+  address?: string;
   batteryPercentage?: number;
   isChargingOnFeedback?: number;
   syncedAt?: number;
@@ -275,6 +280,7 @@ export interface ImageAttributes {
   locationAltitude?: number;
   locationSpeed?: number;
   locationProvider?: string;
+  address?: string;
   batteryPercentage?: number;
   isCharging?: number;
   syncedAt?: number;

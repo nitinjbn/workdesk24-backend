@@ -17,7 +17,7 @@ interface AttendanceAttributes extends BaseModel {
   attendanceLocationAltitude?: number;
   attendanceLocationSpeed?: number;
   attendanceLocationProvider?: string;
-  attendanceLocation?: string;
+  attendanceAddress?: string;
   attendanceBatteryPercentage?: number;
   isChargingOnAttendance?: number;
   dayoverImage?: string;
@@ -28,7 +28,7 @@ interface AttendanceAttributes extends BaseModel {
   dayoverLocationAltitude?: number;
   dayoverLocationSpeed?: number;
   dayoverLocationProvider?: string;
-  dayoverLocation?: string;
+  dayoverAddress?: string;
   dayoverBatteryPercentage?: number;
   isChargingOnDayover?: number;
   dayoverRemarks?: string;
@@ -39,7 +39,7 @@ interface AttendanceAttributes extends BaseModel {
   syncedAt?: number;
 }
 
-interface AttendanceCreationAttributes extends Optional<AttendanceAttributes, 'id' | 'attendanceStatus' | 'vehicleType' | 'vehicleCategory' | 'attendanceOdometerReading' | 'attendanceImage' | 'attendanceRemarks' | 'attendanceLatitude' | 'attendanceLongitude' | 'attendanceLocationAccuracy' | 'attendanceLocationAltitude' | 'attendanceLocationSpeed' | 'attendanceLocationProvider' | 'attendanceLocation' | 'attendanceBatteryPercentage' | 'isChargingOnAttendance' | 'dayoverLatitude' | 'dayoverLongitude' | 'dayoverLocationAccuracy' | 'dayoverLocationAltitude' | 'dayoverLocationSpeed' | 'dayoverLocationProvider' | 'dayoverLocation' | 'dayoverBatteryPercentage' | 'isChargingOnDayover' | 'dayoverRemarks' | 'attendanceTime' | 'dayoverTime' | 'autoDayover' | 'workingHours' | 'createdAt' | 'updatedAt' | 'syncedAt' | 'isDeleted' | 'deletedAt'> {}
+interface AttendanceCreationAttributes extends Optional<AttendanceAttributes, 'id' | 'attendanceStatus' | 'vehicleType' | 'vehicleCategory' | 'attendanceOdometerReading' | 'attendanceImage' | 'attendanceRemarks' | 'attendanceLatitude' | 'attendanceLongitude' | 'attendanceLocationAccuracy' | 'attendanceLocationAltitude' | 'attendanceLocationSpeed' | 'attendanceLocationProvider' | 'attendanceAddress' | 'attendanceBatteryPercentage' | 'isChargingOnAttendance' | 'dayoverLatitude' | 'dayoverLongitude' | 'dayoverLocationAccuracy' | 'dayoverLocationAltitude' | 'dayoverLocationSpeed' | 'dayoverLocationProvider' | 'dayoverAddress' | 'dayoverBatteryPercentage' | 'isChargingOnDayover' | 'dayoverRemarks' | 'attendanceTime' | 'dayoverTime' | 'autoDayover' | 'workingHours' | 'createdAt' | 'updatedAt' | 'syncedAt' | 'isDeleted' | 'deletedAt'> {}
 
 class Attendance extends Model<AttendanceAttributes, AttendanceCreationAttributes> implements AttendanceAttributes {
   public id!: number;
@@ -58,7 +58,7 @@ class Attendance extends Model<AttendanceAttributes, AttendanceCreationAttribute
   public attendanceLocationAltitude?: number;
   public attendanceLocationSpeed?: number;
   public attendanceLocationProvider?: string;
-  public attendanceLocation?: string;
+  public attendanceAddress?: string;
   public attendanceBatteryPercentage?: number;
   public isChargingOnAttendance?: number;
   public dayoverImage?: string;
@@ -69,7 +69,7 @@ class Attendance extends Model<AttendanceAttributes, AttendanceCreationAttribute
   public dayoverLocationAltitude?: number;
   public dayoverLocationSpeed?: number;
   public dayoverLocationProvider?: string;
-  public dayoverLocation?: string;
+  public dayoverAddress?: string;
   public dayoverBatteryPercentage?: number;
   public isChargingOnDayover?: number;
   public dayoverRemarks?: string;
@@ -164,7 +164,7 @@ export function initAttendance(sequelize: Sequelize): typeof Attendance {
         type: DataTypes.STRING(100),
         allowNull: true
       },
-      attendanceLocation: {
+      attendanceAddress: {
         type: DataTypes.STRING(255),
         allowNull: true
       },
@@ -208,7 +208,7 @@ export function initAttendance(sequelize: Sequelize): typeof Attendance {
         type: DataTypes.STRING(100),
         allowNull: true
       },
-      dayoverLocation: {
+      dayoverAddress: {
         type: DataTypes.STRING(255),
         allowNull: true
       },

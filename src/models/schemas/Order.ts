@@ -133,6 +133,10 @@ export function initOrder(sequelize: Sequelize): typeof Order {
         type: DataTypes.STRING(100),
         allowNull: true
       },
+      address: { // Its the address of the location (device) where the order was placed, if available
+        type: DataTypes.STRING(255),
+        allowNull: true,
+      },
       batteryPercentage: {
         type: DataTypes.TINYINT,
         allowNull: true

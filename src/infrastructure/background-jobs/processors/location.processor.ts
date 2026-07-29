@@ -45,6 +45,36 @@ const LOCATION_ENTITIES: Record<string, LocationEntityConfig> = {
 		hostColumn: 'hostId',
 		userColumn: 'userId',
 	},
+	visit: {
+		tableName: 'wd_visits',
+		idColumn: 'id',
+		hostColumn: 'hostId',
+		userColumn: 'userId',
+	},
+	order: {
+		tableName: 'wd_orders',
+		idColumn: 'id',
+		hostColumn: 'hostId',
+		userColumn: 'userId',
+	},
+	payment: {
+		tableName: 'wd_payments',
+		idColumn: 'id',
+		hostColumn: 'hostId',
+		userColumn: 'userId',
+	},
+	feedback: {
+		tableName: 'wd_feedbacks',
+		idColumn: 'id',
+		hostColumn: 'hostId',
+		userColumn: 'userId',
+	},
+	image: {
+		tableName: 'wd_images',
+		idColumn: 'id',
+		hostColumn: 'hostId',
+		userColumn: 'userId',
+	},
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {

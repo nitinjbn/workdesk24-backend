@@ -169,6 +169,10 @@ export function initVisit(sequelize: Sequelize): typeof Visit {
         type: DataTypes.STRING(100),
         allowNull: true
       },
+      checkInAddress: {
+        type: DataTypes.STRING(255),
+        allowNull: true,
+      },
       checkInBatteryPercentage: {
         type: DataTypes.TINYINT,
         allowNull: true
@@ -200,6 +204,10 @@ export function initVisit(sequelize: Sequelize): typeof Visit {
       checkOutLocationProvider: {
         type: DataTypes.STRING(100),
         allowNull: true
+      },
+      checkOutAddress: {
+        type: DataTypes.STRING(255),
+        allowNull: true,
       },
       checkOutBatteryPercentage: {
         type: DataTypes.TINYINT,

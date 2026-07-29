@@ -97,6 +97,10 @@ export function initFeedback(sequelize: Sequelize): typeof Feedback {
         type: DataTypes.STRING(100),
         allowNull: true
       },
+      address: { // Its the address of the location (device) where the feedback was given, if available
+        type: DataTypes.STRING(255),
+        allowNull: true,
+      },
       batteryPercentage: {
         type: DataTypes.TINYINT,
         allowNull: true
