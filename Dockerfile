@@ -12,4 +12,7 @@ RUN npm run build
 
 EXPOSE 3000
 
-CMD ["node", "dist/server.production.js"]
+COPY docker-entrypoint.sh /app/docker-entrypoint.sh
+RUN chmod +x /app/docker-entrypoint.sh
+
+CMD ["/app/docker-entrypoint.sh"]

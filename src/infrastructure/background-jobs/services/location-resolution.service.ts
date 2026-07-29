@@ -1,6 +1,7 @@
 import type { ManagedBackgroundJob } from '../interfaces/background-job-manager.interface';
 import type { ResolveLocationPayload } from '../queues';
 import { locationQueue } from '../queues';
+import { ensureRedisConnectionReady } from '../config/redis.config';
 
 export interface LocationResolutionTarget {
 	readonly entityType: string;
@@ -60,6 +61,8 @@ export class LocationResolutionService {
 		if (latitude === null || longitude === null) {
 			return null;
 		}
+
+		await ensureRedisConnectionReady();
 
 		return locationQueue.dispatchResolveLocation(
 			{

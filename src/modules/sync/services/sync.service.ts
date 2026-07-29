@@ -20,6 +20,7 @@ import { CONFIG } from '../../../config/constants';
 import { logger } from '../../../config/database';
 import { Op, Transaction } from 'sequelize';
 import { locationResolutionService, type LocationResolutionTarget } from '../../../infrastructure/background-jobs/services/location-resolution.service';
+import { getRedisConnectionStatus } from '../../../infrastructure/background-jobs/config/redis.config';
 
 const attendanceRepository = new AttendanceRepository();
 const gpsHistoryRepository = new GpsHistoryRepository();
@@ -191,6 +192,7 @@ export class SyncService {
           entityType: target.entityType,
           addressField: target.addressField,
           jobId: dispatchedJob.id,
+          redisStatus: getRedisConnectionStatus(),
         });
       }
     } catch (error: any) {
@@ -202,6 +204,7 @@ export class SyncService {
         addressField: target.addressField,
         error: error?.message || String(error),
         cause: error?.cause?.message || error?.cause || undefined,
+        redisStatus: getRedisConnectionStatus(),
       });
     }
   }

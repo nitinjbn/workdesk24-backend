@@ -1,6 +1,7 @@
 import { Queue, type QueueOptions } from 'bullmq';
 
 import { DEFAULT_QUEUE_OPTIONS } from '../config/bullmq.config';
+import { getRedisConnection } from '../config/redis.config';
 import {
   ALL_QUEUE_NAMES,
   LEGACY_QUEUE_NAME_ALIASES,
@@ -35,6 +36,13 @@ export class QueueManager {
 
   private constructor(private readonly defaultOptions: Readonly<QueueOptions> = DEFAULT_QUEUE_OPTIONS) {}
 
+  private queueHasStaleConnection(queue: ManagedQueue): boolean {
+    const activeConnection = getRedisConnection();
+    const queueConnection = queue.opts.connection;
+
+    return queueConnection !== undefined && queueConnection !== activeConnection;
+  }
+
   public static getInstance(defaultOptions?: Readonly<QueueOptions>): QueueManager {
     if (QueueManager.instance === undefined) {
       QueueManager.instance = new QueueManager(defaultOptions);
@@ -47,11 +55,18 @@ export class QueueManager {
     const queueName = resolveQueueName(name);
     const existingQueue = this.queues.get(queueName);
     if (existingQueue !== undefined) {
-      return existingQueue as unknown as Queue<TData, TResult, TName>;
+      if (this.queueHasStaleConnection(existingQueue)) {
+        void existingQueue.close().catch(() => undefined);
+        this.queues.delete(queueName);
+      } else {
+        return existingQueue as unknown as Queue<TData, TResult, TName>;
+      }
     }
 
+    const connection = getRedisConnection();
     const queue = new Queue<TData, TResult, TName>(queueName, {
       ...this.defaultOptions,
+      connection,
     });
 
     this.queues.set(queueName, queue as unknown as ManagedQueue);

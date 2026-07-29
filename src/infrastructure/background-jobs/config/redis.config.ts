@@ -58,6 +58,78 @@ function createRedisConnection(): IORedis {
 }
 
 /** A single process-wide producer connection, configured for Railway and Redis-compatible services. */
-export const redisConnection = createRedisConnection();
+let activeRedisConnection = createRedisConnection();
+
+export const redisConnection = activeRedisConnection;
+
+function waitForReady(connection: IORedis): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    const handleReady = (): void => {
+      cleanup();
+      resolve();
+    };
+
+    const handleError = (error: Error): void => {
+      cleanup();
+      reject(error);
+    };
+
+    const cleanup = (): void => {
+      connection.off('ready', handleReady);
+      connection.off('error', handleError);
+    };
+
+    connection.on('ready', handleReady);
+    connection.on('error', handleError);
+  });
+}
+
+/**
+ * Returns a usable Redis connection instance for BullMQ producers.
+ * If the previous connection was fully closed, a new one is created.
+ */
+export function getRedisConnection(): IORedis {
+  if (activeRedisConnection.status === 'end') {
+    activeRedisConnection = createRedisConnection();
+  }
+
+  return activeRedisConnection;
+}
+
+/** Ensures the producer Redis connection is ready before queue commands are issued. */
+export async function ensureRedisConnectionReady(): Promise<IORedis> {
+  const connection = getRedisConnection();
+
+  if (connection.status === 'ready') {
+    return connection;
+  }
+
+  if (connection.status === 'connecting' || connection.status === 'connect' || connection.status === 'reconnecting') {
+    await waitForReady(connection);
+    return connection;
+  }
+
+  if (connection.status === 'wait') {
+    await connection.connect();
+    return connection;
+  }
+
+  if (connection.status === 'close') {
+    const recoveredConnection = getRedisConnection();
+    if (recoveredConnection.status === 'wait') {
+      await recoveredConnection.connect();
+    } else if (recoveredConnection.status !== 'ready') {
+      await waitForReady(recoveredConnection);
+    }
+
+    return recoveredConnection;
+  }
+
+  return connection;
+}
+
+export function getRedisConnectionStatus(): string {
+  return getRedisConnection().status;
+}
 
 export default redisConnection;
