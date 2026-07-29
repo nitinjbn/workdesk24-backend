@@ -10,6 +10,58 @@ import { WorkerManager } from './managers/WorkerManager';
 import { FrameworkProcessorRegistry } from './registry/processor.registry';
 import { WorkerRegistry } from './registry/worker.registry';
 import type { BackgroundJobLogContext, BackgroundJobLogger } from './utils/logger.utils';
+import { initializeDatabase, getDatabaseStatus } from '../../models/index';
+import http from 'http';
+
+const DB_RETRY_DELAY_MS = parseInt(process.env.DB_RETRY_DELAY_MS || '30000', 10);
+
+function startHealthServer(): void {
+    const port = Number(process.env.PORT) || 3000;
+
+    http.createServer((req, res) => {
+        if (req.url === '/api/health/live') {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({
+                status: 'UP',
+                worker: true,
+                redis: redisConnection.status,
+                database: getDatabaseStatus().isHealthy
+            }));
+            return;
+        }
+
+        res.writeHead(404);
+        res.end();
+    }).listen(port, () => {
+        workerLogger.info(`Worker health server listening on ${port}`);
+    });
+}
+
+const initializeDatabaseInBackground = async (): Promise<void> => {
+	try {
+		logger.info('Initializing database connection...');
+		await initializeDatabase();
+
+		const dbStatus = getDatabaseStatus();
+		if (!dbStatus.isHealthy) {
+			throw new Error('Database health check failed');
+		}
+
+		logger.info('Database connection healthy', {
+			metrics: dbStatus.metrics,
+		});
+	} catch (error: any) {
+		logger.error('Database initialization failed; continuing in degraded mode', {
+			error: error.message,
+			stack: error.stack,
+			retryInMs: DB_RETRY_DELAY_MS,
+		});
+
+		setTimeout(() => {
+			void initializeDatabaseInBackground();
+		}, DB_RETRY_DELAY_MS);
+	}
+};
 
 function serializeError(error: unknown): { message: string; stack?: string } {
 	if (error instanceof Error) {
@@ -106,6 +158,7 @@ async function bootstrapWorker(): Promise<void> {
 		redisStatus: redisConnection.status,
 	});
 
+	await initializeDatabaseInBackground();
 	await initializeRedis();
 	workerLogger.info('Redis connection ready for worker bootstrap.', {
 		redisStatus: redisConnection.status,
@@ -137,6 +190,7 @@ async function bootstrapWorker(): Promise<void> {
 
 	workerManager.setupProcessHandlers();
 	await workerManager.startAll();
+	startHealthServer();
 
 	workerLogger.info('Background worker framework started successfully.', {
 		registeredWorkers,
