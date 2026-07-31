@@ -53,6 +53,98 @@ export class ReportController {
       next(error);
     }
   }
+
+  async getVisits(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    const { hostId, userId, filter } = req.body;
+
+    if (!hostId || !userId || !filter) {
+      res.status(400).json({
+        success: false,
+        message: 'Required fields are missing',
+      } as ApiResponse);
+      return;
+    }
+
+    try {
+      const report = await reportService.getVisitsReport({ hostId, userId, filter });
+      res.json({
+        success: true,
+        message: 'Visits report retrieved successfully',
+        data: report,
+      } as ApiResponse);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getPayments(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    const { hostId, userId, filter } = req.body;
+
+    if (!hostId || !userId || !filter) {
+      res.status(400).json({
+        success: false,
+        message: 'Required fields are missing',
+      } as ApiResponse);
+      return;
+    }
+
+    try {
+      const report = await reportService.getPaymentsReport({ hostId, userId, filter });
+      res.json({
+        success: true,
+        message: 'Payments report retrieved successfully',
+        data: report,
+      } as ApiResponse);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getFeedbacks(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    const { hostId, userId, filter } = req.body;
+
+    if (!hostId || !userId || !filter) {
+      res.status(400).json({
+        success: false,
+        message: 'Required fields are missing',
+      } as ApiResponse);
+      return;
+    }
+
+    try {
+      const report = await reportService.getFeedbacksReport({ hostId, userId, filter });
+      res.json({
+        success: true,
+        message: 'Feedbacks report retrieved successfully',
+        data: report,
+      } as ApiResponse);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getImages(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    const { hostId, userId, filter } = req.body;
+
+    if (!hostId || !userId || !filter) {
+      res.status(400).json({
+        success: false,
+        message: 'Required fields are missing',
+      } as ApiResponse);
+      return;
+    }
+
+    try {
+      const report = await reportService.getImagesReport({ hostId, userId, filter });
+      res.json({
+        success: true,
+        message: 'Images report retrieved successfully',
+        data: report,
+      } as ApiResponse);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default new ReportController();

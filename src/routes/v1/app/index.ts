@@ -32,11 +32,11 @@ router.post('/sync/userSettings', syncController.getUserSettings.bind(syncContro
 // Report related routes
 //router.post('/reports/getGPSHistory', reportController.getAppGpsHistory.bind(reportController));
 router.post('/reports/getAttendance', reportController.getAttendance.bind(reportController));
-//router.post('/reports/getVisits', reportController.getVisits.bind(reportController));
+router.post('/reports/getVisits', reportController.getVisits.bind(reportController));
 router.post('/reports/getOrders', reportController.getOrders.bind(reportController));
-// router.post('/reports/getPayments', reportController.getPayments.bind(reportController));
-// router.post('/reports/getFeedbacks', reportController.getFeedbacks.bind(reportController));
-// router.post('/reports/getImages', reportController.getImages.bind(reportController));
+router.post('/reports/getPayments', reportController.getPayments.bind(reportController));
+router.post('/reports/getFeedbacks', reportController.getFeedbacks.bind(reportController));
+router.post('/reports/getImages', reportController.getImages.bind(reportController));
 
 // User Device related routes
 router.post('/device/updateFcmToken', userController.updateFcmToken.bind(userController));
