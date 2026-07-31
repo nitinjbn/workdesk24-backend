@@ -1,35 +1,25 @@
 import { FindAndCountOptions, Includeable, Op } from 'sequelize';
-import db, { Image } from '../../../models';
-import { CommonReportSortBy, ReportResponse, ReportSortDirection, GetImagesReportPayload } from '../types/report.types';
+import db, { Order, OrderProduct } from '../../../models';
+import { AttendanceReportFilter, CommonReportSortBy, ReportResponse, ReportSortDirection, GetOrdersReportPayload } from '../types/report.types';
 import baseReportHelper from '../helpers/base-report.helper';
 import { buildCommonReportOrder, buildDynamicModelFilters, buildUserInclude, buildUserScopedWhere, extractUserFilter } from './user-scoped-report.helper';
 
 
-export class ImagesReportRepository {
-  async getImagesReport(params: GetImagesReportPayload): Promise<ReportResponse<any>> {
-    const { page, limit, filter, hostId, sortBy, sortOrder } = params;
-    const { offset } = baseReportHelper.normalizePagination({ page, limit });
+export class OrdersReportRepository {
+  async getOrdersReport(params: { hostId: number; userId?: number; filter?: { fromDate: number; tillDate: number; customerId?: number }}): Promise<ReportResponse<any>> {
+    const { hostId, userId, filter } = params;
 
-    let where: Record<string, any> = { hostId, isDeleted: 0 };
+    let where: Record<string, any> = { hostId, userId, isDeleted: 0 };
     let visitWhere: Record<string, any> = { isDeleted: 0 };
     if(filter) {
-      if(filter.userId) {
-        where.userId = filter.userId;
-      }
       if(filter.customerId) {
         visitWhere.customerId = filter.customerId;
       }
-      if(filter.customerName?.trim()) {
-        visitWhere.customerName = { [Op.like]: `%${filter.customerName?.trim()}%` };
-      }
-      if(filter.capturedAt) {
-        where.capturedAt = {
-          [Op.gte]: filter.capturedAt?.from,
-          [Op.lte]: filter.capturedAt?.to,
+      if(filter.fromDate && filter.tillDate) {
+        where.orderTime = {
+          [Op.gte]: filter.fromDate,
+          [Op.lte]: filter.tillDate,
         };
-      }
-      if(filter.visitId) {
-        where.visitId = filter.visitId;
       }
     }
     
@@ -37,13 +27,23 @@ export class ImagesReportRepository {
       attributes: {
         exclude: ['id', 'localId', 'isDeleted', 'deletedAt', 'updatedAt', 'syncedAt', 'locationAccuracy', 'batteryPercentage', 'isCharging', 'locationAltitude', 'locationSpeed', 'locationProvider', 'locationProvider'],
         include: [
-          ['id', 'imageId'],
-          [db.Sequelize.col('user.name'), 'employeeName'],
-          [db.Sequelize.col('user.employeeCode'), 'employeeCode']
+          ['id', 'orderId'],
         ]
       },
       where,
       include: [
+        {
+          model: OrderProduct,
+          as: 'products',
+          attributes: {
+            include: ['productId', 'productName', 'quantity', 'mrp', 'discountPercentage', 'discountAmount', 'taxAmount', 'totalAmount'],
+            exclude: ['id', 'hostId', 'userId', 'customerId', 'visitId', 'localId', 'orderId', 'createdAt', 'updatedAt', 'isDeleted', 'deletedAt', 'syncedAt'],
+          },
+          where: {
+            isDeleted: 0,
+          },
+          required: true,
+        },
         {
           model: db.User,
           as: 'user',
@@ -63,29 +63,16 @@ export class ImagesReportRepository {
           where: visitWhere,
         }
       ],
-      order: [sortBy && sortOrder ? [sortBy, sortOrder] : ['createdAt', 'DESC']],
+      order: [['createdAt', 'DESC']],
       distinct: true,
       logging: console.log, // Enable logging for debugging
     };
 
-    if(page && limit) {
-      query.limit = limit;
-      query.offset = offset;
-
-      const { rows, count } = await Image.findAndCountAll(query);
-
-      return {
-        data: rows,
-        pagination: baseReportHelper.buildPagination(count, page, limit),
-      };
-      
-    } else {
-      const rows = await Image.findAll(query);
-      return {
-        data: rows
-      };
-    }
+    const rows = await Order.findAll(query);
+    return {
+      data: rows
+    };
   }
 }
 
-export default new ImagesReportRepository();
+export default new OrdersReportRepository();

@@ -28,6 +28,9 @@ export class OrdersReportRepository {
           [Op.lte]: filter.orderTime?.to,
         };
       }
+      if(filter.visitId) {
+        where.visitId = filter.visitId;
+      }
     }
     
     const query: FindAndCountOptions<any> = {

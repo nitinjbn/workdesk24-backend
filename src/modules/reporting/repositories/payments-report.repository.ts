@@ -28,6 +28,9 @@ export class PaymentsReportRepository {
           [Op.lte]: filter.paymentCaptureTime?.to,
         };
       }
+      if(filter.visitId) {
+        where.visitId = filter.visitId;
+      }
     }
     
     const query: FindAndCountOptions<any> = {

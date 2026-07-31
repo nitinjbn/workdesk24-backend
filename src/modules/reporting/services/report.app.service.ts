@@ -1,4 +1,5 @@
 import attendanceReportRepository from '../repositories/attendance-app-report.repository';
+import ordersReportRepository from '../repositories/orders-app-report.repository';
 import {
   AttendanceReportResponse,
   AttendanceReportPayload
@@ -38,6 +39,30 @@ export class ReportService {
     };
   }
 
+
+  async getOrdersReport(
+    payload: { hostId: number; userId?: number; filter?: { fromDate: number; tillDate: number; customerId?: number } },
+  ): Promise<any> {
+    const { hostId, userId, filter } = payload;
+
+    const report = await ordersReportRepository.getOrdersReport({
+      hostId,
+      filter,
+      userId
+    });
+
+    const dateTimeSettings = await getHostDateTimeSettings(hostId);
+    const plainData = report.data.map((item: any) => {
+      const order = item && typeof item.toJSON === 'function'
+        ? item.toJSON()
+        : item;
+      return order;
+    });
+
+    return {
+      orders: formatDateTimeFieldsBySettings(plainData, dateTimeSettings)
+    };
+  }
   
 }
 

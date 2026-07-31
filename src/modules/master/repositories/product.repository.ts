@@ -363,7 +363,8 @@ export class productRepository {
         include: [
           [db.Sequelize.col('Product.id'), 'productId'],
           [db.Sequelize.col('productCategoryDetails.categoryName'), 'category'],
-          [db.Sequelize.col('productBrandDetails.brandName'), 'brand']
+          [db.Sequelize.col('productBrandDetails.brandName'), 'brand'],
+          [db.Sequelize.col('productUOMDetails.uomName'), 'uom']
         ]
       },
       where,
@@ -384,6 +385,15 @@ export class productRepository {
             isDeleted: 0
           },
           as: "productBrandDetails",
+          required: false
+        },
+        {
+          attributes:[],
+          model: UOM,
+          where: {
+            isDeleted: 0
+          },
+          as: "productUOMDetails",
           required: false
         },
         {

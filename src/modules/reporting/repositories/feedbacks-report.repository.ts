@@ -28,6 +28,9 @@ export class FeedbacksReportRepository {
           [Op.lte]: filter.feedbackTime?.to,
         };
       }
+      if(filter.visitId) {
+        where.visitId = filter.visitId;
+      }
     }
     
     const query: FindAndCountOptions<any> = {

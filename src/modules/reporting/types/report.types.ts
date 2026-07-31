@@ -115,6 +115,7 @@ export interface GetOrdersReportPayload extends ReportPaginationParams, ReportSo
       from?: number;
       to?: number;
     };
+    visitId?: number;
   };
   sortBy?: string;
   sortOrder?: ReportSortDirectionInput;
@@ -134,6 +135,7 @@ export interface GetPaymentsReportPayload extends ReportPaginationParams, Report
       from?: number;
       to?: number;
     };
+    visitId?: number;
   };
   sortBy?: string;
   sortOrder?: ReportSortDirectionInput;
@@ -153,6 +155,7 @@ export interface GetFeedbacksReportPayload extends ReportPaginationParams, Repor
       from?: number;
       to?: number;
     };
+    visitId?: number;
   };
   sortBy?: string;
   sortOrder?: ReportSortDirectionInput;
@@ -172,6 +175,7 @@ export interface GetImagesReportPayload extends ReportPaginationParams, ReportSo
       from?: number;
       to?: number;
     };
+    visitId?: number;
   };
   sortBy?: string;
   sortOrder?: ReportSortDirectionInput;

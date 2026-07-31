@@ -30,6 +30,29 @@ export class ReportController {
       next(error);
     }
   }
+
+  async getOrders(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    const { hostId, userId, filter } = req.body;
+
+    if (!hostId || !userId || !filter) {
+      res.status(400).json({
+        success: false,
+        message: 'Required fields are missing',
+      } as ApiResponse);
+      return;
+    }
+
+    try {
+      const report = await reportService.getOrdersReport({ hostId, userId, filter });
+      res.json({
+        success: true,
+        message: 'Orders report retrieved successfully',
+        data: report,
+      } as ApiResponse);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default new ReportController();
