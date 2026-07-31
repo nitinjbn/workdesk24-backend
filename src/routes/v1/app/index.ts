@@ -4,7 +4,7 @@ import { authMiddleware } from '../../../shared/middleware/auth.middleware';
 import { resolveVisitLocalId } from '../../../shared/middleware/resolve-visit-local-id.middleware';
 import { AuthRequest } from '../../../types';
 import syncController from '../../../modules/sync/controllers/sync.controller';
-import reportController from '../../../modules/reporting/controllers/report.controller';
+import reportController from '../../../modules/reporting/controllers/report.app.controller';
 import userController from '../../../modules/master/controllers/user.controller';
 
 const router = Router();
@@ -30,8 +30,8 @@ router.post('/sync/uploadMultipleMedia', upload.array('media', 10), syncControll
 router.post('/sync/userSettings', syncController.getUserSettings.bind(syncController));
 
 // Report related routes
-router.post('/reports/getGPSHistory', reportController.getAppGpsHistory.bind(reportController));
-router.post('/reports/getAttendance', reportController.getAppAttendance.bind(reportController));
+//router.post('/reports/getGPSHistory', reportController.getAppGpsHistory.bind(reportController));
+router.post('/reports/getAttendance', reportController.getAttendance.bind(reportController));
 
 // User Device related routes
 router.post('/device/updateFcmToken', userController.updateFcmToken.bind(userController));

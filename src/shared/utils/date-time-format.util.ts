@@ -140,6 +140,34 @@ export class DateTimeFormatUtil {
     // Output: ['SUNDAY', 'SATURDAY']
   }
 
+  static getUnixDateRange(payload: { year: number; month: number }): { fromDate: number; tillDate: number } {
+    const { year, month } = payload;
+    const selectedMonth = moment({ year, month: month - 1 });
+
+    const fromDate = selectedMonth.clone().startOf('month').unix();
+    const tillDate = selectedMonth.isSame(moment(), 'month')
+      ? moment().endOf('day').unix()
+      : selectedMonth.clone().endOf('month').unix();
+
+    return {
+      fromDate,
+      tillDate,
+    };
+  }
+
+  static getDayFromUnix(unixTimestamp: number, timezone = 'UTC'): number | null {
+    const unixMs = DateTimeFormatUtil.asUnixMs(unixTimestamp);
+    if (unixMs === null) {
+      return null;
+    }
+
+    const dateTime = moment.tz(unixMs, timezone);
+    if (!dateTime.isValid()) {
+      return null;
+    }
+
+    return dateTime.date();
+  }
 }
 
 export const formatDateTimeFieldsBySettings = <T>(data: T, settings?: HostDateTimeSettings, fieldFormatConfig?: Record<string, 'date' | 'datetime'>): T => {

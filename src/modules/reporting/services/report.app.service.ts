@@ -1,0 +1,44 @@
+import attendanceReportRepository from '../repositories/attendance-app-report.repository';
+import {
+  AttendanceReportResponse,
+  AttendanceReportPayload
+} from '../types/report.types';
+import { Attendance } from '../../../models/schemas';
+import { getHostDateTimeSettings } from '../../../shared/utils/host-settings.util';
+import { DateTimeFormatUtil, formatDateTimeFieldsBySettings } from '../../../shared/utils/date-time-format.util';
+type AttendanceInstance = typeof Attendance.prototype;
+export class ReportService {
+  
+  async getAttendanceReport(
+    payload: { hostId: number; userId?: number; filter?: { fromDate: number; tillDate: number } } & AttendanceReportPayload,
+  ): Promise<AttendanceReportResponse<AttendanceInstance>> {
+    const { hostId, userId, filter } = payload;
+    //const { page, limit } = payload; // Commented because pagination is mandatory for this report and if not provided, it will default to page 1 and limit 10 in the repository.
+
+    const report = await attendanceReportRepository.getReport({
+      hostId,
+      filter,
+      userId
+    });
+
+    const dateTimeSettings = await getHostDateTimeSettings(hostId);
+    const plainData = report.data.map((item: any) => {
+      const attendance = item && typeof item.toJSON === 'function'
+        ? item.toJSON()
+        : item;
+
+      return {
+        day: DateTimeFormatUtil.getDayFromUnix(attendance.attendanceTime, dateTimeSettings.timeZone),
+        ...attendance,
+      };
+    });
+
+    return {
+      attendance: formatDateTimeFieldsBySettings(plainData, dateTimeSettings)
+    };
+  }
+
+  
+}
+
+export default new ReportService();
