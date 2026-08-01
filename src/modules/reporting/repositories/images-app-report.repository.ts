@@ -1,67 +1,58 @@
-import { FindAndCountOptions, Includeable, Op } from 'sequelize';
-import db, { Image } from '../../../models';
-import { CommonReportSortBy, ReportResponse, ReportSortDirection, GetImagesReportPayload } from '../types/report.types';
-import baseReportHelper from '../helpers/base-report.helper';
-import { buildCommonReportOrder, buildDynamicModelFilters, buildUserInclude, buildUserScopedWhere, extractUserFilter } from './user-scoped-report.helper';
+import { FindAndCountOptions, Op } from 'sequelize';
+import db from '../../../models';
+import { ReportResponse } from '../types/report.types';
 
 
 export class ImagesReportRepository {
-  async getImagesReport(params: { hostId: number; userId?: number; filter?: { fromDate: number; tillDate: number; customerId?: number } }): Promise<ReportResponse<any>> {
+  async getImagesReport(params: { hostId: number; userId?: number; filter?: { capturedAt?: { fromDate: number; tillDate: number }; customerId?: number } }): Promise<ReportResponse<any>> {
     const { filter, hostId, userId } = params;
-    // const { offset } = baseReportHelper.normalizePagination({ page, limit });
 
-    let where: Record<string, any> = { hostId, userId, isDeleted: 0 };
-    let visitWhere: Record<string, any> = { isDeleted: 0 };
-    if(filter) {
-      if(filter.customerId) {
+    const visitWhere: Record<string, any> = { hostId, isDeleted: 0 };
+    const imageWhere: Record<string, any> = { hostId, isDeleted: 0 };
+
+    if (userId) {
+      visitWhere.userId = userId;
+      imageWhere.userId = userId;
+    }
+
+    if (filter) {
+      if (filter.customerId) {
         visitWhere.customerId = filter.customerId;
       }
-      if(filter.fromDate && filter.tillDate) {
-        where.capturedAt = {
-          [Op.gte]: filter.fromDate,
-          [Op.lte]: filter.tillDate,
+      if (filter?.capturedAt?.fromDate && filter.capturedAt?.tillDate) {
+        imageWhere.capturedAt = {
+          [Op.gte]: filter.capturedAt.fromDate,
+          [Op.lte]: filter.capturedAt.tillDate,
         };
       }
     }
-    
+
     const query: FindAndCountOptions<any> = {
-      attributes: {
-        exclude: ['id', 'localId', 'isDeleted', 'deletedAt', 'updatedAt', 'syncedAt', 'locationAccuracy', 'batteryPercentage', 'isCharging', 'locationAltitude', 'locationSpeed', 'locationProvider', 'locationProvider'],
-        include: [
-          ['id', 'imageId'],
-          [db.Sequelize.col('user.name'), 'employeeName'],
-          [db.Sequelize.col('user.employeeCode'), 'employeeCode']
-        ]
-      },
-      where,
+      attributes: ['customerName', 'customerCode', 'contactPerson', 'customerPhone', 'customerEmail', 'customerType', 'checkInTime', 'checkOutTime', 'purpose', 'remarks'],
+      where: visitWhere,
       include: [
         {
           model: db.User,
           as: 'user',
           attributes: [],
           required: true,
-          where: {
-            isDeleted: 0,
-          },
+          where: { isDeleted: 0 },
         },
         {
-          model: db.Visit,
-          as: 'visit',
-          attributes: {
-            exclude: ['id', 'localId', 'isDeleted', 'deletedAt', 'updatedAt', 'syncedAt', 'checkInLocationAccuracy', 'checkOutLocationAccuracy', 'checkInBatteryPercentage', 'checkOutBatteryPercentage', 'isChargingOnCheckIn', 'isChargingOnCheckOut', 'checkInLocationAltitude', 'checkOutLocationAltitude', 'checkInLocationSpeed', 'checkOutLocationSpeed', 'checkInLocationProvider', 'checkOutLocationProvider'],
-          },
+          model: db.Image,
+          attributes: ['id', 'caption', 'mediaUrl', 'mediaType', 'capturedAt', 'address'],
           required: true,
-          where: visitWhere,
-        }
+          where: imageWhere,
+          as: 'images',
+        },
       ],
-      order: [["capturedAt", "DESC"]],
+      order: [['checkInTime', 'DESC'], [{ model: db.Image, as: 'images' }, 'capturedAt', 'DESC']],
       distinct: true,
-      logging: console.log, // Enable logging for debugging
     };
 
-    const rows = await Image.findAll(query);
+    const rows = await db.Visit.findAll(query);
     return {
-      data: rows
+      data: rows,
     };
   }
 }

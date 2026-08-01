@@ -46,7 +46,7 @@ export class ReportService {
 
 
   async getOrdersReport(
-    payload: { hostId: number; userId?: number; filter?: { fromDate: number; tillDate: number; customerId?: number } },
+    payload: { hostId: number; userId?: number; filter?: { orderTime?: { fromDate: number; tillDate: number }; customerId?: number } },
   ): Promise<any> {
     const { hostId, userId, filter } = payload;
 
@@ -118,7 +118,7 @@ export class ReportService {
   }
 
   async getFeedbacksReport(
-    payload: { hostId: number; userId?: number; filter?: { fromDate: number; tillDate: number; customerId?: number } },
+    payload: { hostId: number; userId?: number; filter?: { feedbackTime?: { fromDate: number; tillDate: number }; customerId?: number } },
   ): Promise<any> {
     const { hostId, userId, filter } = payload;
 
@@ -142,7 +142,7 @@ export class ReportService {
   }
 
   async getImagesReport(
-    payload: { hostId: number; userId?: number; filter?: { fromDate: number; tillDate: number; customerId?: number } },
+    payload: { hostId: number; userId?: number; filter?: { capturedAt?: { fromDate: number; tillDate: number }; customerId?: number } },
   ): Promise<any> {
     const { hostId, userId, filter } = payload;
 

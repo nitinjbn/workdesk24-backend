@@ -6,7 +6,7 @@ import { buildCommonReportOrder, buildDynamicModelFilters, buildUserInclude, bui
 
 
 export class OrdersReportRepository {
-  async getOrdersReport(params: { hostId: number; userId?: number; filter?: { fromDate: number; tillDate: number; customerId?: number }}): Promise<ReportResponse<any>> {
+  async getOrdersReport(params: { hostId: number; userId?: number; filter?: { orderTime?: { fromDate: number; tillDate: number }; customerId?: number }}): Promise<ReportResponse<any>> {
     const { hostId, userId, filter } = params;
 
     let where: Record<string, any> = { hostId, userId, isDeleted: 0 };
@@ -15,10 +15,10 @@ export class OrdersReportRepository {
       if(filter.customerId) {
         visitWhere.customerId = filter.customerId;
       }
-      if(filter.fromDate && filter.tillDate) {
+      if(filter.orderTime?.fromDate && filter.orderTime?.tillDate) {
         where.orderTime = {
-          [Op.gte]: filter.fromDate,
-          [Op.lte]: filter.tillDate,
+          [Op.gte]: filter.orderTime.fromDate,
+          [Op.lte]: filter.orderTime.tillDate,
         };
       }
     }

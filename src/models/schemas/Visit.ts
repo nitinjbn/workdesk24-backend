@@ -61,6 +61,7 @@ class Visit extends Model<VisitAttributes, VisitCreationAttributes> implements V
     });
     Visit.hasMany(models.Image, {
       foreignKey: 'visitId',
+      as: 'images',
     });
     Visit.hasMany(models.Payment, {
       foreignKey: 'visitId',
