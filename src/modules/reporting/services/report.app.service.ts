@@ -70,7 +70,7 @@ export class ReportService {
   }
   
   async getVisitsReport(
-    payload: { hostId: number; userId?: number; filter?: { fromDate: number; tillDate: number; customerId?: number } },
+    payload: { hostId: number; userId?: number; filter?: { checkInTime?: { fromDate: number; tillDate: number }; customerId?: number } },
   ): Promise<any> {
     const { hostId, userId, filter } = payload;
 

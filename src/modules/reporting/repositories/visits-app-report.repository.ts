@@ -6,7 +6,7 @@ import { buildCommonReportOrder, buildDynamicModelFilters, buildUserInclude, bui
 
 
 export class VisitsReportRepository {
-  async getVisitsReport(params: { hostId: number; userId?: number; filter?: { fromDate: number; tillDate: number; customerId?: number };  }): Promise<ReportResponse<any>> {
+  async getVisitsReport(params: { hostId: number; userId?: number; filter?: { checkInTime?: { fromDate: number; tillDate: number }; customerId?: number };  }): Promise<ReportResponse<any>> {
     const { filter, hostId, userId } = params;
 
     let where: Record<string, any> = { hostId, userId, isDeleted: 0 };
@@ -14,23 +14,16 @@ export class VisitsReportRepository {
       if(filter.customerId) {
         where.customerId = filter.customerId;
       }
-      if(filter.fromDate && filter.tillDate) {
+      if(filter.checkInTime?.fromDate && filter.checkInTime?.tillDate) {
         where.checkInTime = {
-          [Op.gte]: filter.fromDate,
-          [Op.lte]: filter.tillDate,
+          [Op.gte]: filter.checkInTime.fromDate,
+          [Op.lte]: filter.checkInTime.tillDate,
         };
       }
     }
     
     const query: FindAndCountOptions<any> = {
-      attributes: {
-        exclude: ['id', 'localId', 'isDeleted', 'deletedAt', 'updatedAt', 'syncedAt', 'checkInLocationAccuracy', 'checkOutLocationAccuracy', 'checkInBatteryPercentage', 'checkOutBatteryPercentage', 'isChargingOnCheckIn', 'isChargingOnCheckOut', 'checkInLocationAltitude', 'checkOutLocationAltitude', 'checkInLocationSpeed', 'checkOutLocationSpeed', 'checkInLocationProvider', 'checkOutLocationProvider'],
-        include: [
-          ['id', 'visitId'],
-          [db.Sequelize.col('user.name'), 'employeeName'],
-          [db.Sequelize.col('user.employeeCode'), 'employeeCode']
-        ]
-      },
+      attributes: ["customerName", "customerCode", "contactPerson", "customerPhone", "customerEmail", "customerType", "customerAddress", "checkInTime", "checkOutTime", "purpose", "remarks", "visitDuration", "checkInAddress", "checkOutAddress"],
       where,
       include: [
         {
