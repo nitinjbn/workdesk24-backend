@@ -23,7 +23,7 @@ export class VisitsReportRepository {
     }
     
     const query: FindAndCountOptions<any> = {
-      attributes: ["customerName", "customerCode", "contactPerson", "customerPhone", "customerEmail", "customerType", "customerAddress", "checkInTime", "checkOutTime", "purpose", "remarks", "visitDuration", "checkInAddress", "checkOutAddress"],
+      attributes: ["customerId", "customerName", "customerCode", "contactPerson", "customerPhone", "customerEmail", "customerType", "customerAddress", "checkInTime", "checkOutTime", "purpose", "remarks", "visitDuration", "checkInAddress", "checkOutAddress"],
       where,
       include: [
         {

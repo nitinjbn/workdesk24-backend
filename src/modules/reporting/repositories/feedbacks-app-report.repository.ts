@@ -28,7 +28,7 @@ export class FeedbacksReportRepository {
     }
 
     const query: FindAndCountOptions<any> = {
-      attributes: ['customerName', 'customerCode', 'contactPerson', 'customerPhone', 'customerEmail', 'customerType', 'checkInTime', 'checkOutTime', 'purpose', 'remarks'],
+      attributes: ['customerId', 'customerName', 'customerCode', 'contactPerson', 'customerPhone', 'customerEmail', 'customerType', 'checkInTime', 'checkOutTime', 'purpose', 'remarks'],
       where: visitWhere,
       include: [
         {

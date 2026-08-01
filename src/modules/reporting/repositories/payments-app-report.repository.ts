@@ -28,7 +28,7 @@ export class PaymentsReportRepository {
     }
 
     const query: FindAndCountOptions<any> = {
-      attributes: ["customerName", "customerCode", "contactPerson", "customerPhone", "customerEmail", "customerType"],
+      attributes: ["customerId", "customerName", "customerCode", "contactPerson", "customerPhone", "customerEmail", "customerType"],
       where: visitWhere,
       include: [
         {
