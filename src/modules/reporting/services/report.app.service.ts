@@ -12,6 +12,8 @@ import {
 import { Attendance } from '../../../models/schemas';
 import { getHostDateTimeSettings } from '../../../shared/utils/host-settings.util';
 import { DateTimeFormatUtil, formatDateTimeFieldsBySettings } from '../../../shared/utils/date-time-format.util';
+import { createConfiguredError } from '../../../shared/utils/error.util';
+import { customerRepository } from '../../master/repositories/customer.repository';
 type AttendanceInstance = typeof Attendance.prototype;
 export class ReportService {
   
@@ -162,6 +164,28 @@ export class ReportService {
 
     return {
       images: formatDateTimeFieldsBySettings(plainData, dateTimeSettings)
+    };
+  }
+
+  async getCustomerDetails(
+    payload: { hostId: number, customerId: number }
+  ): Promise<any> {
+    let { hostId, customerId } = payload;
+
+    const customerDetails = await visitsReportRepository.getCustomerById({
+      hostId,
+      customerId
+    });    
+    if (!customerDetails || !Object(customerDetails.data) || Object.keys(customerDetails.data).length === 0) {
+      throw createConfiguredError("CUSTOMER_NOT_FOUND", 'Customer not found.');
+    }
+
+    const dateTimeSettings = await getHostDateTimeSettings(hostId);
+    const plainData = customerDetails?.data && typeof customerDetails.data.toJSON === 'function' 
+      ? customerDetails.data.toJSON() 
+      : customerDetails?.data;
+    return {
+      customer: formatDateTimeFieldsBySettings(plainData as any, dateTimeSettings),
     };
   }
 }

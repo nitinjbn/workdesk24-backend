@@ -37,6 +37,7 @@ router.post('/reports/getOrders', reportController.getOrders.bind(reportControll
 router.post('/reports/getPayments', reportController.getPayments.bind(reportController));
 router.post('/reports/getFeedbacks', reportController.getFeedbacks.bind(reportController));
 router.post('/reports/getImages', reportController.getImages.bind(reportController));
+router.post('/reports/getCustomerDetails', reportController.getCustomerDetails.bind(reportController));
 
 // User Device related routes
 router.post('/device/updateFcmToken', userController.updateFcmToken.bind(userController));

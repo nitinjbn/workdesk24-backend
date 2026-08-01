@@ -145,6 +145,29 @@ export class ReportController {
       next(error);
     }
   }
+
+  async getCustomerDetails(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    const { hostId, customerId } = req.body;
+
+    if (!hostId || !customerId) {
+      res.status(400).json({
+        success: false,
+        message: 'Required fields are missing',
+      } as ApiResponse);
+      return;
+    }
+
+    try {
+      const report = await reportService.getCustomerDetails({ hostId, customerId });
+      res.json({
+        success: true,
+        message: 'Customer details report retrieved successfully',
+        data: report,
+      } as ApiResponse);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default new ReportController();
