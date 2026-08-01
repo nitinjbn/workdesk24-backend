@@ -4,7 +4,7 @@ import { ReportResponse } from '../types/report.types';
 
 
 export class PaymentsReportRepository {
-  async getPaymentsReport(params: { hostId: number; userId?: number; filter?: { fromDate: number; tillDate: number; customerId?: number }}): Promise<ReportResponse<any>> {
+  async getPaymentsReport(params: { hostId: number; userId?: number; filter?: { paymentCaptureTime?: { fromDate: number; tillDate: number }; customerId?: number }}): Promise<ReportResponse<any>> {
     const { filter, hostId, userId } = params;
 
     const visitWhere: Record<string, any> = { hostId, isDeleted: 0 };
@@ -19,10 +19,10 @@ export class PaymentsReportRepository {
       if (filter.customerId) {
         visitWhere.customerId = filter.customerId;
       }
-      if (filter.fromDate && filter.tillDate) {
+      if (filter.paymentCaptureTime?.fromDate && filter.paymentCaptureTime?.tillDate) {
         paymentWhere.paymentCaptureTime = {
-          [Op.gte]: filter.fromDate,
-          [Op.lte]: filter.tillDate,
+          [Op.gte]: filter.paymentCaptureTime.fromDate,
+          [Op.lte]: filter.paymentCaptureTime.tillDate,
         };
       }
     }

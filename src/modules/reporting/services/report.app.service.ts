@@ -94,7 +94,7 @@ export class ReportService {
   }
 
   async getPaymentsReport(
-    payload: { hostId: number; userId?: number; filter?: { fromDate: number; tillDate: number; customerId?: number } },
+    payload: { hostId: number; userId?: number; filter?: { paymentCaptureTime?: { fromDate: number; tillDate: number }; customerId?: number } },
   ): Promise<any> {
     const { hostId, userId, filter } = payload;
 
