@@ -1,66 +1,58 @@
-import { FindAndCountOptions, Includeable, Op } from 'sequelize';
-import db, { Order, OrderProduct, Feedback } from '../../../models';
-import { AttendanceReportFilter, CommonReportSortBy, ReportResponse, ReportSortDirection, GetFeedbacksReportPayload } from '../types/report.types';
-import baseReportHelper from '../helpers/base-report.helper';
-import { buildCommonReportOrder, buildDynamicModelFilters, buildUserInclude, buildUserScopedWhere, extractUserFilter } from './user-scoped-report.helper';
+import { FindAndCountOptions, Op } from 'sequelize';
+import db from '../../../models';
+import { ReportResponse } from '../types/report.types';
 
 
 export class FeedbacksReportRepository {
-  async getFeedbacksReport(params: { hostId: number; userId?: number; filter?: { fromDate: number; tillDate: number; customerId?: number }}): Promise<ReportResponse<any>> {
-    const { filter, hostId, userId} = params;
+  async getFeedbacksReport(params: { hostId: number; userId?: number; filter?: { feedbackTime?: {fromDate: number; tillDate: number;}; customerId?: number }}): Promise<ReportResponse<any>> {
+    const { filter, hostId, userId } = params;
 
-    let where: Record<string, any> = { hostId, userId, isDeleted: 0 };
-    let visitWhere: Record<string, any> = { isDeleted: 0 };
-    if(filter) {
-      if(filter.customerId) {
+    const visitWhere: Record<string, any> = { hostId, isDeleted: 0 };
+    const feedbackWhere: Record<string, any> = { hostId, isDeleted: 0 };
+
+    if (userId) {
+      visitWhere.userId = userId;
+      feedbackWhere.userId = userId;
+    }
+
+    if (filter) {
+      if (filter.customerId) {
         visitWhere.customerId = filter.customerId;
       }
-      if(filter.fromDate && filter.tillDate) {
-        where.feedbackTime = {
-          [Op.gte]: filter.fromDate,
-          [Op.lte]: filter.tillDate,
+      if (filter?.feedbackTime?.fromDate && filter.feedbackTime?.tillDate) {
+        feedbackWhere.feedbackTime = {
+          [Op.gte]: filter.feedbackTime.fromDate,
+          [Op.lte]: filter.feedbackTime.tillDate,
         };
       }
     }
-    
+
     const query: FindAndCountOptions<any> = {
-      attributes: {
-        exclude: ['id', 'localId', 'isDeleted', 'deletedAt', 'updatedAt', 'syncedAt', 'locationAccuracy', 'batteryPercentage', 'isChargingOnFeedback', 'locationAltitude', 'locationSpeed', 'locationProvider', 'locationProvider'],
-        include: [
-          ['id', 'feedbackId'],
-          [db.Sequelize.col('user.name'), 'employeeName'],
-          [db.Sequelize.col('user.employeeCode'), 'employeeCode']
-        ]
-      },
-      where,
+      attributes: ['customerName', 'customerCode', 'contactPerson', 'customerPhone', 'customerEmail', 'customerType', 'checkInTime', 'checkOutTime', 'purpose', 'remarks'],
+      where: visitWhere,
       include: [
         {
           model: db.User,
           as: 'user',
           attributes: [],
           required: true,
-          where: {
-            isDeleted: 0,
-          },
+          where: { isDeleted: 0 },
         },
         {
-          model: db.Visit,
-          as: 'visit',
-          attributes: {
-            exclude: ['id', 'localId', 'isDeleted', 'deletedAt', 'updatedAt', 'syncedAt', 'checkInLocationAccuracy', 'checkOutLocationAccuracy', 'checkInBatteryPercentage', 'checkOutBatteryPercentage', 'isChargingOnCheckIn', 'isChargingOnCheckOut', 'checkInLocationAltitude', 'checkOutLocationAltitude', 'checkInLocationSpeed', 'checkOutLocationSpeed', 'checkInLocationProvider', 'checkOutLocationProvider'],
-          },
+          model: db.Feedback,
+          as: 'feedbacks',
+          attributes: ['id', 'message', 'mediaUrl', 'mediaType', 'feedbackTime', 'address'],
           required: true,
-          where: visitWhere,
-        }
+          where: feedbackWhere,
+        },
       ],
-      order: [["feedbackTime", "DESC"]],
+      order: [['checkInTime', 'DESC'], [{ model: db.Feedback, as: 'feedbacks' }, 'feedbackTime', 'DESC']],
       distinct: true,
-      logging: console.log, // Enable logging for debugging
     };
 
-    const rows = await Feedback.findAll(query);
+    const rows = await db.Visit.findAll(query);
     return {
-      data: rows
+      data: rows,
     };
   }
 }
