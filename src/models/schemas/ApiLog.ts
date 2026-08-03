@@ -156,7 +156,7 @@ export function initApiLog(sequelize: Sequelize): typeof ApiLog {
       },
       createdAt: {
         type: DataTypes.BIGINT,
-        allowNull: false
+        allowNull: true,
       },
       updatedAt: {
         type: DataTypes.BIGINT,
