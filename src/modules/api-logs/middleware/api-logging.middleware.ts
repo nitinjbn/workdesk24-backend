@@ -13,6 +13,7 @@ import type {
 const SKIP_PATH_SUFFIXES = new Set(['/health', '/ping']);
 const SKIP_EXACT_PATHS = new Set(['/favicon.ico']);
 const DEFAULT_MAX_BODY_BYTES = Number(process.env.API_LOG_BODY_MAX_BYTES ?? 32768);
+const API_LOG_CREATE_TIMEOUT_MS = Number(process.env.API_LOG_CREATE_TIMEOUT_MS ?? 30);
 
 const SENSITIVE_KEYS = new Set([
   'password',
@@ -136,12 +137,12 @@ function maskSensitiveData(value: unknown, visited: WeakSet<object> = new WeakSe
 }
 
 function jsonByteLength(value: unknown): number {
-  const serialized = JSON.stringify(value) ?? '';
+  const serialized = safeJsonStringify(value);
   return Buffer.byteLength(serialized, 'utf8');
 }
 
 function ensureSizeBound(value: JsonValue, maxBytes: number): JsonValue {
-  const serialized = JSON.stringify(value) ?? '';
+  const serialized = safeJsonStringify(value);
   const size = Buffer.byteLength(serialized, 'utf8');
   if (size <= maxBytes) {
     return value;
@@ -153,6 +154,44 @@ function ensureSizeBound(value: JsonValue, maxBytes: number): JsonValue {
     maxBytes,
     preview: serialized.slice(0, maxBytes),
   };
+}
+
+function safeJsonStringify(value: unknown): string {
+  const visited = new WeakSet<object>();
+
+  try {
+    const serialized = JSON.stringify(value, (_key, currentValue) => {
+      if (typeof currentValue === 'bigint') {
+        return currentValue.toString();
+      }
+
+      if (typeof currentValue === 'object' && currentValue !== null) {
+        if (visited.has(currentValue)) {
+          return '[circular]';
+        }
+        visited.add(currentValue);
+      }
+
+      return currentValue;
+    });
+
+    return serialized ?? '';
+  } catch {
+    return '[unserializable]';
+  }
+}
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T | null> {
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+    return promise;
+  }
+
+  return Promise.race<T | null>([
+    promise,
+    new Promise<null>((resolve) => {
+      setTimeout(() => resolve(null), timeoutMs);
+    }),
+  ]);
 }
 
 function getRequestSize(req: ApiLoggingRequest, fallbackBody: JsonValue): number {
@@ -306,90 +345,112 @@ function errorMessageFromUnknown(error: unknown): string {
 
 export function createApiLoggingMiddleware(service: ApiLogService = apiLogService): RequestHandler {
   return async (req: ApiLoggingRequest, res: Response, next: NextFunction): Promise<void> => {
-    const endpoint = getEndpoint(req);
-    if (shouldSkipPath(endpoint)) {
-      next();
-      return;
-    }
-
-    const startTime = process.hrtime.bigint();
-    const requestTime = Math.floor(Date.now() / 1000);
-    const requestDate = new Date().toISOString().slice(0, 10);
-    const maxBodyBytes = Number.isFinite(DEFAULT_MAX_BODY_BYTES) && DEFAULT_MAX_BODY_BYTES > 0
-      ? DEFAULT_MAX_BODY_BYTES
-      : 32768;
-
-    const maskedRequestBody = ensureSizeBound(maskSensitiveData(req.body), maxBodyBytes);
-    const requestSize = getRequestSize(req, maskedRequestBody);
-
-    const { category, module } = resolveCategoryAndModule(req, endpoint);
-
-    const apiLogId = await service.createProcessingLog({
-      hostId: resolveHostId(req),
-      userId: resolveUserId(req),
-      deviceId: resolveDeviceId(req),
-      source: inferSource(req),
-      category,
-      module,
-      apiEndpoint: `${req.method.toUpperCase()} ${endpoint}`,
-      requestBody: maskedRequestBody,
-      requestSize,
-      requestTime,
-      requestDate,
-      ipAddress: resolveIpAddress(req),
-      userAgent: toStringOrUndefined(req.headers['user-agent']),
-    });
-
-    if (apiLogId !== null) {
-      req.apiLogId = apiLogId;
-    }
-
-    let capturedResponseBody: unknown;
-
-    const originalJson = res.json.bind(res);
-    res.json = ((body: unknown) => {
-      capturedResponseBody = body;
-      return originalJson(body);
-    }) as typeof res.json;
-
-    const originalSend = res.send.bind(res);
-    res.send = ((body: unknown) => {
-      if (capturedResponseBody === undefined) {
-        capturedResponseBody = body;
-      }
-      return originalSend(body);
-    }) as typeof res.send;
-
-    res.on('finish', () => {
-      if (req.apiLogId === undefined) {
+    try {
+      const endpoint = getEndpoint(req);
+      if (shouldSkipPath(endpoint)) {
+        next();
         return;
       }
 
-      const responseTime = Math.floor(Date.now() / 1000);
-      const durationMilliseconds = getDurationMilliseconds(startTime);
-      const responseStatusCode = res.statusCode;
-      const status = responseStatusCode < 400 ? 'SUCCESS' : 'FAILED';
-      const maskedResponseBody = capturedResponseBody === undefined
-        ? undefined
-        : ensureSizeBound(maskSensitiveData(capturedResponseBody), maxBodyBytes);
-      const responseSize = getResponseSize(res, maskedResponseBody);
-      const locals = res.locals as ApiLoggingLocals;
+      const startTime = process.hrtime.bigint();
+      const requestTime = Math.floor(Date.now() / 1000);
+      const requestDate = new Date().toISOString().slice(0, 10);
+      const maxBodyBytes = Number.isFinite(DEFAULT_MAX_BODY_BYTES) && DEFAULT_MAX_BODY_BYTES > 0
+        ? DEFAULT_MAX_BODY_BYTES
+        : 32768;
 
-      const payload: ApiLogFinalizeInput = {
-        apiLogId: req.apiLogId,
-        status,
-        responseStatusCode,
-        responseBody: maskedResponseBody,
-        responseSize,
-        responseTime,
-        durationMilliseconds,
-        errorMessage: locals.apiLoggingErrorMessage,
-      };
+      const maskedRequestBody = ensureSizeBound(maskSensitiveData(req.body), maxBodyBytes);
+      const requestSize = getRequestSize(req, maskedRequestBody);
 
-      void service.queueFinalizeLog(payload);
-    });
+      const { category, module } = resolveCategoryAndModule(req, endpoint);
 
-    next();
+      const createLogPromise = service.createProcessingLog({
+        hostId: resolveHostId(req),
+        userId: resolveUserId(req),
+        deviceId: resolveDeviceId(req),
+        source: inferSource(req),
+        category,
+        module,
+        apiEndpoint: `${req.method.toUpperCase()} ${endpoint}`,
+        requestBody: maskedRequestBody,
+        requestSize,
+        requestTime,
+        requestDate,
+        ipAddress: resolveIpAddress(req),
+        userAgent: toStringOrUndefined(req.headers['user-agent']),
+      }).catch((error: unknown) => {
+        logger.error('API logging create failed before controller execution.', {
+          error: error instanceof Error ? error.message : String(error),
+          endpoint,
+        });
+        return null;
+      });
+
+      const apiLogId = await withTimeout(createLogPromise, API_LOG_CREATE_TIMEOUT_MS);
+      if (apiLogId !== null) {
+        req.apiLogId = apiLogId;
+      }
+
+      let capturedResponseBody: unknown;
+
+      const originalJson = res.json.bind(res);
+      res.json = ((body: unknown) => {
+        capturedResponseBody = body;
+        return originalJson(body);
+      }) as typeof res.json;
+
+      const originalSend = res.send.bind(res);
+      res.send = ((body: unknown) => {
+        if (capturedResponseBody === undefined) {
+          capturedResponseBody = body;
+        }
+        return originalSend(body);
+      }) as typeof res.send;
+
+      res.on('finish', () => {
+        try {
+          if (req.apiLogId === undefined) {
+            return;
+          }
+
+          const responseTime = Math.floor(Date.now() / 1000);
+          const durationMilliseconds = getDurationMilliseconds(startTime);
+          const responseStatusCode = res.statusCode;
+          const status = responseStatusCode < 400 ? 'SUCCESS' : 'FAILED';
+          const maskedResponseBody = capturedResponseBody === undefined
+            ? undefined
+            : ensureSizeBound(maskSensitiveData(capturedResponseBody), maxBodyBytes);
+          const responseSize = getResponseSize(res, maskedResponseBody);
+          const locals = res.locals as ApiLoggingLocals;
+
+          const payload: ApiLogFinalizeInput = {
+            apiLogId: req.apiLogId,
+            status,
+            responseStatusCode,
+            responseBody: maskedResponseBody,
+            responseSize,
+            responseTime,
+            durationMilliseconds,
+            errorMessage: locals.apiLoggingErrorMessage,
+          };
+
+          void service.queueFinalizeLog(payload);
+        } catch (error: unknown) {
+          logger.error('API logging finalize enqueue failed after response finish.', {
+            error: error instanceof Error ? error.message : String(error),
+            endpoint,
+          });
+        }
+      });
+
+      next();
+    } catch (error: unknown) {
+      logger.error('API logging middleware failed; continuing request without logging.', {
+        error: error instanceof Error ? error.message : String(error),
+        path: req.originalUrl,
+      });
+      next();
+    }
   };
 }
 
