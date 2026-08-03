@@ -4,6 +4,7 @@ export const PROCESSOR_NAMES = {
   EMAIL: 'email-processor',
   IMAGE: 'image-processor',
   REPORT: 'report-processor',
+  SYSTEM: 'system-processor',
 } as const;
 
 export type ProcessorName = (typeof PROCESSOR_NAMES)[keyof typeof PROCESSOR_NAMES];

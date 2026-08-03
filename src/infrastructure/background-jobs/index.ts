@@ -56,8 +56,11 @@ export {
   notificationProcessor,
   placeholderProcessors,
   reportProcessor,
+  systemProcessor,
 } from './processors';
 export {
+  ApiLogQueue,
+  apiLogQueue,
   LocationQueue,
   locationQueue,
   type ResolveLocationPayload,
@@ -70,5 +73,6 @@ export {
   locationWorkerDefinition,
   notificationWorkerDefinition,
   reportWorkerDefinition,
+  systemWorkerDefinition,
 } from './workers';
 export { QueueCleanupUtils } from './utils/queue-cleanup.utils';

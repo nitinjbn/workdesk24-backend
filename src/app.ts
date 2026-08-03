@@ -7,6 +7,7 @@ import healthRoutes from './routes/health.routes';
 import { bullBoardBasePath, createBullBoardRouter } from './modules/bull-board';
 import { errorHandler } from './shared/middleware/error-handler.middleware';
 import responseSerializerMiddleware from './shared/middleware/response-serializer.middleware';
+import { ApiLoggingErrorMiddleware, ApiLoggingMiddleware } from './modules/api-logs';
 
 const app: Application = express();
 
@@ -45,6 +46,9 @@ app.use(express.urlencoded({ extended: true }));
 // Response serializer middleware - converts numeric fields from Sequelize
 app.use(responseSerializerMiddleware);
 
+// API logging middleware
+app.use(ApiLoggingMiddleware);
+
 // Trust proxy for correct IP addresses
 app.set('trust proxy', true);
 
@@ -64,6 +68,7 @@ app.use((_req: Request, res: Response) => {
 });
 
 // Error handler
+app.use(ApiLoggingErrorMiddleware);
 app.use(errorHandler);
 
 export default app;

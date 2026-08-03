@@ -9,22 +9,23 @@ import customerRoutes from './customers.routes';
 import reportRoutes from './reports.routes';
 import inquiryRoutes from './inquiries.routes';
 import dashboardRoutes from './dashboard.routes';
+import { apiLogRouteContext } from '../../../modules/api-logs';
 
 const router = Router();
 
-router.post('/login', rateLimitConfig.auth, adminAuthController.login.bind(adminAuthController));
-router.post('/refresh', rateLimitConfig.auth, requireAdminCsrfToken, adminAuthController.refresh.bind(adminAuthController));
-router.post('/logout', requireAdminCsrfToken, adminAuthController.logout.bind(adminAuthController));
+router.post('/login', apiLogRouteContext('admin', 'auth'), rateLimitConfig.auth, adminAuthController.login.bind(adminAuthController));
+router.post('/refresh', apiLogRouteContext('admin', 'auth'), rateLimitConfig.auth, requireAdminCsrfToken, adminAuthController.refresh.bind(adminAuthController));
+router.post('/logout', apiLogRouteContext('admin', 'auth'), requireAdminCsrfToken, adminAuthController.logout.bind(adminAuthController));
 
 router.use(authMiddleware);
 router.use(requireAdminRole);
 router.use(requireAdminCsrfToken);
 
-router.use(userRoutes);
-router.use(productRoutes);
-router.use(customerRoutes);
-router.use(reportRoutes);
-router.use(inquiryRoutes);
-router.use(dashboardRoutes);
+router.use(apiLogRouteContext('admin', 'users'), userRoutes);
+router.use(apiLogRouteContext('admin', 'products'), productRoutes);
+router.use(apiLogRouteContext('admin', 'customers'), customerRoutes);
+router.use(apiLogRouteContext('admin', 'reports'), reportRoutes);
+router.use(apiLogRouteContext('admin', 'inquiries'), inquiryRoutes);
+router.use(apiLogRouteContext('admin', 'dashboard'), dashboardRoutes);
 
 export default router;

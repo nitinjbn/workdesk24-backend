@@ -5,6 +5,7 @@ import { imageProcessor } from './image.processor';
 import { LocationProcessor, locationProcessor } from './location.processor';
 import { notificationProcessor } from './notification.processor';
 import { reportProcessor } from './report.processor';
+import { SystemProcessor, systemProcessor } from './system.processor';
 
 export {
 	emailProcessor,
@@ -12,6 +13,7 @@ export {
 	locationProcessor,
 	notificationProcessor,
 	reportProcessor,
+	systemProcessor,
 };
 
 export function createPlaceholderProcessors(logger: BackgroundJobLogger): ReadonlyArray<ProcessorDefinition> {
@@ -21,6 +23,7 @@ export function createPlaceholderProcessors(logger: BackgroundJobLogger): Readon
 		emailProcessor,
 		imageProcessor,
 		reportProcessor,
+		new SystemProcessor(logger),
 	];
 }
 

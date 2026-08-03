@@ -37,6 +37,7 @@ import { initUserOTPDeliveries } from './schemas/UserOTPDeliveries';
 import { initUserPushNotifications } from './schemas/UserPushNotifications';
 import { initUserDailySummary } from './schemas/UserDailySummary';
 import { initVisitSummary } from './schemas/VisitSummary';
+import { initApiLog } from './schemas/ApiLog';
 
 dotenv.config();
 
@@ -129,6 +130,7 @@ const UserOTPDeliveries = initUserOTPDeliveries(sequelize);
 const UserPushNotifications = initUserPushNotifications(sequelize);
 const UserDailySummary = initUserDailySummary(sequelize);
 const VisitSummary = initVisitSummary(sequelize);
+const ApiLog = initApiLog(sequelize);
 
 // Store models in an object
 const db: any = {
@@ -169,6 +171,7 @@ const db: any = {
   UserPushNotifications,
   UserDailySummary,
   VisitSummary,
+  ApiLog,
   connectionManager,
 };
 
@@ -257,6 +260,7 @@ export {
   UserPushNotifications,
   UserDailySummary,
   VisitSummary,
+  ApiLog,
 };
 
 export default db;

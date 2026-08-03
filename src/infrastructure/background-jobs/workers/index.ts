@@ -7,6 +7,7 @@ import { locationWorkerDefinition } from './location.worker';
 import { notificationWorkerDefinition } from './notification.worker';
 import { createWorkerProcessor } from './worker-processor.factory';
 import { reportWorkerDefinition } from './report.worker';
+import { systemWorkerDefinition } from './system.worker';
 
 export {
 	emailWorkerDefinition,
@@ -14,6 +15,7 @@ export {
 	locationWorkerDefinition,
 	notificationWorkerDefinition,
 	reportWorkerDefinition,
+	systemWorkerDefinition,
 };
 
 export function createWorkerDefinitions(resolver: ProcessorResolver): ReadonlyArray<WorkerDefinition> {
@@ -50,6 +52,13 @@ export function createWorkerDefinitions(resolver: ProcessorResolver): ReadonlyAr
 			...imageWorkerDefinition,
 			processor: createWorkerProcessor({
 				processorId: PROCESSOR_NAMES.IMAGE,
+				resolver,
+			}),
+		},
+		{
+			...systemWorkerDefinition,
+			processor: createWorkerProcessor({
+				processorId: PROCESSOR_NAMES.SYSTEM,
 				resolver,
 			}),
 		},

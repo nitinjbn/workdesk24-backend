@@ -1,8 +1,10 @@
 import { Router } from 'express';
 import authController from '../../../modules/auth/controllers/auth.controller';
+import { apiLogRouteContext } from '../../../modules/api-logs';
 //import authNotificationController from '../../../modules/notifications/auth/controllers/auth-notification.controller';
 
 const router = Router();
+router.use(apiLogRouteContext('auth', 'auth'));
 
 router.post('/requestOtp', authController.requestOtp.bind(authController));
 router.post('/verifyOtp', authController.verifyOtp.bind(authController));
