@@ -108,5 +108,6 @@ export const CONFIG = {
       MAX_ATTEMPTS: 5,
       MAX_RESENDS: 3,
     }
-  }
+  },
+  SKIP_LOGGING_PATH_PATTERNS: ['/background-jobs'] // Paths that should skip API logging, e.g., background job routes
 }

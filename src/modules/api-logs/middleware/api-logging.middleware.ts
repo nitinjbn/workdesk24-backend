@@ -9,10 +9,11 @@ import type {
   JsonObject,
   JsonValue,
 } from '../types/api-log.types';
+import { CONFIG } from '../../../config/constants';
 
 const SKIP_PATH_SUFFIXES = new Set(['/health', '/ping']);
 const SKIP_EXACT_PATHS = new Set(['/favicon.ico']);
-const DEFAULT_SKIP_PATH_PATTERNS = ['/background-jobs'];
+const DEFAULT_SKIP_PATH_PATTERNS = CONFIG.SKIP_LOGGING_PATH_PATTERNS ?? ['/background-jobs'];
 const DEFAULT_MAX_BODY_BYTES = Number(process.env.API_LOG_BODY_MAX_BYTES ?? 32768);
 const API_LOG_CREATE_TIMEOUT_MS = Number(process.env.API_LOG_CREATE_TIMEOUT_MS ?? 30);
 const SKIP_PATH_PATTERNS = (() => {
