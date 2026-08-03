@@ -57,6 +57,7 @@ export interface AuthenticatedRequestUser {
 export interface ApiLoggingRequest extends Request {
   user?: AuthenticatedRequestUser;
   apiLogId?: number;
+  apiLoggingDisabled?: boolean;
   apiLogContext?: {
     category: string;
     module: string;

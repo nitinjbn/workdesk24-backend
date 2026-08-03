@@ -12,8 +12,20 @@ import type {
 
 const SKIP_PATH_SUFFIXES = new Set(['/health', '/ping']);
 const SKIP_EXACT_PATHS = new Set(['/favicon.ico']);
+const DEFAULT_SKIP_PATH_PATTERNS = ['/background-jobs'];
 const DEFAULT_MAX_BODY_BYTES = Number(process.env.API_LOG_BODY_MAX_BYTES ?? 32768);
 const API_LOG_CREATE_TIMEOUT_MS = Number(process.env.API_LOG_CREATE_TIMEOUT_MS ?? 30);
+const SKIP_PATH_PATTERNS = (() => {
+  const configured = process.env.API_LOG_SKIP_PATH_PATTERNS?.trim();
+  if (!configured) {
+    return DEFAULT_SKIP_PATH_PATTERNS;
+  }
+
+  return configured
+    .split(',')
+    .map((pattern) => pattern.trim())
+    .filter((pattern) => pattern.length > 0);
+})();
 
 const SENSITIVE_KEYS = new Set([
   'password',
@@ -232,6 +244,17 @@ function shouldSkipPath(endpoint: string): boolean {
     }
   }
 
+  for (const pattern of SKIP_PATH_PATTERNS) {
+    if (
+      endpoint === pattern ||
+      endpoint.startsWith(`${pattern}/`) ||
+      endpoint.endsWith(pattern) ||
+      endpoint.includes(`${pattern}/`)
+    ) {
+      return true;
+    }
+  }
+
   return false;
 }
 
@@ -346,6 +369,11 @@ function errorMessageFromUnknown(error: unknown): string {
 export function createApiLoggingMiddleware(service: ApiLogService = apiLogService): RequestHandler {
   return async (req: ApiLoggingRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
+      if (req.apiLoggingDisabled === true) {
+        next();
+        return;
+      }
+
       const endpoint = getEndpoint(req);
       if (shouldSkipPath(endpoint)) {
         next();
@@ -455,6 +483,13 @@ export function createApiLoggingMiddleware(service: ApiLogService = apiLogServic
 }
 
 export const ApiLoggingMiddleware = createApiLoggingMiddleware();
+
+export function disableApiLoggingForRoute(): RequestHandler {
+  return (req: ApiLoggingRequest, _res: Response, next: NextFunction): void => {
+    req.apiLoggingDisabled = true;
+    next();
+  };
+}
 
 export function apiLogRouteContext(category: string, module: string): RequestHandler {
   const normalizedCategory = category.trim().toLowerCase();

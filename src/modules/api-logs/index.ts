@@ -3,6 +3,7 @@ export {
   ApiLoggingErrorMiddleware,
   createApiLoggingMiddleware,
   createApiLoggingErrorMiddleware,
+  disableApiLoggingForRoute,
   apiLogRouteContext,
 } from './middleware/api-logging.middleware';
 export { ApiLogService, apiLogService } from './services/api-log.service';
