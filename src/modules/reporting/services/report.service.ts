@@ -203,7 +203,7 @@ export class ReportService {
       page,
       limit,
       filter,
-      sortBy: payload.sort?.by || payload.sortBy || 'createdAt',
+      sortBy: payload.sort?.by || payload.sortBy,
       sortOrder: baseReportHelper.normalizeSortDirection(payload.sort?.order || payload.sortOrder),
     });
 
@@ -229,7 +229,7 @@ export class ReportService {
       page,
       limit,
       filter,
-      sortBy: payload.sort?.by || payload.sortBy || 'createdAt',
+      sortBy: payload.sort?.by || payload.sortBy,
       sortOrder: baseReportHelper.normalizeSortDirection(payload.sort?.order || payload.sortOrder),
     });
     const dateTimeSettings = await getHostDateTimeSettings(hostId);
@@ -254,7 +254,7 @@ export class ReportService {
       page,
       limit,
       filter,
-      sortBy: payload.sort?.by || payload.sortBy || 'createdAt',
+      sortBy: payload.sort?.by || payload.sortBy,
       sortOrder: baseReportHelper.normalizeSortDirection(payload.sort?.order || payload.sortOrder),
     });
 
@@ -280,7 +280,7 @@ export class ReportService {
       page,
       limit,
       filter,
-      sortBy: payload.sort?.by || payload.sortBy || 'createdAt',
+      sortBy: payload.sort?.by || payload.sortBy,
       sortOrder: baseReportHelper.normalizeSortDirection(payload.sort?.order || payload.sortOrder),
     });
 

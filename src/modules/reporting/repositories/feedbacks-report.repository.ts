@@ -10,11 +10,11 @@ export class FeedbacksReportRepository {
     const { page, limit, filter, hostId, sortBy, sortOrder } = params;
     const { offset } = baseReportHelper.normalizePagination({ page, limit });
 
-    let where: Record<string, any> = { hostId, isDeleted: 0 };
+    let feedbackWhere: Record<string, any> = { hostId, isDeleted: 0 };
     let visitWhere: Record<string, any> = { isDeleted: 0 };
     if(filter) {
       if(filter.userId) {
-        where.userId = filter.userId;
+        feedbackWhere.userId = filter.userId;
       }
       if(filter.customerId) {
         visitWhere.customerId = filter.customerId;
@@ -23,26 +23,30 @@ export class FeedbacksReportRepository {
         visitWhere.customerName = { [Op.like]: `%${filter.customerName?.trim()}%` };
       }
       if(filter.feedbackTime) {
-        where.feedbackTime = {
+        feedbackWhere.feedbackTime = {
           [Op.gte]: filter.feedbackTime?.from,
           [Op.lte]: filter.feedbackTime?.to,
         };
       }
       if(filter.visitId) {
-        where.visitId = filter.visitId;
+        feedbackWhere.visitId = filter.visitId;
       }
     }
     
     const query: FindAndCountOptions<any> = {
-      attributes: {
-        exclude: ['id', 'localId', 'isDeleted', 'deletedAt', 'updatedAt', 'syncedAt', 'locationAccuracy', 'batteryPercentage', 'isChargingOnFeedback', 'locationAltitude', 'locationSpeed', 'locationProvider', 'locationProvider'],
-        include: [
-          ['id', 'feedbackId'],
-          [db.Sequelize.col('user.name'), 'employeeName'],
-          [db.Sequelize.col('user.employeeCode'), 'employeeCode']
-        ]
-      },
-      where,
+      attributes: [
+        ['id', 'visitId'],
+        'customerId',
+        'customerName',
+        'customerCode',
+        'contactPerson',
+        'customerPhone',
+        'customerEmail',
+        'checkInTime',
+        [db.Sequelize.col('user.name'), 'employeeName'],
+        [db.Sequelize.col('user.employeeCode'), 'employeeCode']
+      ],
+      where: visitWhere,
       include: [
         {
           model: db.User,
@@ -54,16 +58,21 @@ export class FeedbacksReportRepository {
           },
         },
         {
-          model: db.Visit,
-          as: 'visit',
-          attributes: {
-            exclude: ['id', 'localId', 'isDeleted', 'deletedAt', 'updatedAt', 'syncedAt', 'checkInLocationAccuracy', 'checkOutLocationAccuracy', 'checkInBatteryPercentage', 'checkOutBatteryPercentage', 'isChargingOnCheckIn', 'isChargingOnCheckOut', 'checkInLocationAltitude', 'checkOutLocationAltitude', 'checkInLocationSpeed', 'checkOutLocationSpeed', 'checkInLocationProvider', 'checkOutLocationProvider'],
-          },
+          model: db.Feedback,
+          as: 'feedbacks',
+          attributes: [
+            ['id', 'feedbackId'],
+            'message',
+            'mediaUrl',
+            'mediaType',
+            'feedbackTime',
+            'address'
+          ],
           required: true,
-          where: visitWhere,
+          where: feedbackWhere,
         }
       ],
-      order: [sortBy && sortOrder ? [sortBy, sortOrder] : ['createdAt', 'DESC']],
+      order: [sortBy && sortOrder ? [sortBy, sortOrder] : ['checkInTime', 'DESC']],
       distinct: true,
       logging: console.log, // Enable logging for debugging
     };
@@ -72,7 +81,7 @@ export class FeedbacksReportRepository {
       query.limit = limit;
       query.offset = offset;
 
-      const { rows, count } = await Feedback.findAndCountAll(query);
+      const { rows, count } = await db.Visit.findAndCountAll(query);
 
       return {
         data: rows,
@@ -80,7 +89,7 @@ export class FeedbacksReportRepository {
       };
       
     } else {
-      const rows = await Feedback.findAll(query);
+      const rows = await db.Visit.findAll(query);
       return {
         data: rows
       };
