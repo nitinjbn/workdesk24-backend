@@ -36,6 +36,7 @@ export class ImagesReportRepository {
     const query: FindAndCountOptions<any> = {
       attributes: [
         ['id', 'visitId'],
+        'userId',
         'customerId',
         'customerName',
         'customerCode',
