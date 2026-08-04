@@ -305,6 +305,7 @@ export class AuthService {
     const tokenRecord = await userRefreshTokenRepository.findByTokenHash(tokenHash);
 
     if (!tokenRecord) {
+      console.log("#################### refreshAdminSession: Token record not found for hash:", tokenHash);
       throw createConfiguredError('INVALID_REFRESH_TOKEN');
     }
 
@@ -319,12 +320,14 @@ export class AuthService {
     }
 
     if (tokenRecord.userId !== payload.userId || tokenRecord.tokenFamily !== payload.tokenFamily) {
+      console.log("#################### refreshAdminSession: Token record userId or tokenFamily mismatch. Expected userId:", payload.userId, "tokenFamily:", payload.tokenFamily, "but got userId:", tokenRecord.userId, "tokenFamily:", tokenRecord.tokenFamily);
       await userRefreshTokenRepository.revokeAllActiveForUser(tokenRecord.userId);
       throw createConfiguredError('INVALID_REFRESH_TOKEN');
     }
 
     const user = await userRepository.findById(payload.userId);
     if (!user) {
+      console.log("#################### refreshAdminSession: User not found for userId:", payload.userId);
       await userRefreshTokenRepository.revokeAllActiveForUser(payload.userId);
       throw createConfiguredError('INVALID_REFRESH_TOKEN');
     }
