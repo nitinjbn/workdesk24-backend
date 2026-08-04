@@ -44,6 +44,9 @@ export class ImagesReportRepository {
         'customerPhone',
         'customerEmail',
         'checkInTime',
+        'checkInAddress',
+        'checkOutTime',
+        'checkOutAddress',
         [db.Sequelize.col('user.name'), 'employeeName'],
         [db.Sequelize.col('user.employeeCode'), 'employeeCode']
       ],
