@@ -389,20 +389,24 @@ export class AuthService {
     const tokenRecord = await userRefreshTokenRepository.findByTokenHash(tokenHash);
 
     if (!tokenRecord) {
+      console.log("#################### refreshAppSession: Token record not found for hash:", tokenHash);
       throw createConfiguredError('INVALID_REFRESH_TOKEN');
     }
 
     if (tokenRecord.isRevoked === 1) {
+      console.log("#################### refreshAppSession: Token record is revoked for userId:", tokenRecord.userId);
       await userRefreshTokenRepository.revokeAllActiveForUser(tokenRecord.userId);
       throw createConfiguredError('REFRESH_TOKEN_REUSE_DETECTED');
     }
 
     if (tokenRecord.expiresAt <= now) {
+      console.log("#################### refreshAppSession: Token record is expired for userId:", tokenRecord.userId, "expiresAt:", tokenRecord.expiresAt, "now:", now);
       await userRefreshTokenRepository.revokeTokenById(tokenRecord.id);
       throw createConfiguredError('REFRESH_TOKEN_EXPIRED');
     }
 
     if (tokenRecord.userId !== payload.userId || tokenRecord.tokenFamily !== payload.tokenFamily) {
+      console.log("#################### refreshAppSession: Token record userId or tokenFamily mismatch. Expected userId:", payload.userId, "tokenFamily:", payload.tokenFamily, "but got userId:", tokenRecord.userId, "tokenFamily:", tokenRecord.tokenFamily);
       await userRefreshTokenRepository.revokeAllActiveForUser(tokenRecord.userId);
       throw createConfiguredError('INVALID_REFRESH_TOKEN');
     }
@@ -410,6 +414,7 @@ export class AuthService {
     let user = await userRepository.findById(payload.userId);
     user = (user?.get ? user.get({ plain: true }) : user) as unknown as LoginUser;
     if (!user) {
+      console.log("#################### refreshAppSession: User not found for userId:", payload.userId);
       await userRefreshTokenRepository.revokeAllActiveForUser(payload.userId);
       throw createConfiguredError('INVALID_REFRESH_TOKEN');
     }
