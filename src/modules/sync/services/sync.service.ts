@@ -377,7 +377,8 @@ export class SyncService {
           };
         });
 
-        await this.scheduleOrderLocationJobs(syncResult.persistedRecord, syncResult.previousRecord);
+        // Its commented out because the location resolution jobs are already scheduled in the syncVisitSummaryForActivity method, which is called above. Scheduling them again here would be redundant and could lead to unnecessary processing.
+        //await this.scheduleOrderLocationJobs(syncResult.persistedRecord, syncResult.previousRecord);
 
         if (syncResult.status === 'updated') {
           results.updated.push({ localId, serverId: syncResult.serverId });
@@ -420,10 +421,11 @@ export class SyncService {
         await this.syncVisitSummaryForActivity(payment, transaction, previousPayment);
         await this.syncDailySummaryForActivity(payment, 'paymentDate', transaction, previousPayment);
       },
-      async (record, previousRecord) => {
-        await this.schedulePaymentLocationJobs(record, previousRecord);
-      }
+      // async (record, previousRecord) => {
+      //   await this.schedulePaymentLocationJobs(record, previousRecord);
+      // }
     );
+    // The scheduling of payment location jobs is commented out because the location resolution jobs are already scheduled in the syncVisitSummaryForActivity method, which is called above. Scheduling them again here would be redundant and could lead to unnecessary processing.
   }
 
   private async schedulePaymentLocationJobs(record: SyncRecord, previousRecord?: SyncRecord): Promise<void> {
@@ -451,10 +453,11 @@ export class SyncService {
         await this.syncVisitSummaryForActivity(feedback, transaction, previousFeedback);
         await this.syncDailySummaryForActivity(feedback, 'feedbackTime', transaction, previousFeedback);
       },
-      async (record, previousRecord) => {
-        await this.scheduleFeedbackLocationJobs(record, previousRecord);
-      }
+      // async (record, previousRecord) => {
+      //   await this.scheduleFeedbackLocationJobs(record, previousRecord);
+      // }
     );
+    // The scheduling of feedback location jobs is commented out because the location resolution jobs are already scheduled in the syncVisitSummaryForActivity method, which is called above. Scheduling them again here would be redundant and could lead to unnecessary processing.
   }
 
   private async scheduleFeedbackLocationJobs(record: SyncRecord, previousRecord?: SyncRecord): Promise<void> {
@@ -482,10 +485,11 @@ export class SyncService {
         await this.syncVisitSummaryForActivity(image, transaction, previousImage);
         await this.syncDailySummaryForActivity(image, 'capturedAt', transaction, previousImage);
       },
-      async (record, previousRecord) => {
-        await this.scheduleImageLocationJobs(record, previousRecord);
-      }
+      // async (record, previousRecord) => {
+      //   await this.scheduleImageLocationJobs(record, previousRecord);
+      // }
     );
+    // The scheduling of image location jobs is commented out because the location resolution jobs are already scheduled in the syncVisitSummaryForActivity method, which is called above. Scheduling them again here would be redundant and could lead to unnecessary processing.
   }
 
   private async scheduleImageLocationJobs(record: SyncRecord, previousRecord?: SyncRecord): Promise<void> {
