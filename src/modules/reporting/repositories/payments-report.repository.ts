@@ -47,11 +47,21 @@ export class PaymentsReportRepository {
         'checkInAddress',
         'checkOutTime',
         'checkOutAddress',
+        [db.Sequelize.col('visitSummary.paymentAmount'), 'totalPaymentAmount'],
         [db.Sequelize.col('user.name'), 'employeeName'],
         [db.Sequelize.col('user.employeeCode'), 'employeeCode']
       ],
       where: visitWhere,
       include: [
+        {
+          model: db.VisitSummary,
+          as: 'visitSummary',
+          attributes: [],
+          required: true,
+          where: {
+            isDeleted: 0,
+          },
+        },
         {
           model: db.User,
           as: 'user',
