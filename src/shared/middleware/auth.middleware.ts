@@ -29,8 +29,12 @@ export const authMiddleware = async (
     const token = tokenFromHeader || tokenFromCookie;
 
     if (!token) {
+      res.setHeader('x-auth-error-code', 'AUTH_REQUIRED');
+      res.setHeader('x-http-status-code', '401');
       res.status(401).json({
         success: false,
+        code: 'AUTH_REQUIRED',
+        statusCode: 401,
         message: 'Authentication required',
       });
       return;
@@ -42,8 +46,12 @@ export const authMiddleware = async (
     const user = await userRepository.findById(decoded.userId);
 
     if (!user) {
+      res.setHeader('x-auth-error-code', 'INVALID_TOKEN');
+      res.setHeader('x-http-status-code', '401');
       res.status(401).json({
         success: false,
+        code: 'INVALID_TOKEN',
+        statusCode: 401,
         message: 'Invalid token',
       });
       return;
@@ -64,8 +72,12 @@ export const authMiddleware = async (
       error instanceof jwt.JsonWebTokenError ||
       error instanceof jwt.NotBeforeError
     ) {
+      res.setHeader('x-auth-error-code', 'INVALID_OR_EXPIRED_TOKEN');
+      res.setHeader('x-http-status-code', '401');
       res.status(401).json({
         success: false,
+        code: 'INVALID_OR_EXPIRED_TOKEN',
+        statusCode: 401,
         message: 'Invalid or expired token',
       });
       return;
@@ -81,8 +93,12 @@ export const requireAdminRole = async (
   next: NextFunction
 ): Promise<void> => {
   if (!req.user) {
+    res.setHeader('x-auth-error-code', 'AUTH_REQUIRED');
+    res.setHeader('x-http-status-code', '401');
     res.status(401).json({
       success: false,
+      code: 'AUTH_REQUIRED',
+      statusCode: 401,
       message: 'Authentication required',
     });
     return;
@@ -92,8 +108,12 @@ export const requireAdminRole = async (
     const isAdmin = await isAdminRole(req.user.hostId, req.user.roleId);
 
     if (!isAdmin) {
+      res.setHeader('x-auth-error-code', 'ADMIN_ACCESS_REQUIRED');
+      res.setHeader('x-http-status-code', '403');
       res.status(403).json({
         success: false,
+        code: 'ADMIN_ACCESS_REQUIRED',
+        statusCode: 403,
         message: 'Admin access is required',
       });
       return;
