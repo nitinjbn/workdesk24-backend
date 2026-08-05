@@ -237,7 +237,8 @@ export class AuthService {
       throw createConfiguredError('APP_LOGIN_ACCESS_DENIED');
     }
 
-    const sessionTokens = await this.createUserSessionTokens({ hostId: user.hostId, userId: user.id, deviceType: 'ANDROID', deviceId: deviceDetails?.deviceId || 'app' });
+    const resolvedDeviceId = await this.resolveUserDeviceId(user.hostId, user.id, deviceDetails?.deviceId);
+    const sessionTokens = await this.createUserSessionTokens({ hostId: user.hostId, userId: user.id, deviceType: 'ANDROID', deviceId: resolvedDeviceId });
     const permissionsByModule = await this.getPermissionsByModuleForUser(user.hostId, user.roleId, user.id);
     
     // Fetch user settings separately since they're in a different table
@@ -430,7 +431,8 @@ export class AuthService {
       throw createConfiguredError('APP_LOGIN_ACCESS_DENIED');
     }
 
-    const rotatedTokens = await this.createUserSessionTokens({ hostId: user.hostId, userId: user.id, tokenFamily: payload.tokenFamily, deviceType: 'ANDROID', deviceId: 'app' });
+    const resolvedDeviceId = await this.resolveUserDeviceId(user.hostId, user.id, tokenRecord.deviceId);
+    const rotatedTokens = await this.createUserSessionTokens({ hostId: user.hostId, userId: user.id, tokenFamily: payload.tokenFamily, deviceType: 'ANDROID', deviceId: resolvedDeviceId });
     await userRefreshTokenRepository.revokeTokenById(tokenRecord.id, rotatedTokens.refreshTokenHash);
     const permissionsByModule = await this.getPermissionsByModuleForUser(user.hostId, user.roleId, user.id);
     
@@ -529,6 +531,20 @@ export class AuthService {
       tokenFamily: finalTokenFamily,
       csrfToken: this.createCsrfToken(),
     };
+  }
+
+  private async resolveUserDeviceId(hostId: number, userId: number, preferredDeviceId?: string | null): Promise<string> {
+    const trimmedPreferredDeviceId = preferredDeviceId?.trim();
+    if (trimmedPreferredDeviceId) {
+      return trimmedPreferredDeviceId;
+    }
+
+    const persistedDeviceId = await userRepository.getLatestDeviceIdByUser(hostId, userId);
+    if (persistedDeviceId) {
+      return persistedDeviceId;
+    }
+
+    throw createConfiguredError('INVALID_DEVICE_DETAILS', 'Device ID is required for app session', 400, 'VALIDATION_ERROR');
   }
 
   private verifyRefreshToken(token: string): RefreshTokenPayload {

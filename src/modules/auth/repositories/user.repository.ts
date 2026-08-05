@@ -200,6 +200,23 @@ export class UserRepository extends BaseRepository<typeof User.prototype> {
       });
     }
   }
+
+  async getLatestDeviceIdByUser(hostId: number, userId: number): Promise<string | null> {
+    const device = await UserDevice.findOne({
+      where: {
+        hostId,
+        userId,
+      },
+      order: [
+        ['updatedAt', 'DESC'],
+        ['createdAt', 'DESC'],
+        ['id', 'DESC'],
+      ],
+    });
+
+    const deviceId = device?.deviceId?.trim();
+    return deviceId || null;
+  }
 }
 
 export default new UserRepository();
