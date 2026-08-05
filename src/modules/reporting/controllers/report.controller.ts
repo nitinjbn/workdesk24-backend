@@ -2,9 +2,31 @@ import { Response, NextFunction } from 'express';
 import reportService from '../services/report.service';
 import { ApiResponse } from '../../../shared/types/base.types';
 import { AuthRequest } from '../../../shared/types/auth.types';
-import { AdminGpsHistoryPayload, AttendanceReportPayload, GpsHistoryReportPayload } from '../types/report.types';
+import {
+  AdminGpsHistoryJourneyPayload,
+  AdminGpsHistoryPayload,
+  AttendanceReportPayload,
+  GpsHistoryReportPayload,
+} from '../types/report.types';
 
 export class ReportController {
+  async getAdminGpsHistoryJourney(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const result = await reportService.getAdminGpsHistoryJourneyReport(
+        req.body as AdminGpsHistoryJourneyPayload,
+        { hostId: req.user!.hostId }
+      );
+
+      res.json({
+        success: true,
+        message: 'Route fetched successfully',
+        data: result,
+      } as ApiResponse);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async getAdminGpsHistory(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const result = await reportService.getAdminGpsHistoryReport(

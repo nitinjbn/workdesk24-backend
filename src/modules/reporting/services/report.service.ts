@@ -1,6 +1,8 @@
 import gpsHistoryReportRepository from '../repositories/gps-history-report.repository';
 import attendanceReportRepository from '../repositories/attendance-report.repository';
 import {
+  AdminGpsHistoryJourneyPayload,
+  AdminGpsHistoryJourneyResponse,
   AdminGpsHistoryPayload,
   AdminGpsHistoryResponse,
   AttendanceReportResponse,
@@ -38,6 +40,60 @@ type AttendanceInstance = typeof Attendance.prototype;
 type UserInstance = typeof User.prototype;
 
 export class ReportService {
+  async getAdminGpsHistoryJourneyReport(
+    payload: AdminGpsHistoryJourneyPayload,
+    scope: ReportScope
+  ): Promise<AdminGpsHistoryJourneyResponse> {
+    const hostId = this.resolveRequiredHostId(payload.hostId, scope.hostId);
+    const scopedUserId = baseReportHelper.parseNumber(scope.requestUserId);
+    const payloadUserId = baseReportHelper.parseNumber(payload.filter?.userId);
+    const userId = scopedUserId ?? payloadUserId;
+
+    if (userId === null || userId === undefined) {
+      throw createConfiguredError(
+        'REPORT_USER_SCOPE_REQUIRED',
+        'filter.userId is required for journey route',
+        400,
+        'VALIDATION_ERROR'
+      );
+    }
+
+    const startTime = baseReportHelper.parseNumber(
+      payload.filter?.startEvent?.timestamp ?? payload.filter?.startEvent?.time
+    );
+    const endTime = baseReportHelper.parseNumber(
+      payload.filter?.endEvent?.timestamp ?? payload.filter?.endEvent?.time
+    );
+
+    if (startTime === null || endTime === null) {
+      throw createConfiguredError(
+        'VALIDATION_ERROR',
+        'filter.startEvent.timestamp and filter.endEvent.timestamp are required',
+        400,
+        'VALIDATION_ERROR'
+      );
+    }
+
+    if (startTime > endTime) {
+      throw createConfiguredError(
+        'VALIDATION_ERROR',
+        'filter.startEvent.timestamp must be less than or equal to filter.endEvent.timestamp',
+        400,
+        'VALIDATION_ERROR'
+      );
+    }
+
+    const report = await gpsHistoryReportRepository.getAdminGpsHistoryJourneyReport({
+      hostId,
+      userId,
+      startTime,
+      endTime,
+    });
+
+    const dateTimeSettings = await getHostDateTimeSettings(hostId);
+    return formatDateTimeFieldsBySettings(report, dateTimeSettings);
+  }
+
   async getAdminGpsHistoryReport(
     payload: AdminGpsHistoryPayload,
     scope: ReportScope

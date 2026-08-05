@@ -1,6 +1,8 @@
 import { FindAndCountOptions, Includeable, Op } from 'sequelize';
 import db, { GpsHistory } from '../../../models';
 import {
+  AdminGpsHistoryJourneyPoint,
+  AdminGpsHistoryJourneyResponse,
   AdminGpsHistoryJourney,
   AdminGpsHistoryJourneyEvent,
   AdminGpsHistoryResponse,
@@ -30,6 +32,13 @@ export interface AdminGpsHistoryReportQuery {
   userId: number;
   fromDate: number;
   tillDate: number;
+}
+
+export interface AdminGpsHistoryJourneyReportQuery {
+  hostId: number;
+  userId: number;
+  startTime: number;
+  endTime: number;
 }
 
 interface RawAttendance {
@@ -324,6 +333,89 @@ export class GpsHistoryReportRepository {
     };
   }
 
+  async getAdminGpsHistoryJourneyReport(
+    params: AdminGpsHistoryJourneyReportQuery
+  ): Promise<AdminGpsHistoryJourneyResponse> {
+    const { hostId, userId, startTime, endTime } = params;
+
+    const gpsRows = await db.GpsHistory.findAll({
+      attributes: ['createdAt', 'latitude', 'longitude', 'accuracy', 'speed', 'provider'],
+      where: {
+        hostId,
+        userId,
+        isDeleted: 0,
+        createdAt: {
+          [Op.between]: [startTime, endTime],
+        },
+      },
+      order: [['createdAt', 'ASC']],
+    });
+
+    const gpsPoints: AdminGpsHistoryJourneyPoint[] = gpsRows.map((row) => {
+      const point = row.toJSON() as Record<string, unknown>;
+      const timestamp = this.toNonNegativeInteger(point.createdAt);
+      return {
+        time: timestamp,
+        timestamp,
+        latitude: this.toFiniteNumber(point.latitude as number | string | undefined) || 0,
+        longitude: this.toFiniteNumber(point.longitude as number | string | undefined) || 0,
+        accuracy: this.toNonNegativeInteger(point.accuracy),
+        speed: this.toNonNegativeInteger(point.speed),
+        provider: String(point.provider || ''),
+      };
+    });
+
+    let distanceKm = 0;
+    let travelSeconds = 0;
+    let maximumSpeed = 0;
+    let movingSpeedSum = 0;
+    let movingPointCount = 0;
+
+    for (let index = 0; index < gpsPoints.length; index += 1) {
+      const currentPoint = gpsPoints[index];
+      maximumSpeed = Math.max(maximumSpeed, currentPoint.speed);
+
+      if (currentPoint.speed > 0) {
+        movingSpeedSum += currentPoint.speed;
+        movingPointCount += 1;
+      }
+
+      if (index === gpsPoints.length - 1) {
+        continue;
+      }
+
+      const nextPoint = gpsPoints[index + 1];
+      distanceKm += this.calculateDistanceKm(
+        currentPoint.latitude,
+        currentPoint.longitude,
+        nextPoint.latitude,
+        nextPoint.longitude
+      );
+
+      const intervalSeconds = Math.max(0, nextPoint.timestamp - currentPoint.timestamp);
+      if (currentPoint.speed > 0) {
+        travelSeconds += intervalSeconds;
+      }
+    }
+
+    const durationMinutes = Math.max(0, Math.round((endTime - startTime) / 60));
+    const travelMinutes = Math.min(durationMinutes, Math.round(travelSeconds / 60));
+    const idleMinutes = Math.max(0, durationMinutes - travelMinutes);
+    const averageSpeed = movingPointCount > 0 ? Math.round(movingSpeedSum / movingPointCount) : 0;
+
+    return {
+      summary: {
+        distanceKm: this.roundToOneDecimal(distanceKm),
+        durationMinutes,
+        travelMinutes,
+        idleMinutes,
+        averageSpeed,
+        maximumSpeed,
+      },
+      gpsPoints,
+    };
+  }
+
   private toJourneyEvent(
     type: 'ATTENDANCE' | 'VISIT' | 'DAYOVER',
     source: {
@@ -350,6 +442,7 @@ export class GpsHistoryReportRepository {
       type,
       id: source.id,
       time: source.time,
+      timestamp: source.time,
       latitude,
       longitude,
       address: source.address || '',

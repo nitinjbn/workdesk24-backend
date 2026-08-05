@@ -79,6 +79,24 @@ export interface AdminGpsHistoryFilter {
   tillDate?: number | string;
 }
 
+export interface AdminGpsJourneyEventFilter {
+  type?: 'ATTENDANCE' | 'VISIT' | 'DAYOVER';
+  id?: number | string;
+  timestamp?: number | string;
+  time?: number | string;
+}
+
+export interface AdminGpsHistoryJourneyFilter {
+  userId?: number | string;
+  startEvent?: AdminGpsJourneyEventFilter;
+  endEvent?: AdminGpsJourneyEventFilter;
+}
+
+export interface AdminGpsHistoryJourneyPayload {
+  hostId?: number | string;
+  filter?: AdminGpsHistoryJourneyFilter;
+}
+
 export interface AdminGpsHistoryPayload {
   hostId?: number | string;
   filter?: AdminGpsHistoryFilter;
@@ -108,6 +126,7 @@ export interface AdminGpsHistoryJourneyEvent {
   type: 'ATTENDANCE' | 'VISIT' | 'DAYOVER';
   id: number;
   time: number;
+  timestamp: number;
   latitude: number;
   longitude: number;
   address?: string;
@@ -137,6 +156,30 @@ export interface AdminGpsHistoryResponse {
   summary: AdminGpsHistorySummary;
   journeys: AdminGpsHistoryJourney[];
   mapBounds: AdminGpsHistoryMapBounds;
+}
+
+export interface AdminGpsHistoryJourneySummary {
+  distanceKm: number;
+  durationMinutes: number;
+  travelMinutes: number;
+  idleMinutes: number;
+  averageSpeed: number;
+  maximumSpeed: number;
+}
+
+export interface AdminGpsHistoryJourneyPoint {
+  time: number | string;
+  timestamp: number;
+  latitude: number;
+  longitude: number;
+  accuracy: number;
+  speed: number;
+  provider: string;
+}
+
+export interface AdminGpsHistoryJourneyResponse {
+  summary: AdminGpsHistoryJourneySummary;
+  gpsPoints: AdminGpsHistoryJourneyPoint[];
 }
 
 export type AttendanceReportFilter = UserScopedReportFilter;
