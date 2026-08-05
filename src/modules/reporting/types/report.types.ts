@@ -73,6 +73,72 @@ export type GpsHistoryReportFilter = UserScopedReportFilter;
 
 export interface GpsHistoryReportPayload extends UserScopedReportPayload {}
 
+export interface AdminGpsHistoryFilter {
+  userId?: number | string;
+  fromDate?: number | string;
+  tillDate?: number | string;
+}
+
+export interface AdminGpsHistoryPayload {
+  hostId?: number | string;
+  filter?: AdminGpsHistoryFilter;
+}
+
+export interface AdminGpsHistoryEmployee {
+  userId: number;
+  code: string;
+  name: string;
+  designation: string;
+  mobileNumber: string;
+}
+
+export interface AdminGpsHistorySummary {
+  attendanceTime: number | null;
+  dayoverTime: number | null;
+  workingMinutes: number;
+  totalDistanceKm: number;
+  visitCount: number;
+  orderCount: number;
+  paymentCount: number;
+  feedbackCount: number;
+  imageCount: number;
+}
+
+export interface AdminGpsHistoryJourneyEvent {
+  type: 'ATTENDANCE' | 'VISIT' | 'DAYOVER';
+  id: number;
+  time: number;
+  latitude: number;
+  longitude: number;
+  address?: string;
+  title?: string;
+}
+
+export interface AdminGpsHistoryJourney {
+  journeyId: number;
+  title: string;
+  distanceKm: number;
+  durationMinutes: number;
+  gpsPointCount?: number;
+  routeType: 'ESTIMATED';
+  startEvent: AdminGpsHistoryJourneyEvent;
+  endEvent: AdminGpsHistoryJourneyEvent;
+}
+
+export interface AdminGpsHistoryMapBounds {
+  north: number;
+  south: number;
+  east: number;
+  west: number;
+}
+
+export interface AdminGpsHistoryResponse {
+  employee: AdminGpsHistoryEmployee;
+  summary: AdminGpsHistorySummary;
+  journeys: AdminGpsHistoryJourney[];
+  mapBounds: AdminGpsHistoryMapBounds;
+}
+
 export type AttendanceReportFilter = UserScopedReportFilter;
 
 export interface AttendanceReportPayload extends UserScopedReportPayload {}

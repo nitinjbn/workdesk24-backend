@@ -1,6 +1,8 @@
 import gpsHistoryReportRepository from '../repositories/gps-history-report.repository';
 import attendanceReportRepository from '../repositories/attendance-report.repository';
 import {
+  AdminGpsHistoryPayload,
+  AdminGpsHistoryResponse,
   AttendanceReportResponse,
   AttendanceReportFilter,
   AttendanceReportPayload,
@@ -36,6 +38,56 @@ type AttendanceInstance = typeof Attendance.prototype;
 type UserInstance = typeof User.prototype;
 
 export class ReportService {
+  async getAdminGpsHistoryReport(
+    payload: AdminGpsHistoryPayload,
+    scope: ReportScope
+  ): Promise<AdminGpsHistoryResponse> {
+    const hostId = this.resolveRequiredHostId(payload.hostId, scope.hostId);
+    const scopedUserId = baseReportHelper.parseNumber(scope.requestUserId);
+    const payloadUserId = baseReportHelper.parseNumber(payload.filter?.userId);
+    const userId = scopedUserId ?? payloadUserId;
+
+    if (userId === null || userId === undefined) {
+      throw createConfiguredError(
+        'REPORT_USER_SCOPE_REQUIRED',
+        'filter.userId is required for GPS history',
+        400,
+        'VALIDATION_ERROR'
+      );
+    }
+
+    const fromDate = baseReportHelper.parseNumber(payload.filter?.fromDate);
+    const tillDate = baseReportHelper.parseNumber(payload.filter?.tillDate);
+
+    if (fromDate === null || tillDate === null) {
+      throw createConfiguredError(
+        'VALIDATION_ERROR',
+        'filter.fromDate and filter.tillDate are required',
+        400,
+        'VALIDATION_ERROR'
+      );
+    }
+
+    if (fromDate > tillDate) {
+      throw createConfiguredError(
+        'VALIDATION_ERROR',
+        'filter.fromDate must be less than or equal to filter.tillDate',
+        400,
+        'VALIDATION_ERROR'
+      );
+    }
+
+    const report = await gpsHistoryReportRepository.getAdminGpsHistoryReport({
+      hostId,
+      userId,
+      fromDate,
+      tillDate,
+    });
+
+    const dateTimeSettings = await getHostDateTimeSettings(hostId);
+    return formatDateTimeFieldsBySettings(report, dateTimeSettings);
+  }
+
   async getGpsHistoryReport(
     payload: GpsHistoryReportPayload,
     scope: ReportScope
