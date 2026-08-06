@@ -38,6 +38,9 @@ interface RegisterDto {
 interface LoginDto {
   email: string;
   password: string;
+  deviceDetails?: {
+    deviceId: string;
+  };
 }
 
 interface VerifyOtpDto {
@@ -286,7 +289,7 @@ export class AuthService {
       throw createConfiguredError('ADMIN_PORTAL_ACCESS_DENIED');
     }
 
-    const sessionTokens = await this.createUserSessionTokens({ hostId: user.hostId, userId: user.id, deviceType: 'WEB', deviceId: 'default' });
+    const sessionTokens = await this.createUserSessionTokens({ hostId: user.hostId, userId: user.id, deviceType: 'WEB', deviceId: data.deviceDetails?.deviceId || 'default' });
     const permissionsByModule = await this.getPermissionsByModuleForUser(user.hostId, user.roleId, user.id);
 
     return {
@@ -344,7 +347,8 @@ export class AuthService {
       throw createConfiguredError('ADMIN_PORTAL_ACCESS_DENIED');
     }
 
-    const rotatedTokens = await this.createUserSessionTokens({ hostId: user.hostId, userId: user.id, tokenFamily: payload.tokenFamily, deviceType: 'WEB', deviceId: 'default' });
+    const resolvedDeviceId = await this.resolveUserDeviceId(user.hostId, user.id, tokenRecord.deviceId);
+    const rotatedTokens = await this.createUserSessionTokens({ hostId: user.hostId, userId: user.id, tokenFamily: payload.tokenFamily, deviceType: 'WEB', deviceId: resolvedDeviceId });
     await userRefreshTokenRepository.revokeTokenById(tokenRecord.id, rotatedTokens.refreshTokenHash);
     const permissionsByModule = await this.getPermissionsByModuleForUser(user.hostId, user.roleId, user.id);
 

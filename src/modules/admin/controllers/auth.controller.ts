@@ -16,7 +16,7 @@ import {
 export class AdminAuthController {
   async login(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { email, password } = req.body;
+      const { email, password, deviceDetails } = req.body;
 
       if (!email || !password) {
         res.status(400).json({
@@ -26,7 +26,7 @@ export class AdminAuthController {
         return;
       }
 
-      const result = await authService.adminLogin({ email, password });
+      const result = await authService.adminLogin({ email, password, deviceDetails });
       const accessCookieName = getAdminAuthCookieName();
       const refreshCookieName = getAdminRefreshCookieName();
       const csrfCookieName = getAdminCsrfCookieName();
