@@ -26,7 +26,7 @@ export class ProductRepository {
             isDeleted: 0
           },
           as: "productCategoryDetails",
-          required: true
+          required: false
         },
         {
           attributes:[],
@@ -35,7 +35,7 @@ export class ProductRepository {
             isDeleted: 0
           },
           as: "productBrandDetails",
-          required: true
+          required: false
         },
         {
           attributes: {
