@@ -9,7 +9,7 @@ export async function registerMaintenanceSchedulers(): Promise<void> {
         frequency: 'daily',
         time: '1:00 AM',
       }),
-      tz: 'UTC',
+      tz: 'Asia/Kolkata', // Timezone for the cron job, UTC or American/New_York or Asia/Kolkata, etc. (default is UTC)
     },
     {
       name: 'ensure-api-log-partition', // Job name
