@@ -3,6 +3,7 @@ import type { BackgroundJobLogger } from '../utils/logger.utils';
 import { emailProcessor } from './email.processor';
 import { imageProcessor } from './image.processor';
 import { LocationProcessor, locationProcessor } from './location.processor';
+import { maintenanceProcessor } from './maintenance.processor';
 import { notificationProcessor } from './notification.processor';
 import { reportProcessor } from './report.processor';
 import { SystemProcessor, systemProcessor } from './system.processor';
@@ -11,6 +12,7 @@ export {
 	emailProcessor,
 	imageProcessor,
 	locationProcessor,
+	maintenanceProcessor,
 	notificationProcessor,
 	reportProcessor,
 	systemProcessor,
@@ -23,6 +25,7 @@ export function createPlaceholderProcessors(logger: BackgroundJobLogger): Readon
 		emailProcessor,
 		imageProcessor,
 		reportProcessor,
+		maintenanceProcessor,
 		new SystemProcessor(logger),
 	];
 }

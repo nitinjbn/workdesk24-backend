@@ -10,6 +10,7 @@
     "build:watch": "tsc --watch",
     "prestart": "npm run build",
     "worker": "node dist/infrastructure/background-jobs/worker.js",
+    "scheduler": "node dist/infrastructure/background-jobs/register-schedulers.js",
     "dev:worker": "ts-node-dev --respawn --transpile-only src/infrastructure/background-jobs/worker.ts",
     "db:migrate": "sequelize-cli db:migrate",
     "db:migrate:undo": "sequelize-cli db:migrate:undo",

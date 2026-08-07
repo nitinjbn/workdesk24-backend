@@ -5,6 +5,7 @@ export const QUEUE_NAMES = {
   EMAIL: 'background-email',
   IMAGE: 'background-image',
   REPORT: 'background-report',
+  MAINTENANCE: 'maintenance',
   SYSTEM: 'background-system',
 } as const;
 

@@ -4,6 +4,7 @@ export const PROCESSOR_NAMES = {
   EMAIL: 'email-processor',
   IMAGE: 'image-processor',
   REPORT: 'report-processor',
+  MAINTENANCE: 'maintenance-processor',
   SYSTEM: 'system-processor',
 } as const;
 
