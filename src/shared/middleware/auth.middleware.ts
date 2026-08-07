@@ -34,7 +34,7 @@ export const authMiddleware = async (
       res.status(401).json({
         success: false,
         code: 'AUTH_REQUIRED',
-        statusCode: 401,
+        statusCode: 401, // This is important for the APP to handle refresh token as fallback if HTTPS status code is not 401 (There was an issue in uploadMedia, where APP was getting -1 as HTTP status code, and it was not able to handle refresh token fallback)
         message: 'Authentication required',
       });
       return;
@@ -51,7 +51,7 @@ export const authMiddleware = async (
       res.status(401).json({
         success: false,
         code: 'INVALID_TOKEN',
-        statusCode: 401,
+        statusCode: 401, // This is important for the APP to handle refresh token as fallback if HTTPS status code is not 401 (There was an issue in uploadMedia, where APP was getting -1 as HTTP status code, and it was not able to handle refresh token fallback)
         message: 'Invalid token',
       });
       return;
