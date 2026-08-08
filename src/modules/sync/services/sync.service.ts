@@ -10,7 +10,11 @@ import {
   CustomerRepository, 
   ProductRepository,
   UserDailySummaryRepository,
-  VisitSummaryRepository } from '../repositories';
+  VisitSummaryRepository,
+  ActivityLogRepository } from '../repositories';
+import type { ActivityLogInput } from '../repositories/activity-log.repository';
+import { ActivityModule } from '../../../models/schemas/ActivityLog';
+import { User } from '../../../models';
 import { resolveVisitLocalIdForRecord } from '../../../shared/utils/visit-local-id-resolver';
 import userRepository from '../repositories/users.repository';
 import { CommonUtil } from '../../../shared/utils/common.util';
@@ -34,6 +38,7 @@ const customerRepository = new CustomerRepository();
 const productRepository = new ProductRepository();
 const userDailySummaryRepository = new UserDailySummaryRepository();
 const visitSummaryRepository = new VisitSummaryRepository();
+const activityLogRepository = new ActivityLogRepository();
 
 interface SyncRecord {
   localId?: string;
@@ -57,7 +62,45 @@ interface LocationSyncConfig extends LocationResolutionTarget {
   readonly recordId: number;
 }
 
+type ActivityLogFactory = (record: SyncRecord) => Omit<ActivityLogInput, 'hostId' | 'userId' | 'entityId' | 'activityTime'> | null;
+
 export class SyncService {
+  private async logActivity(
+    record: SyncRecord,
+    factory: ActivityLogFactory,
+    transaction: Transaction
+  ): Promise<void> {
+    const hostId = Number(record.hostId);
+    const userId = Number(record.userId);
+    const entityId = Number(record.id);
+
+    if (!Number.isInteger(hostId) || hostId <= 0 || !Number.isInteger(userId) || userId <= 0 || !Number.isInteger(entityId) || entityId <= 0) {
+      return;
+    }
+
+    const entry = factory(record);
+    if (!entry) {
+      return;
+    }
+
+    const activityTime = Number((record as any).activityTime ?? (record as any).attendanceTime ?? (record as any).checkInTime ?? (record as any).orderTime ?? (record as any).paymentDate ?? (record as any).feedbackTime ?? (record as any).capturedAt ?? Math.floor(Date.now() / 1000));
+
+    const userRow = await User.findOne({ attributes: ['name'], where: { id: userId, hostId }, transaction });
+    const employeeName: string | null = (userRow as any)?.name ?? null;
+
+    await activityLogRepository.log(
+      {
+        hostId,
+        userId,
+        entityId,
+        activityTime: Number.isFinite(activityTime) && activityTime > 0 ? activityTime : Math.floor(Date.now() / 1000),
+        ...entry,
+        metadata: { employeeName, ...entry.metadata },
+      },
+      transaction
+    );
+  }
+
   async syncData(
     repository: any,
     userId: number,
@@ -133,7 +176,24 @@ export class SyncService {
       attendanceRepository,
       userId,
       records,
-      this.syncUserDailySummary.bind(this),
+      async (record, transaction, previousRecord) => {
+        await this.syncUserDailySummary(record, transaction);
+        await this.logActivity(
+          record,
+          (r) => ({
+            module: ActivityModule.ATTENDANCE,
+            action: previousRecord ? 'DAYOVER_MARKED' : 'ATTENDANCE_MARKED',
+            descriptionKey: previousRecord ? 'EMPLOYEE_MARKED_DAYOVER' : 'EMPLOYEE_MARKED_ATTENDANCE',
+            metadata: {
+              attendanceTime: r.attendanceTime ?? null,
+              dayoverTime: r.dayoverTime ?? null,
+              workingHours: r.workingHours ?? null,
+              attendanceStatus: r.attendanceStatus ?? null,
+            },
+          }),
+          transaction
+        );
+      },
       async (record, previousRecord) => {
         await this.scheduleAttendanceLocationJobs(record, previousRecord);
       }

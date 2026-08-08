@@ -1,3 +1,4 @@
+export * from './activity-log.repository';
 export * from './attendance.repository';
 export * from './customers.repository';
 export * from './feedback.repository';
