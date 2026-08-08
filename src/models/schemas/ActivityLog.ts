@@ -70,7 +70,7 @@ export function initActivityLog(sequelize: Sequelize): typeof ActivityLog {
         allowNull: false,
       },
       action: {
-        type: DataTypes.STRING(25),
+        type: DataTypes.STRING(50),
         allowNull: false,
       },
       entityId: {
@@ -78,7 +78,7 @@ export function initActivityLog(sequelize: Sequelize): typeof ActivityLog {
         allowNull: false,
       },
       descriptionKey: {
-        type: DataTypes.STRING(25),
+        type: DataTypes.STRING(50),
         allowNull: false,
       },
       metadata: {
