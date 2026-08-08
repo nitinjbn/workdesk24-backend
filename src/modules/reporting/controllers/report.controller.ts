@@ -174,6 +174,20 @@ export class ReportController {
       next(error);
     }
   }
+
+  async getAllActivities(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const payload = req.body;
+      const result = await reportService.getAllActivitiesReport(payload);
+      res.json({
+        success: true,
+        message: 'All activities report retrieved successfully',
+        data: result,
+      } as ApiResponse);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default new ReportController();

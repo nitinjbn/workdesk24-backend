@@ -34,6 +34,8 @@ import ordersReportRepository from '../repositories/orders-report.repository';
 import paymentsReportRepository from '../repositories/payments-report.repository';
 import feedbacksReportRepository from '../repositories/feedbacks-report.repository';
 import imagesReportRepository from '../repositories/images-report.repository';
+import activityLogsReportRepository from '../repositories/activity-logs-report.repository';
+import { resolveActivityEnrichment } from '../helpers/activity-log.helper';
 
 type GpsHistoryInstance = typeof GpsHistory.prototype;
 type AttendanceInstance = typeof Attendance.prototype;
@@ -399,6 +401,39 @@ export class ReportService {
 
     return {
       images: formatDateTimeFieldsBySettings(plainData, dateTimeSettings),
+      pagination: report.pagination,
+    };
+  }
+
+  async getAllActivitiesReport(
+    payload: { hostId: number; filter?: Record<string, any>; page?: number; limit?: number; sort?: { by?: string; order?: "ASC" | "DESC" }; sortBy?: string; sortOrder?: "ASC" | "DESC" },
+  ): Promise<{ activities: any[]; pagination: any }> {
+    const { hostId, filter, page, limit, sort, sortBy, sortOrder } = payload;
+
+    const report = await activityLogsReportRepository.getAllActivitiesReport({
+      hostId,
+      page,
+      limit,
+      filter,
+      sortBy: sort?.by || sortBy,
+      sortOrder: sort?.order || sortOrder,
+    });
+
+    const dateTimeSettings = await getHostDateTimeSettings(hostId);
+    const plainData = report.data.map((item: any) =>
+      item && typeof item.toJSON === 'function' ? item.toJSON() : item
+    );
+
+    const enriched = plainData.map((record: any) => ({
+      module: record.module,
+      action: record.action,
+      entityId: record.entityId,
+      activityTime: record.activityTime,
+      ...resolveActivityEnrichment(record, dateTimeSettings),
+    }));
+
+    return {
+      activities: formatDateTimeFieldsBySettings(enriched, dateTimeSettings),
       pagination: report.pagination,
     };
   }

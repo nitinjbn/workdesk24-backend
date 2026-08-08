@@ -1,12 +1,13 @@
 import { BaseRepository } from '../../../shared/repositories/base.repository';
 import ActivityLog from '../../../models/schemas/ActivityLog';
-import { ActivityModule } from '../../../config/logActivity';
+import { ActivityModule } from '../../../config/activityLog';
 import type { Transaction } from 'sequelize';
 import { DateTimeFormatUtil } from '../../../shared/utils/date-time-format.util';
 
 export interface ActivityLogInput {
   hostId: number;
   userId: number;
+  customerId?: number;
   module: ActivityModule;
   action: string;
   entityId: number;
