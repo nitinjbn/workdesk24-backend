@@ -13,4 +13,6 @@ router.post('/reports/getPayments', reportController.getPayments.bind(reportCont
 router.post('/reports/getFeedbacks', reportController.getFeedbacks.bind(reportController));
 router.post('/reports/getImages', reportController.getImages.bind(reportController));
 
+router.post('/reports/getAllActivities', reportController.getAllActivities.bind(reportController));
+
 export default router;

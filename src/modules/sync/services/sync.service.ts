@@ -13,7 +13,7 @@ import {
   VisitSummaryRepository,
   ActivityLogRepository } from '../repositories';
 import type { ActivityLogInput } from '../repositories/activity-log.repository';
-import { ActivityModule, ACTIVITY_DESCRIPTION_KEYS } from '../../../config/logActivity';
+import { ActivityModule, ACTIVITY_DESCRIPTION_KEYS } from '../../../config/activityLog';
 import { User } from '../../../models';
 import { resolveVisitLocalIdForRecord } from '../../../shared/utils/visit-local-id-resolver';
 import userRepository from '../repositories/users.repository';
@@ -92,6 +92,7 @@ export class SyncService {
       {
         hostId,
         userId,
+        customerId: record.customerId ? Number(record.customerId) : entry.metadata.customerId ? Number(entry.metadata.customerId) : undefined,
         entityId,
         activityTime: Number.isFinite(activityTime) && activityTime > 0 ? activityTime : Math.floor(Date.now() / 1000),
         ...entry,

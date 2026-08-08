@@ -1,9 +1,10 @@
 import { Model, DataTypes, Sequelize, Optional } from 'sequelize';
 import { BaseModel } from '../../shared/types/base.types';
-import { ActivityModule } from '../../config/logActivity';
+import { ActivityModule } from '../../config/activityLog';
 interface ActivityLogAttributes extends BaseModel {
   hostId: number;
   userId: number;
+  customerId?: number;
   module: ActivityModule;
   action: string;
   entityId: number;
@@ -12,12 +13,13 @@ interface ActivityLogAttributes extends BaseModel {
   activityTime: number;
   createdAt: number;
 }
-interface ActivityLogCreationAttributes extends Optional<ActivityLogAttributes, 'id' | 'hostId' | 'userId' | 'entityId' | 'metadata' | 'createdAt' > {}
+interface ActivityLogCreationAttributes extends Optional<ActivityLogAttributes, 'id' | 'hostId' | 'userId' | 'customerId' | 'entityId' | 'metadata' | 'createdAt' > {}
 
 class ActivityLog extends Model<ActivityLogAttributes, ActivityLogCreationAttributes> implements ActivityLogAttributes {
   public id!: number;
   public hostId: number;
   public userId: number;
+  public customerId?: number;
   public module: ActivityModule;
   public action: string;
   public entityId: number ;
@@ -54,6 +56,10 @@ export function initActivityLog(sequelize: Sequelize): typeof ActivityLog {
       userId: {
         type: DataTypes.BIGINT,
         allowNull: false,
+      },
+      customerId: {
+        type: DataTypes.BIGINT,
+        allowNull: true,
       },
       module: {
         type: DataTypes.ENUM(...Object.values(ActivityModule)),
