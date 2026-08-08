@@ -37,6 +37,7 @@ export function initGpsHistory(sequelize: Sequelize): typeof GpsHistory {
         type: DataTypes.BIGINT.UNSIGNED,
         autoIncrement: true,
         allowNull: false,
+        primaryKey: true
       },
       hostId: {
         type: DataTypes.BIGINT,
@@ -84,7 +85,8 @@ export function initGpsHistory(sequelize: Sequelize): typeof GpsHistory {
       },
       createdAt: {
         type: DataTypes.BIGINT.UNSIGNED,
-        allowNull: false
+        allowNull: false,
+        primaryKey: true // Composite primary key with 'id' due to partitioning strategy
       },
       updatedAt: {
         type: DataTypes.BIGINT.UNSIGNED,

@@ -5,11 +5,11 @@ const GPS_HISTORY_PARTITION_LOCK = 'wd_gps_history:ensure_next_partition';
 
 export class GpsHistoryService {
   public constructor(
-    private readonly partitionMaintenanceHelper: PartitionMaintenanceHelper = partitionMaintenanceHelper,
+    private readonly partitionMaintenanceHelperObj: PartitionMaintenanceHelper = partitionMaintenanceHelper,
   ) {}
 
   public async ensureNextPartition(): Promise<void> {
-    await this.partitionMaintenanceHelper.ensureNextMonthlyPartition({
+    await this.partitionMaintenanceHelperObj.ensureNextMonthlyPartition({
       tableName: GPS_HISTORY_TABLE,
       lockName: GPS_HISTORY_PARTITION_LOCK,
       displayName: 'GPS history',

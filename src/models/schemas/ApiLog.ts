@@ -141,6 +141,7 @@ export function initApiLog(sequelize: Sequelize): typeof ApiLog {
       requestDate: {
         type: DataTypes.DATEONLY,
         allowNull: false,
+        primaryKey: true, // Composite primary key with 'id' due to partitioning strategy
       },
       durationMilliseconds: {
         type: DataTypes.MEDIUMINT.UNSIGNED,
