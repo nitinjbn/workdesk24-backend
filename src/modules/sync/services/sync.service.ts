@@ -13,7 +13,7 @@ import {
   VisitSummaryRepository,
   ActivityLogRepository } from '../repositories';
 import type { ActivityLogInput } from '../repositories/activity-log.repository';
-import { ActivityModule } from '../../../models/schemas/ActivityLog';
+import { ActivityModule, ACTIVITY_DESCRIPTION_KEYS } from '../../../config/logActivity';
 import { User } from '../../../models';
 import { resolveVisitLocalIdForRecord } from '../../../shared/utils/visit-local-id-resolver';
 import userRepository from '../repositories/users.repository';
@@ -183,7 +183,7 @@ export class SyncService {
           (r) => ({
             module: ActivityModule.ATTENDANCE,
             action: previousRecord ? 'DAYOVER_MARKED' : 'ATTENDANCE_MARKED',
-            descriptionKey: previousRecord ? 'EMPLOYEE_MARKED_DAYOVER' : 'EMPLOYEE_MARKED_ATTENDANCE',
+            descriptionKey: previousRecord ? ACTIVITY_DESCRIPTION_KEYS.DAYOVER_MARKED : ACTIVITY_DESCRIPTION_KEYS.ATTENDANCE_MARKED,
             metadata: {
               attendanceTime: r.attendanceTime ?? null,
               dayoverTime: r.dayoverTime ?? null,
@@ -336,6 +336,21 @@ export class SyncService {
       async (visit, transaction, previousVisit) => {
         await this.syncVisitSummaryForVisit(visit, transaction);
         await this.syncDailySummaryForActivity(visit, 'checkInTime', transaction, previousVisit);
+        await this.logActivity(
+          visit,
+          (r) => ({
+            module: ActivityModule.VISIT,
+            action: previousVisit ? 'VISIT_CHECKOUT' : 'VISIT_CHECKIN',
+            descriptionKey: previousVisit ? ACTIVITY_DESCRIPTION_KEYS.VISIT_CHECKOUT : ACTIVITY_DESCRIPTION_KEYS.VISIT_CHECKIN,
+            metadata: {
+              checkInTime: r.checkInTime ?? null,
+              checkOutTime: r.checkOutTime ?? null,
+              customerId: r.customerId ?? null,
+              customerName: r.customerName ?? null,
+            },
+          }),
+          transaction
+        );
       },
       async (record, previousRecord) => {
         await this.scheduleVisitLocationJobs(record, previousRecord);
@@ -428,6 +443,21 @@ export class SyncService {
 
           await this.syncVisitSummaryForActivity(order.toJSON(), transaction, previousOrder);
           await this.syncDailySummaryForActivity(order.toJSON(), 'orderTime', transaction, previousOrder);
+          await this.logActivity(
+            order.toJSON(),
+            (r) => ({
+              module: ActivityModule.ORDER,
+              action: 'ORDER_CREATED',
+              descriptionKey: ACTIVITY_DESCRIPTION_KEYS.ORDER_CREATED,
+              metadata: {
+                orderTime: r.orderTime ?? null,
+                totalAmount: r.totalAmount ?? null,
+                customerId: r.customerId ?? null,
+                customerName: r.customerName ?? null,
+              },
+            }),
+            transaction
+          );
 
           return {
             status: instance ? 'updated' as const : 'created' as const,
@@ -480,6 +510,21 @@ export class SyncService {
       async (payment, transaction, previousPayment) => {
         await this.syncVisitSummaryForActivity(payment, transaction, previousPayment);
         await this.syncDailySummaryForActivity(payment, 'paymentDate', transaction, previousPayment);
+        await this.logActivity(
+          payment,
+          (r) => ({
+            module: ActivityModule.PAYMENT,
+            action: 'PAYMENT_COLLECTED',
+            descriptionKey: ACTIVITY_DESCRIPTION_KEYS.PAYMENT_COLLECTED,
+            metadata: {
+              paymentDate: r.paymentDate ?? null,
+              amount: r.amount ?? null,
+              customerId: r.customerId ?? null,
+              customerName: r.customerName ?? null,
+            },
+          }),
+          transaction
+        );
       },
       // async (record, previousRecord) => {
       //   await this.schedulePaymentLocationJobs(record, previousRecord);
@@ -512,6 +557,21 @@ export class SyncService {
       async (feedback, transaction, previousFeedback) => {
         await this.syncVisitSummaryForActivity(feedback, transaction, previousFeedback);
         await this.syncDailySummaryForActivity(feedback, 'feedbackTime', transaction, previousFeedback);
+        await this.logActivity(
+          feedback,
+          (r) => ({
+            module: ActivityModule.FEEDBACK,
+            action: 'FEEDBACK_SUBMITTED',
+            descriptionKey: ACTIVITY_DESCRIPTION_KEYS.FEEDBACK_SUBMITTED,
+            metadata: {
+              feedbackTime: r.feedbackTime ?? null,
+              rating: r.rating ?? null,
+              customerId: r.customerId ?? null,
+              customerName: r.customerName ?? null,
+            },
+          }),
+          transaction
+        );
       },
       // async (record, previousRecord) => {
       //   await this.scheduleFeedbackLocationJobs(record, previousRecord);
@@ -544,6 +604,20 @@ export class SyncService {
       async (image, transaction, previousImage) => {
         await this.syncVisitSummaryForActivity(image, transaction, previousImage);
         await this.syncDailySummaryForActivity(image, 'capturedAt', transaction, previousImage);
+        await this.logActivity(
+          image,
+          (r) => ({
+            module: ActivityModule.IMAGE,
+            action: 'IMAGE_UPLOADED',
+            descriptionKey: ACTIVITY_DESCRIPTION_KEYS.IMAGE_UPLOADED,
+            metadata: {
+              capturedAt: r.capturedAt ?? null,
+              customerId: r.customerId ?? null,
+              customerName: r.customerName ?? null,
+            },
+          }),
+          transaction
+        );
       },
       // async (record, previousRecord) => {
       //   await this.scheduleImageLocationJobs(record, previousRecord);

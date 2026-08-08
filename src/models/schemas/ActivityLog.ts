@@ -1,16 +1,6 @@
 import { Model, DataTypes, Sequelize, Optional } from 'sequelize';
 import { BaseModel } from '../../shared/types/base.types';
-
-export enum ActivityModule {
-    ATTENDANCE = 'ATTENDANCE',
-    DAYOVER = 'DAYOVER',
-    VISIT = 'VISIT',
-    ORDER = 'ORDER',
-    PAYMENT = 'PAYMENT',
-    FEEDBACK = 'FEEDBACK',
-    IMAGE = 'IMAGE',
-}
-
+import { ActivityModule } from '../../config/logActivity';
 interface ActivityLogAttributes extends BaseModel {
   hostId: number;
   userId: number;
