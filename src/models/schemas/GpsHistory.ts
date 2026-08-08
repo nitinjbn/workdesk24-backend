@@ -34,9 +34,9 @@ export function initGpsHistory(sequelize: Sequelize): typeof GpsHistory {
   GpsHistory.init(
     {
       id: {
-        type: DataTypes.BIGINT,
+        type: DataTypes.BIGINT.UNSIGNED,
         autoIncrement: true,
-        primaryKey: true,
+        allowNull: false,
       },
       hostId: {
         type: DataTypes.BIGINT,
@@ -83,15 +83,15 @@ export function initGpsHistory(sequelize: Sequelize): typeof GpsHistory {
         allowNull: true
       },
       createdAt: {
-        type: DataTypes.BIGINT,
+        type: DataTypes.BIGINT.UNSIGNED,
         allowNull: false
       },
       updatedAt: {
-        type: DataTypes.BIGINT,
+        type: DataTypes.BIGINT.UNSIGNED,
         allowNull: true
       },      
       syncedAt: {
-        type: DataTypes.BIGINT,
+        type: DataTypes.BIGINT.UNSIGNED,
         allowNull: true
       },
       isDeleted: {
@@ -100,7 +100,7 @@ export function initGpsHistory(sequelize: Sequelize): typeof GpsHistory {
         defaultValue: 0
       },
       deletedAt: {
-        type: DataTypes.BIGINT,
+        type: DataTypes.BIGINT.UNSIGNED,
         allowNull: true
       },
     },
