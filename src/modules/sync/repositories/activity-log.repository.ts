@@ -1,6 +1,6 @@
 import { BaseRepository } from '../../../shared/repositories/base.repository';
 import ActivityLog from '../../../models/schemas/ActivityLog';
-import { ActivityModule } from '../../../models/schemas/ActivityLog';
+import { ActivityModule } from '../../../config/logActivity';
 import type { Transaction } from 'sequelize';
 import { DateTimeFormatUtil } from '../../../shared/utils/date-time-format.util';
 
