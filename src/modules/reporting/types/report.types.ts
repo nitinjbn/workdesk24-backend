@@ -141,8 +141,8 @@ export interface AdminGpsHistoryJourney {
   durationMinutes: number;
   gpsPointCount?: number;
   routeType: 'ESTIMATED';
-  startEvent: AdminGpsHistoryJourneyEvent;
-  endEvent: AdminGpsHistoryJourneyEvent;
+  latitude: number;
+  longitude: number;
 }
 
 export interface AdminGpsHistoryMapBounds {

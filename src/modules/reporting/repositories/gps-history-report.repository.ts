@@ -52,6 +52,8 @@ interface RawAttendance {
   dayoverLongitude?: number | string;
   dayoverAddress?: string;
   workingHours?: number;
+  vehicleType?: string;
+  vehicleCategory?: string;
 }
 
 interface RawVisit {
@@ -150,6 +152,8 @@ export class GpsHistoryReportRepository {
           'dayoverLongitude',
           'dayoverAddress',
           'workingHours',
+          'vehicleType',
+          'vehicleCategory',
         ],
         where: {
           hostId,
@@ -182,6 +186,17 @@ export class GpsHistoryReportRepository {
             [Op.between]: [fromDate, tillDate],
           },
         },
+        include: [
+          {
+            model: db.VisitSummary,
+            as: 'visitSummary',
+            attributes: ['totalOrders', 'totalPayments', 'totalFeedbacks', 'totalImages'],
+            where: {
+              isDeleted: 0,
+            },
+            required: false,
+          },
+        ],
         order: [['checkInTime', 'ASC']],
       }),
       db.UserDailySummary.findOne({
@@ -210,92 +225,105 @@ export class GpsHistoryReportRepository {
     const feedbackCount = this.toNonNegativeInteger(dailySummaryJson?.totalFeedbacks);
     const imageCount = this.toNonNegativeInteger(dailySummaryJson?.totalImages);
 
-    const attendanceEvent = this.toJourneyEvent('ATTENDANCE', {
-      id: attendanceJson?.id,
-      time: attendanceJson?.attendanceTime,
-      latitude: attendanceJson?.attendanceLatitude,
-      longitude: attendanceJson?.attendanceLongitude,
-      address: attendanceJson?.attendanceAddress,
-    });
+    const newJourney = [];
+    if (attendanceJson?.attendanceTime) {
+      newJourney.push({
+        type: 'ATTENDANCE',
+        id: attendanceJson?.id,
+        time: attendanceJson?.attendanceTime,
+        latitude: attendanceJson?.attendanceLatitude,
+        longitude: attendanceJson?.attendanceLongitude,
+        address: attendanceJson?.attendanceAddress,
+        title: 'Attendance',
+      });
+    }
 
-    const dayoverEvent = this.toJourneyEvent('DAYOVER', {
-      id: attendanceJson?.id,
-      time: attendanceJson?.dayoverTime,
-      latitude: attendanceJson?.dayoverLatitude,
-      longitude: attendanceJson?.dayoverLongitude,
-      address: attendanceJson?.dayoverAddress,
-    });
-
-    const visitEvents = visitsJson.map((visit) => ({
-      checkIn: this.toJourneyEvent('VISIT', {
+    visitsJson && visitsJson.forEach((visit) => {
+      newJourney.push({
+        type: 'VISIT',
         id: visit.id,
         time: visit.checkInTime,
-        latitude: visit.checkInLatitude,
-        longitude: visit.checkInLongitude,
+        latitude: this.toFiniteNumber(visit.checkInLatitude),
+        longitude: this.toFiniteNumber(visit.checkInLongitude),
         address: visit.checkInAddress,
-        title: visit.customerName,
-      }),
-      checkOut: this.toJourneyEvent('VISIT', {
-        id: visit.id,
-        time: visit.checkOutTime,
-        latitude: visit.checkOutLatitude,
-        longitude: visit.checkOutLongitude,
-        address: visit.checkOutAddress,
-        title: visit.customerName,
-      }),
-    }));
+        title: `Visit: ${visit.customerName}`,
+        summary: {
+          totalOrders: this.toNonNegativeInteger(visit.visitSummary?.totalOrders),
+          totalPayments: this.toNonNegativeInteger(visit.visitSummary?.totalPayments),
+          totalFeedbacks: this.toNonNegativeInteger(visit.visitSummary?.totalFeedbacks),
+          totalImages: this.toNonNegativeInteger(visit.visitSummary?.totalImages),
+        },
+      });
+    });
 
-    const journeys: AdminGpsHistoryJourney[] = [];
+    if (attendanceJson?.dayoverTime) {
+      newJourney.push({
+        type: 'DAYOVER',
+        id: attendanceJson?.id,
+        time: attendanceJson?.dayoverTime,
+        latitude: attendanceJson?.dayoverLatitude,
+        longitude: attendanceJson?.dayoverLongitude,
+        address: attendanceJson?.dayoverAddress,
+        title: 'Day Over',
+      });
+    }
+
     let journeyId = 1;
 
-    const firstVisitCheckIn = visitEvents[0]?.checkIn;
-    if (attendanceEvent && firstVisitCheckIn) {
-      journeys.push(this.buildJourney(journeyId++, attendanceEvent, firstVisitCheckIn));
-    }
-
-    for (let index = 0; index < visitEvents.length - 1; index += 1) {
-      const currentVisit = visitEvents[index];
-      const nextVisit = visitEvents[index + 1];
-      const startEvent = currentVisit.checkIn;
-      const endEvent = nextVisit.checkIn;
-
-      if (startEvent && endEvent) {
-        journeys.push(this.buildJourney(journeyId++, startEvent, endEvent));
-      }
-    }
-
-    const lastVisit = visitEvents[visitEvents.length - 1];
-    const lastVisitEvent = lastVisit?.checkOut || lastVisit?.checkIn;
-    if (lastVisitEvent && dayoverEvent) {
-      journeys.push(this.buildJourney(journeyId++, lastVisitEvent, dayoverEvent));
-    }
-
-    if (journeys.length > 0) {
+    const finalJourney = [];
+    if (newJourney.length > 0) {
       const pointCounts = await Promise.all(
-        journeys.map((journey) =>
+        newJourney.map((journey, index) =>
           db.GpsHistory.count({
             where: {
               hostId,
               userId,
               isDeleted: 0,
               createdAt: {
-                [Op.between]: [journey.startEvent.time, journey.endEvent.time],
+                [Op.between]: [journey.time, newJourney[index + 1]?.time || journey.time],
               },
             },
           })
         )
       );
 
-      journeys.forEach((journey, index) => {
+      
+      newJourney.forEach((journey, index) => {
+        journey.journeyId = journeyId;
+        journeyId++;
+        finalJourney.push(journey);
         const gpsPointCount = pointCounts[index] || 0;
         if (gpsPointCount > 0) {
-          journey.gpsPointCount = gpsPointCount;
+          const distanceKm = this.calculateDistanceKm(
+            journey.latitude,
+            journey.longitude,
+            newJourney[index + 1]?.latitude || journey.latitude,
+            newJourney[index + 1]?.longitude || journey.longitude
+          );
+          const durationMinutes = Math.max(0, Math.round(((newJourney[index + 1]?.time || journey.time) - journey.time) / 60));
+
+          finalJourney.push(
+            {
+              type: "TRAVEL",
+              routeType: 'ESTIMATED',
+              gpsPointCount,
+              distanceKm: this.roundToOneDecimal(distanceKm),
+              durationMinutes,
+              journeyId: journeyId,
+              title: "Travel",
+              vehicleType: attendanceJson?.vehicleType || '',
+              vehicleCategory: attendanceJson?.vehicleCategory || ''
+            }
+          );
+
+          journeyId++;
         }
+        
       });
     }
 
-    const coordinates = this.extractCoordinates(journeys);
-    const totalDistanceKm = journeys.reduce((sum, journey) => sum + journey.distanceKm, 0);
+    const coordinates = this.extractCoordinates(newJourney);
+    const totalDistanceKm = newJourney.reduce((sum, journey) => sum + journey.distanceKm, 0);
 
     const attendanceTime = attendanceJson?.attendanceTime || null;
     const dayoverTime = attendanceJson?.dayoverTime || null;
@@ -324,7 +352,7 @@ export class GpsHistoryReportRepository {
         feedbackCount,
         imageCount,
       },
-      journeys,
+      journeys: finalJourney,
       mapBounds: {
         north: coordinates.length ? Math.max(...coordinates.map((point) => point.latitude)) : 0,
         south: coordinates.length ? Math.min(...coordinates.map((point) => point.latitude)) : 0,
@@ -451,29 +479,27 @@ export class GpsHistoryReportRepository {
     };
   }
 
-  private buildJourney(
-    journeyId: number,
-    startEvent: AdminGpsHistoryJourneyEvent,
-    endEvent: AdminGpsHistoryJourneyEvent
-  ): AdminGpsHistoryJourney {
-    const distanceKm = this.calculateDistanceKm(
-      startEvent.latitude,
-      startEvent.longitude,
-      endEvent.latitude,
-      endEvent.longitude
-    );
-    const durationMinutes = Math.max(0, Math.round((endEvent.time - startEvent.time) / 60));
+  // private buildJourney(
+  //   journeyId: number,
+  //   startEvent: AdminGpsHistoryJourneyEvent,
+  //   endEvent: AdminGpsHistoryJourneyEvent
+  // ): AdminGpsHistoryJourney {
+  //   const distanceKm = this.calculateDistanceKm(
+  //     startEvent.latitude,
+  //     startEvent.longitude,
+  //     endEvent.latitude,
+  //     endEvent.longitude
+  //   );
+  //   const durationMinutes = Math.max(0, Math.round((endEvent.time - startEvent.time) / 60));
 
-    return {
-      journeyId,
-      title: `${this.resolveEventTitle(startEvent)} → ${this.resolveEventTitle(endEvent)}`,
-      distanceKm: this.roundToOneDecimal(distanceKm),
-      durationMinutes,
-      routeType: 'ESTIMATED',
-      startEvent,
-      endEvent,
-    };
-  }
+  //   return {
+  //     journeyId,
+  //     title: `${this.resolveEventTitle(startEvent)} → ${this.resolveEventTitle(endEvent)}`,
+  //     distanceKm: this.roundToOneDecimal(distanceKm),
+  //     durationMinutes,
+  //     routeType: 'ESTIMATED'
+  //   };
+  // }
 
   private resolveEventTitle(event: AdminGpsHistoryJourneyEvent): string {
     if (event.type === 'ATTENDANCE') {
@@ -491,12 +517,8 @@ export class GpsHistoryReportRepository {
 
     journeys.forEach((journey) => {
       coordinates.push({
-        latitude: journey.startEvent.latitude,
-        longitude: journey.startEvent.longitude,
-      });
-      coordinates.push({
-        latitude: journey.endEvent.latitude,
-        longitude: journey.endEvent.longitude,
+        latitude: journey.latitude,
+        longitude: journey.longitude,
       });
     });
 
