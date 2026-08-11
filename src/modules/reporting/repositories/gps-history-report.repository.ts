@@ -256,7 +256,7 @@ export class GpsHistoryReportRepository {
     for (let index = 0; index < visitEvents.length - 1; index += 1) {
       const currentVisit = visitEvents[index];
       const nextVisit = visitEvents[index + 1];
-      const startEvent = currentVisit.checkOut || currentVisit.checkIn;
+      const startEvent = currentVisit.checkIn;
       const endEvent = nextVisit.checkIn;
 
       if (startEvent && endEvent) {
