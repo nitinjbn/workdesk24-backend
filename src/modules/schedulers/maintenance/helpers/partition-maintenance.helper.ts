@@ -205,6 +205,10 @@ export class PartitionMaintenanceHelper {
         const boundaryValue = resolveUnixBoundary(nextMonthUpperBoundUtc);
         targetPartitionDescription = String(boundaryValue);
         boundarySql = `(${boundaryValue})`;
+      } else if (partitionMethod === 'RANGE' && partitionExpression.includes('activitytime')) {
+        const boundaryValue = resolveUnixBoundary(nextMonthUpperBoundUtc);
+        targetPartitionDescription = String(boundaryValue);
+        boundarySql = `(${boundaryValue})`;
       } else {
         throw new Error(
           `Unsupported partition strategy for ${config.tableName}: method=${partitionMethod}, expression=${metadata.partitionExpression ?? 'NULL'}`,
@@ -254,11 +258,17 @@ export class PartitionMaintenanceHelper {
       const targetPartitionName = deriveMonthlyPartitionName(nextMonthStartUtc, existingNames);
       assertSafeIdentifier(targetPartitionName, 'partition name');
 
-      const nameConflict = partitionRows.some((row) => row.partitionName === targetPartitionName);
-      if (nameConflict) {
-        throw new Error(
-          `Partition name conflict for ${config.tableName}: ${targetPartitionName} already exists with a different boundary.`,
-        );
+      const conflictingPartition = partitionRows.find((row) => row.partitionName === targetPartitionName);
+      if (conflictingPartition) {
+        logger.info(`${config.displayName} partition name already exists; skipping as idempotent success.`, {
+          tableName: config.tableName,
+          partitionName: targetPartitionName,
+          existingPartitionDescription: conflictingPartition.partitionDescription,
+          targetPartitionMonthUtc: nextMonthStartDate,
+          targetUpperBoundUtc: nextMonthUpperBoundDate,
+          targetPartitionDescription,
+        });
+        return;
       }
 
       assertSafeIdentifier(config.tableName, 'table name');
