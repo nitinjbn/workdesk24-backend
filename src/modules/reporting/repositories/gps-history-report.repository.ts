@@ -120,7 +120,7 @@ export class GpsHistoryReportRepository {
 
     const [user, attendance, visits, dailySummary] = await Promise.all([
       db.User.findOne({
-        attributes: ['id', 'employeeCode', 'name', 'mobile'],
+        attributes: ['id', 'employeeCode', 'name', 'mobile', 'profileImageUrl'],
         where: {
           id: userId,
           hostId,
@@ -311,6 +311,7 @@ export class GpsHistoryReportRepository {
         name: userJson?.name || '',
         designation: designationName,
         mobileNumber: userJson?.mobile || '',
+        profileImageUrl: userJson?.profileImageUrl || '',
       },
       summary: {
         attendanceTime,

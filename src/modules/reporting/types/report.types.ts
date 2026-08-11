@@ -108,6 +108,7 @@ export interface AdminGpsHistoryEmployee {
   name: string;
   designation: string;
   mobileNumber: string;
+  profileImageUrl: string;
 }
 
 export interface AdminGpsHistorySummary {
