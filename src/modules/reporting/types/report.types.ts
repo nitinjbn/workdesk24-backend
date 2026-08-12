@@ -75,8 +75,10 @@ export interface GpsHistoryReportPayload extends UserScopedReportPayload {}
 
 export interface AdminGpsHistoryFilter {
   userId?: number | string;
-  fromDate?: number | string;
-  tillDate?: number | string;
+  reportTime?: {
+    from?: number | string;
+    to?: number | string;
+  };
 }
 
 export interface AdminGpsJourneyEventFilter {

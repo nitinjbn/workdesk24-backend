@@ -114,13 +114,13 @@ export class ReportService {
       );
     }
 
-    const fromDate = baseReportHelper.parseNumber(payload.filter?.fromDate);
-    const tillDate = baseReportHelper.parseNumber(payload.filter?.tillDate);
+    const fromDate = baseReportHelper.parseNumber(payload.filter?.reportTime.from);
+    const tillDate = baseReportHelper.parseNumber(payload.filter?.reportTime.to);
 
     if (fromDate === null || tillDate === null) {
       throw createConfiguredError(
         'VALIDATION_ERROR',
-        'filter.fromDate and filter.tillDate are required',
+        'filter.reportTime.from and filter.reportTime.to are required',
         400,
         'VALIDATION_ERROR'
       );
@@ -129,7 +129,7 @@ export class ReportService {
     if (fromDate > tillDate) {
       throw createConfiguredError(
         'VALIDATION_ERROR',
-        'filter.fromDate must be less than or equal to filter.tillDate',
+        'filter.reportTime.from must be less than or equal to filter.reportTime.to',
         400,
         'VALIDATION_ERROR'
       );

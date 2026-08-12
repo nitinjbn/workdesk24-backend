@@ -311,8 +311,8 @@ export class GpsHistoryReportRepository {
               routeType: 'ESTIMATED',
               gpsPointCount,
               createdAt: {
-                from: journey.time,
-                to: newJourney[index + 1]?.time || journey.time,
+                from: parseInt(journey.time, 10),
+                to: parseInt(newJourney[index + 1]?.time || journey.time, 10),
               },
               coordinates: {
                 from: {

@@ -23,7 +23,7 @@ export const NUMERIC_FIELD_CONFIG: Record<string, 'number' | 'bigint'> = {
   productId: 'bigint',
 
   // Timestamps (stored as Unix timestamps)
-  createdAt: 'bigint',
+  createdAt: 'number',
   updatedAt: 'bigint',
   isDeleted: 'number',
   deletedAt: 'bigint',
@@ -33,6 +33,7 @@ export const NUMERIC_FIELD_CONFIG: Record<string, 'number' | 'bigint'> = {
   dateOfBirth: 'bigint',
   joiningDate: 'bigint',
   mobileVerified: 'number',
+  timestamp: 'bigint',
 
   // Settings and other numeric fields
   isEnabled: 'number',
@@ -54,6 +55,25 @@ export function convertNumericFields(data: any, fieldConfig: Record<string, 'num
   const converted: any = { ...data };
 
   Object.entries(data).forEach(([key, value]) => {
+    // Convert range objects like { from, to } for configured numeric fields
+    if (fieldConfig[key] && value && typeof value === 'object' && !Array.isArray(value)) {
+      const rangeValue = value as Record<string, unknown>;
+      if ('from' in rangeValue || 'to' in rangeValue) {
+        const convertedRange: Record<string, unknown> = { ...rangeValue };
+
+        if (typeof convertedRange.from === 'string' && /^\d+$/.test(convertedRange.from)) {
+          convertedRange.from = parseInt(convertedRange.from, 10);
+        }
+
+        if (typeof convertedRange.to === 'string' && /^\d+$/.test(convertedRange.to)) {
+          convertedRange.to = parseInt(convertedRange.to, 10);
+        }
+
+        converted[key] = convertedRange;
+        return;
+      }
+    }
+
     // Recursively convert nested objects
     if (value && typeof value === 'object' && !Array.isArray(value)) {
       converted[key] = convertNumericFields(value, fieldConfig);
