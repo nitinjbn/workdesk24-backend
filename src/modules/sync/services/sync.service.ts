@@ -106,7 +106,7 @@ export class SyncService {
     repository: any,
     userId: number,
     records: SyncRecord[],
-    afterPersist?: (record: SyncRecord, transaction: Transaction, previousRecord?: SyncRecord) => Promise<void>,
+    afterPersist?: (record: SyncRecord, transaction: Transaction, previousRecord?: SyncRecord, sourceRecord?: SyncRecord) => Promise<void>,
     afterCommit?: (record: SyncRecord, previousRecord?: SyncRecord) => Promise<void>
   ): Promise<SyncResult> {
     const results: SyncResult = {
@@ -137,7 +137,7 @@ export class SyncService {
             }
 
             const persistedRecord = updatedRecord.toJSON();
-            await afterPersist?.(record, transaction, previousRecord);
+            await afterPersist?.(persistedRecord, transaction, previousRecord, record);
             return { status: 'updated', serverId: instance.id, persistedRecord, previousRecord };
           }
 
@@ -148,7 +148,7 @@ export class SyncService {
             syncedAt: now,
           }, transaction);
           const persistedRecord = newRecord.toJSON();
-          await afterPersist?.(record, transaction);
+          await afterPersist?.(persistedRecord, transaction, undefined, record);
           return { status: 'created', serverId: newRecord.id, persistedRecord };
         });
 
@@ -555,7 +555,7 @@ export class SyncService {
       feedbackRepository,
       userId,
       records,
-      async (feedback, transaction, previousFeedback) => {
+      async (feedback, transaction, previousFeedback, sourceFeedback) => {
         await this.syncVisitSummaryForActivity(feedback, transaction, previousFeedback);
         await this.syncDailySummaryForActivity(feedback, 'feedbackTime', transaction, previousFeedback);
         await this.logActivity(
@@ -565,12 +565,12 @@ export class SyncService {
             action: 'FEEDBACK_SUBMITTED',
             descriptionKey: ACTIVITY_DESCRIPTION_KEYS.FEEDBACK_SUBMITTED,
             metadata: {
-              employeeName: r.employeeName ?? null,
-              feedbackTime: r.feedbackTime ?? null,
-              rating: r.rating ?? null,
-              customerId: r.customerId ?? null,
-              customerName: r.customerName ?? null,
-              customerCode: r.customerCode ?? null,
+              employeeName: r.employeeName ?? sourceFeedback?.employeeName ?? null,
+              feedbackTime: r.feedbackTime ?? sourceFeedback?.feedbackTime ?? null,
+              rating: r.rating ?? sourceFeedback?.rating ?? null,
+              customerId: r.customerId ?? sourceFeedback?.customerId ?? null,
+              customerName: r.customerName ?? sourceFeedback?.customerName ?? null,
+              customerCode: r.customerCode ?? sourceFeedback?.customerCode ?? null,
             },
           }),
           transaction
