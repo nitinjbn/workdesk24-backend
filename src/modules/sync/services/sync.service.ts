@@ -508,7 +508,7 @@ export class SyncService {
       paymentRepository,
       userId,
       records,
-      async (payment, transaction, previousPayment) => {
+      async (payment, transaction, previousPayment, sourceRecord) => {
         await this.syncVisitSummaryForActivity(payment, transaction, previousPayment);
         await this.syncDailySummaryForActivity(payment, 'paymentDate', transaction, previousPayment);
         await this.logActivity(
@@ -520,8 +520,10 @@ export class SyncService {
             metadata: {
               paymentDate: r.paymentDate ?? null,
               amount: r.amount ?? null,
-              customerId: r.customerId ?? null,
-              customerName: r.customerName ?? null,
+              employeeName: r.employeeName ?? sourceRecord?.employeeName ?? null,
+              customerId: r.customerId ?? sourceRecord?.customerId ?? null,
+              customerName: r.customerName ?? sourceRecord?.customerName ?? null,
+              customerCode: r.customerCode ?? sourceRecord?.customerCode ?? null,
             },
           }),
           transaction
@@ -604,7 +606,7 @@ export class SyncService {
       imageRepository,
       userId,
       records,
-      async (image, transaction, previousImage) => {
+      async (image, transaction, previousImage, sourceRecord) => {
         await this.syncVisitSummaryForActivity(image, transaction, previousImage);
         await this.syncDailySummaryForActivity(image, 'capturedAt', transaction, previousImage);
         await this.logActivity(
@@ -615,8 +617,10 @@ export class SyncService {
             descriptionKey: ACTIVITY_DESCRIPTION_KEYS.IMAGE_UPLOADED,
             metadata: {
               capturedAt: r.capturedAt ?? null,
-              customerId: r.customerId ?? null,
-              customerName: r.customerName ?? null,
+              employeeName: r.employeeName ?? sourceRecord?.employeeName ?? null,
+              customerId: r.customerId ?? sourceRecord?.customerId ?? null,
+              customerName: r.customerName ?? sourceRecord?.customerName ?? null,
+              customerCode: r.customerCode ?? sourceRecord?.customerCode ?? null,
             },
           }),
           transaction
