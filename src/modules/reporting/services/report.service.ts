@@ -61,10 +61,10 @@ export class ReportService {
     }
 
     const startTime = baseReportHelper.parseNumber(
-      payload.filter?.startEvent?.timestamp ?? payload.filter?.startEvent?.time
+      payload.filter?.createdAt?.from ?? payload.filter?.createdAt?.from
     );
     const endTime = baseReportHelper.parseNumber(
-      payload.filter?.endEvent?.timestamp ?? payload.filter?.endEvent?.time
+      payload.filter?.createdAt?.to ?? payload.filter?.createdAt?.to
     );
 
     if (startTime === null || endTime === null) {

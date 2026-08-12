@@ -88,8 +88,10 @@ export interface AdminGpsJourneyEventFilter {
 
 export interface AdminGpsHistoryJourneyFilter {
   userId?: number | string;
-  startEvent?: AdminGpsJourneyEventFilter;
-  endEvent?: AdminGpsJourneyEventFilter;
+  createdAt: {
+    from: number;
+    to: number;
+  }
 }
 
 export interface AdminGpsHistoryJourneyPayload {
