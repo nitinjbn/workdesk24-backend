@@ -137,7 +137,7 @@ export class SyncService {
             }
 
             const persistedRecord = updatedRecord.toJSON();
-            await afterPersist?.(persistedRecord, transaction, previousRecord);
+            await afterPersist?.(record, transaction, previousRecord);
             return { status: 'updated', serverId: instance.id, persistedRecord, previousRecord };
           }
 
@@ -148,7 +148,7 @@ export class SyncService {
             syncedAt: now,
           }, transaction);
           const persistedRecord = newRecord.toJSON();
-          await afterPersist?.(persistedRecord, transaction);
+          await afterPersist?.(record, transaction);
           return { status: 'created', serverId: newRecord.id, persistedRecord };
         });
 
@@ -565,10 +565,12 @@ export class SyncService {
             action: 'FEEDBACK_SUBMITTED',
             descriptionKey: ACTIVITY_DESCRIPTION_KEYS.FEEDBACK_SUBMITTED,
             metadata: {
+              employeeName: r.employeeName ?? null,
               feedbackTime: r.feedbackTime ?? null,
               rating: r.rating ?? null,
               customerId: r.customerId ?? null,
               customerName: r.customerName ?? null,
+              customerCode: r.customerCode ?? null,
             },
           }),
           transaction
