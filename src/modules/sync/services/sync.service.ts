@@ -457,6 +457,7 @@ export class SyncService {
                 customerId: r.customerId ?? orderData.customerId ?? null,
                 customerName: r.customerName ?? orderData.customerName ?? null,
                 customerCode: r.customerCode ?? orderData.customerCode ?? null,
+                customerType: r.customerType ?? orderData.customerType ?? null,
               },
             }),
             transaction
@@ -526,6 +527,7 @@ export class SyncService {
               customerId: r.customerId ?? sourceRecord?.customerId ?? null,
               customerName: r.customerName ?? sourceRecord?.customerName ?? null,
               customerCode: r.customerCode ?? sourceRecord?.customerCode ?? null,
+              customerType: r.customerType ?? sourceRecord?.customerType ?? null,
             },
           }),
           transaction
@@ -575,6 +577,7 @@ export class SyncService {
               customerId: r.customerId ?? sourceFeedback?.customerId ?? null,
               customerName: r.customerName ?? sourceFeedback?.customerName ?? null,
               customerCode: r.customerCode ?? sourceFeedback?.customerCode ?? null,
+              customerType: r.customerType ?? sourceFeedback?.customerType ?? null,
             },
           }),
           transaction
@@ -623,6 +626,7 @@ export class SyncService {
               customerId: r.customerId ?? sourceRecord?.customerId ?? null,
               customerName: r.customerName ?? sourceRecord?.customerName ?? null,
               customerCode: r.customerCode ?? sourceRecord?.customerCode ?? null,
+              customerType: r.customerType ?? sourceRecord?.customerType ?? null,
             },
           }),
           transaction
