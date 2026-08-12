@@ -453,8 +453,10 @@ export class SyncService {
               metadata: {
                 orderTime: r.orderTime ?? null,
                 totalAmount: r.totalAmount ?? null,
-                customerId: r.customerId ?? null,
-                customerName: r.customerName ?? null,
+                employeeName: r.employeeName ?? orderData.employeeName ?? null,
+                customerId: r.customerId ?? orderData.customerId ?? null,
+                customerName: r.customerName ?? orderData.customerName ?? null,
+                customerCode: r.customerCode ?? orderData.customerCode ?? null,
               },
             }),
             transaction
