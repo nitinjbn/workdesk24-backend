@@ -1,4 +1,5 @@
 import { FindAndCountOptions, Includeable, Op } from 'sequelize';
+import { CONFIG } from '../../../config/constants';
 import db, { GpsHistory } from '../../../models';
 import {
   AdminGpsHistoryJourneyPoint,
@@ -581,6 +582,107 @@ export class GpsHistoryReportRepository {
     }
 
     return Math.floor(parsedValue);
+  }
+
+  async getLastLocationsReport(params: { hostId: number; filter?: Record<string, any> }): Promise<{ lastLocations: any[]; }> {
+    const { hostId, filter } = params;
+    const where: Record<string, any> = {
+      hostId,
+      isDeleted: 0,
+    };
+
+    const presentAttendanceRows = await db.Attendance.findAll({
+      attributes: ['userId'],
+      where: {
+        hostId,
+        isDeleted: 0,
+        attendanceStatus: 'Present',
+        attendanceTime: {
+          [Op.between]: [filter?.createdAt?.from, filter?.createdAt?.to],
+        },
+      },
+      include: [
+        {
+          model: db.User,
+          as: 'user',
+          attributes: ['id'],
+          where: {
+            isDeleted: 0,
+          },
+          required: true,
+        },
+      ],
+    });
+
+    const presentUserIds = Array.from(
+      new Set(
+        presentAttendanceRows
+          .map((attendance) => Number((attendance.toJSON() as Record<string, unknown>).userId))
+          .filter((userId) => Number.isFinite(userId) && userId > 0)
+      )
+    );
+
+    if (!presentUserIds.length) {
+      return {
+        lastLocations: [],
+      };
+    }
+
+    const filteredUserId = Number(filter?.userId);
+    const allowedUserIds = Number.isFinite(filteredUserId) && filteredUserId > 0
+      ? presentUserIds.filter((userId) => userId === filteredUserId)
+      : presentUserIds;
+
+    if (!allowedUserIds.length) {
+      return {
+        lastLocations: []
+      };
+    }
+
+    where.userId = {
+      [Op.in]: allowedUserIds,
+    };
+
+    (where as any)[Op.and] = db.sequelize.literal(`
+      \`GpsHistory\`.\`id\` = (
+        SELECT gh2.id
+        FROM wd_gps_history gh2
+        WHERE gh2.hostId = \`GpsHistory\`.\`hostId\`
+          AND gh2.userId = \`GpsHistory\`.\`userId\`
+          AND gh2.isDeleted = 0
+        ORDER BY gh2.createdAt DESC, gh2.id DESC
+        LIMIT 1
+      )
+    `);
+
+    const gpsRows = await db.GpsHistory.findAll({
+      attributes: [
+        'userId',
+        [db.sequelize.col('user.name'), 'employeeName'],
+        [db.sequelize.col('user.profileImageUrl'), 'profileImageUrl'],
+        'latitude',
+        'longitude',
+        ['createdAt', 'locationTime'],
+      ],
+      where,
+      include: [
+        {
+          model: db.User,
+          as: 'user',
+          attributes: [],
+          where: {
+            isDeleted: 0
+          },
+        }
+      ],
+      subQuery: false,
+      logging: console.log, // Enable logging for debugging
+      order: [['createdAt', 'DESC'], ['id', 'DESC']],
+    });
+
+    return {
+      lastLocations: gpsRows.map((row) => row.toJSON())
+    };
   }
 }
 

@@ -14,5 +14,6 @@ router.post('/reports/getFeedbacks', reportController.getFeedbacks.bind(reportCo
 router.post('/reports/getImages', reportController.getImages.bind(reportController));
 
 router.post('/reports/getAllActivities', reportController.getAllActivities.bind(reportController));
+router.post('/reports/getLastLocations', reportController.getLastLocations.bind(reportController));
 
 export default router;

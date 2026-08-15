@@ -188,6 +188,20 @@ export class ReportController {
       next(error);
     }
   }
+
+  async getLastLocations(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const payload = req.body;
+      const result = await reportService.getLastLocationsReport(payload);
+      res.json({
+        success: true,
+        message: 'Last locations report retrieved successfully',
+        data: result,
+      } as ApiResponse);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default new ReportController();

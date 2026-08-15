@@ -36,6 +36,7 @@ import feedbacksReportRepository from '../repositories/feedbacks-report.reposito
 import imagesReportRepository from '../repositories/images-report.repository';
 import activityLogsReportRepository from '../repositories/activity-logs-report.repository';
 import { resolveActivityEnrichment } from '../helpers/activity-log.helper';
+import moment from 'moment-timezone';
 
 type GpsHistoryInstance = typeof GpsHistory.prototype;
 type AttendanceInstance = typeof Attendance.prototype;
@@ -437,6 +438,37 @@ export class ReportService {
     return {
       activities: formatDateTimeFieldsBySettings(enriched, dateTimeSettings),
       pagination: report.pagination,
+    };
+  }
+
+  async getLastLocationsReport(
+    payload: { hostId: number; filter?: Record<string, any>; },
+  ): Promise<{ lastLocations: any[]; }> {
+    const { hostId, filter } = payload;
+
+    const dateTimeSettings = await getHostDateTimeSettings(hostId);
+
+    // Calculate the start and end of the current day in the host's timezone
+    const startOfDay = moment().tz(dateTimeSettings.timeZone || CONFIG.REPORTING.TIMEZONE).startOf('day').unix();
+    const endOfDay = moment().tz(dateTimeSettings.timeZone || CONFIG.REPORTING.TIMEZONE).endOf('day').unix();
+
+    const report = await gpsHistoryReportRepository.getLastLocationsReport({
+      hostId,
+      filter: {
+        ...filter,
+        createdAt: {
+          from: startOfDay,
+          to: endOfDay,
+        },
+      },
+    });
+
+    const plainData = report.lastLocations.map((item: any) =>
+      item && typeof item.toJSON === 'function' ? item.toJSON() : item
+    );
+
+    return {
+      lastLocations: formatDateTimeFieldsBySettings(plainData, dateTimeSettings)
     };
   }
 }
