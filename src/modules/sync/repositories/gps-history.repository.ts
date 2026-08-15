@@ -1,6 +1,22 @@
 import { BaseRepository } from '../../../shared/repositories/base.repository';
 import GpsHistory from '../../../models/schemas/GpsHistory';
-import { WhereOptions, Op } from 'sequelize';
+import UserLastLocation from '../../../models/schemas/UserLastLocations';
+import { WhereOptions, Op, Transaction } from 'sequelize';
+
+export interface UserLastLocationUpsertPayload {
+  hostId: number;
+  userId: number;
+  latitude: number;
+  longitude: number;
+  locationTime: number;
+  localId?: string;
+  accuracy?: number;
+  altitude?: number;
+  speed?: number;
+  provider?: string;
+  batteryPercentage?: number;
+  isCharging?: number;
+}
 
 export class GpsHistoryRepository extends BaseRepository<typeof GpsHistory.prototype> {
   constructor() {
@@ -31,5 +47,33 @@ export class GpsHistoryRepository extends BaseRepository<typeof GpsHistory.proto
       } as WhereOptions<typeof GpsHistory.prototype>,
       order: [['timestamp', 'DESC']],
     });
+  }
+
+  async upsertUserLastLocation(
+    payload: UserLastLocationUpsertPayload,
+    transaction?: Transaction
+  ): Promise<typeof UserLastLocation.prototype> {
+    const [row] = await UserLastLocation.upsert(
+      {
+        hostId: payload.hostId,
+        userId: payload.userId,
+        localId: payload.localId,
+        latitude: payload.latitude,
+        longitude: payload.longitude,
+        accuracy: payload.accuracy,
+        altitude: payload.altitude,
+        speed: payload.speed,
+        provider: payload.provider,
+        batteryPercentage: payload.batteryPercentage,
+        isCharging: payload.isCharging,
+        locationTime: payload.locationTime,
+      },
+      {
+        transaction,
+        returning: true,
+      }
+    );
+
+    return row;
   }
 }

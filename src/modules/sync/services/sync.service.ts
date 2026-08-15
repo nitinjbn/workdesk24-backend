@@ -1,6 +1,7 @@
 import { 
   AttendanceRepository, 
   GpsHistoryRepository, 
+  type UserLastLocationUpsertPayload,
   VisitRepository, 
   OrderRepository, 
   OrderProductRepository, 
@@ -62,6 +63,18 @@ interface LocationSyncConfig extends LocationResolutionTarget {
   readonly recordId: number;
 }
 
+interface LocationFieldMap {
+  latitudeField: string;
+  longitudeField: string;
+  locationTimeField: string;
+  accuracyField?: string;
+  altitudeField?: string;
+  speedField?: string;
+  providerField?: string;
+  batteryPercentageField?: string;
+  isChargingField?: string;
+}
+
 type ActivityLogFactory = (record: SyncRecord) => Omit<ActivityLogInput, 'hostId' | 'userId' | 'entityId' | 'activityTime'> | null;
 
 export class SyncService {
@@ -97,6 +110,200 @@ export class SyncService {
         activityTime: Number.isFinite(activityTime) && activityTime > 0 ? activityTime : Math.floor(Date.now() / 1000),
         ...entry,
         metadata: { employeeName, ...entry.metadata },
+      },
+      transaction
+    );
+  }
+
+  private toFiniteNumber(value: unknown): number | null {
+    if (value === undefined || value === null || value === '') {
+      return null;
+    }
+
+    const parsedValue = Number(value);
+    return Number.isFinite(parsedValue) ? parsedValue : null;
+  }
+
+  private toPositiveInteger(value: unknown): number | null {
+    const parsedValue = Number(value);
+    if (!Number.isFinite(parsedValue) || parsedValue <= 0) {
+      return null;
+    }
+
+    return Math.floor(parsedValue);
+  }
+
+  private buildLocationCandidate(source: SyncRecord, map: LocationFieldMap): UserLastLocationUpsertPayload | null {
+    const latitude = this.toFiniteNumber(source[map.latitudeField]);
+    const longitude = this.toFiniteNumber(source[map.longitudeField]);
+
+    if (latitude === null || longitude === null) {
+      return null;
+    }
+
+    const locationTime = this.toPositiveInteger(source[map.locationTimeField]) || Math.floor(Date.now() / 1000);
+
+    return {
+      hostId: 0,
+      userId: 0,
+      latitude,
+      longitude,
+      locationTime,
+      localId: typeof source.localId === 'string' ? source.localId : undefined,
+      accuracy: map.accuracyField ? this.toFiniteNumber(source[map.accuracyField]) ?? undefined : undefined,
+      altitude: map.altitudeField ? this.toFiniteNumber(source[map.altitudeField]) ?? undefined : undefined,
+      speed: map.speedField ? this.toFiniteNumber(source[map.speedField]) ?? undefined : undefined,
+      provider: map.providerField && source[map.providerField] !== undefined && source[map.providerField] !== null
+        ? String(source[map.providerField])
+        : undefined,
+      batteryPercentage: map.batteryPercentageField
+        ? this.toFiniteNumber(source[map.batteryPercentageField]) ?? undefined
+        : undefined,
+      isCharging: map.isChargingField ? this.toPositiveInteger(source[map.isChargingField]) ?? undefined : undefined,
+    };
+  }
+
+  private resolveLatestLocationCandidate(record: SyncRecord, sourceRecord?: SyncRecord): UserLastLocationUpsertPayload | null {
+    const sources: SyncRecord[] = [record];
+    if (sourceRecord) {
+      sources.push(sourceRecord);
+    }
+
+    const maps: LocationFieldMap[] = [
+      {
+        latitudeField: 'latitude',
+        longitudeField: 'longitude',
+        locationTimeField: 'createdAt',
+        accuracyField: 'accuracy',
+        altitudeField: 'altitude',
+        speedField: 'speed',
+        providerField: 'provider',
+        batteryPercentageField: 'batteryPercentage',
+        isChargingField: 'isCharging',
+      },
+      {
+        latitudeField: 'latitude',
+        longitudeField: 'longitude',
+        locationTimeField: 'locationTime',
+        accuracyField: 'accuracy',
+        altitudeField: 'altitude',
+        speedField: 'speed',
+        providerField: 'provider',
+        batteryPercentageField: 'batteryPercentage',
+        isChargingField: 'isCharging',
+      },
+      {
+        latitudeField: 'attendanceLatitude',
+        longitudeField: 'attendanceLongitude',
+        locationTimeField: 'attendanceTime',
+        accuracyField: 'attendanceLocationAccuracy',
+        altitudeField: 'attendanceLocationAltitude',
+        speedField: 'attendanceLocationSpeed',
+        providerField: 'attendanceLocationProvider',
+        batteryPercentageField: 'attendanceBatteryPercentage',
+        isChargingField: 'isChargingOnAttendance',
+      },
+      {
+        latitudeField: 'dayoverLatitude',
+        longitudeField: 'dayoverLongitude',
+        locationTimeField: 'dayoverTime',
+        accuracyField: 'dayoverLocationAccuracy',
+        altitudeField: 'dayoverLocationAltitude',
+        speedField: 'dayoverLocationSpeed',
+        providerField: 'dayoverLocationProvider',
+        batteryPercentageField: 'dayoverBatteryPercentage',
+        isChargingField: 'isChargingOnDayover',
+      },
+      {
+        latitudeField: 'checkInLatitude',
+        longitudeField: 'checkInLongitude',
+        locationTimeField: 'checkInTime',
+        accuracyField: 'checkInLocationAccuracy',
+        altitudeField: 'checkInLocationAltitude',
+        speedField: 'checkInLocationSpeed',
+        providerField: 'checkInLocationProvider',
+        batteryPercentageField: 'checkInBatteryPercentage',
+        isChargingField: 'isChargingOnCheckIn',
+      },
+      {
+        latitudeField: 'checkOutLatitude',
+        longitudeField: 'checkOutLongitude',
+        locationTimeField: 'checkOutTime',
+        accuracyField: 'checkOutLocationAccuracy',
+        altitudeField: 'checkOutLocationAltitude',
+        speedField: 'checkOutLocationSpeed',
+        providerField: 'checkOutLocationProvider',
+        batteryPercentageField: 'checkOutBatteryPercentage',
+        isChargingField: 'isChargingOnCheckOut',
+      },
+      {
+        latitudeField: 'latitude',
+        longitudeField: 'longitude',
+        locationTimeField: 'orderTime',
+      },
+      {
+        latitudeField: 'latitude',
+        longitudeField: 'longitude',
+        locationTimeField: 'paymentCaptureTime',
+      },
+      {
+        latitudeField: 'latitude',
+        longitudeField: 'longitude',
+        locationTimeField: 'feedbackTime',
+      },
+      {
+        latitudeField: 'latitude',
+        longitudeField: 'longitude',
+        locationTimeField: 'capturedAt',
+      },
+      {
+        latitudeField: 'latitude',
+        longitudeField: 'longitude',
+        locationTimeField: 'activityTime',
+      },
+    ];
+
+    const candidates: UserLastLocationUpsertPayload[] = [];
+
+    for (const source of sources) {
+      for (const map of maps) {
+        const candidate = this.buildLocationCandidate(source, map);
+        if (candidate) {
+          candidates.push(candidate);
+        }
+      }
+    }
+
+    if (!candidates.length) {
+      return null;
+    }
+
+    candidates.sort((a, b) => b.locationTime - a.locationTime);
+    return candidates[0];
+  }
+
+  private async upsertUserLastLocationFromRecord(
+    record: SyncRecord,
+    transaction: Transaction,
+    sourceRecord?: SyncRecord
+  ): Promise<void> {
+    const hostId = Number(record.hostId ?? sourceRecord?.hostId);
+    const userId = Number(record.userId ?? sourceRecord?.userId);
+
+    if (!Number.isInteger(hostId) || hostId <= 0 || !Number.isInteger(userId) || userId <= 0) {
+      return;
+    }
+
+    const locationCandidate = this.resolveLatestLocationCandidate(record, sourceRecord);
+    if (!locationCandidate) {
+      return;
+    }
+
+    await gpsHistoryRepository.upsertUserLastLocation(
+      {
+        ...locationCandidate,
+        hostId,
+        userId,
       },
       transaction
     );
@@ -177,7 +384,7 @@ export class SyncService {
       attendanceRepository,
       userId,
       records,
-      async (record, transaction, previousRecord) => {
+      async (record, transaction, previousRecord, sourceRecord) => {
         await this.syncUserDailySummary(record, transaction);
         await this.logActivity(
           record,
@@ -194,6 +401,7 @@ export class SyncService {
           }),
           transaction
         );
+        await this.upsertUserLastLocationFromRecord(record, transaction, sourceRecord);
       },
       async (record, previousRecord) => {
         await this.scheduleAttendanceLocationJobs(record, previousRecord);
@@ -326,7 +534,14 @@ export class SyncService {
   }
 
   async syncGpsHistory(userId: number, records: SyncRecord[]): Promise<SyncResult> {
-    return this.syncData(gpsHistoryRepository, userId, records);
+    return this.syncData(
+      gpsHistoryRepository,
+      userId,
+      records,
+      async (record, transaction, _previousRecord, sourceRecord) => {
+        await this.upsertUserLastLocationFromRecord(record, transaction, sourceRecord);
+      }
+    );
   }
 
   async syncVisits(userId: number, records: SyncRecord[]): Promise<SyncResult> {
@@ -334,7 +549,7 @@ export class SyncService {
       visitRepository,
       userId,
       records,
-      async (visit, transaction, previousVisit) => {
+      async (visit, transaction, previousVisit, sourceVisit) => {
         await this.syncVisitSummaryForVisit(visit, transaction);
         await this.syncDailySummaryForActivity(visit, 'checkInTime', transaction, previousVisit);
         await this.logActivity(
@@ -352,6 +567,7 @@ export class SyncService {
           }),
           transaction
         );
+        await this.upsertUserLastLocationFromRecord(visit, transaction, sourceVisit);
       },
       async (record, previousRecord) => {
         await this.scheduleVisitLocationJobs(record, previousRecord);
@@ -463,6 +679,8 @@ export class SyncService {
             transaction
           );
 
+          await this.upsertUserLastLocationFromRecord(order.toJSON(), transaction, record);
+
           return {
             status: instance ? 'updated' as const : 'created' as const,
             serverId: order.id,
@@ -532,6 +750,7 @@ export class SyncService {
           }),
           transaction
         );
+        await this.upsertUserLastLocationFromRecord(payment, transaction, sourceRecord);
       },
       // async (record, previousRecord) => {
       //   await this.schedulePaymentLocationJobs(record, previousRecord);
@@ -582,6 +801,7 @@ export class SyncService {
           }),
           transaction
         );
+        await this.upsertUserLastLocationFromRecord(feedback, transaction, sourceFeedback);
       },
       // async (record, previousRecord) => {
       //   await this.scheduleFeedbackLocationJobs(record, previousRecord);
@@ -631,6 +851,7 @@ export class SyncService {
           }),
           transaction
         );
+        await this.upsertUserLastLocationFromRecord(image, transaction, sourceRecord);
       },
       // async (record, previousRecord) => {
       //   await this.scheduleImageLocationJobs(record, previousRecord);

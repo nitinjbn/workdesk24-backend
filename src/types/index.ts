@@ -78,6 +78,43 @@ export interface GpsHistoryAttributes {
   deletedAt?: number | null;
 }
 
+// User Last Location attributes
+export interface UserLastLocationAttributes {
+  id?: number;
+  hostId: number;
+  userId: number;
+  localId?: string;
+  latitude: number;
+  longitude: number;
+  accuracy?: number;
+  altitude?: number;
+  speed?: number;
+  provider?: string;
+  batteryPercentage?: number;
+  isCharging?: number;
+  locationTime: number;
+}
+
+export interface GpsHistoryAttributes {
+  id?: number;
+  hostId: number;
+  userId: number;
+  localId?: string;
+  latitude: number;
+  longitude: number;
+  accuracy?: number;
+  altitude?: number;
+  speed?: number;
+  provider?: string;
+  batteryPercentage?: number;
+  isCharging?: number;
+  createdAt?: number;
+  updatedAt?: number | null;  
+  syncedAt?: number;
+  isDeleted?: number;
+  deletedAt?: number | null;
+}
+
 // Visit attributes
 export interface VisitAttributes {
   id?: number;

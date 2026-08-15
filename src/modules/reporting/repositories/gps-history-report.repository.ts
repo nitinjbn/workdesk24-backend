@@ -587,8 +587,7 @@ export class GpsHistoryReportRepository {
   async getLastLocationsReport(params: { hostId: number; filter?: Record<string, any> }): Promise<{ lastLocations: any[]; }> {
     const { hostId, filter } = params;
     const where: Record<string, any> = {
-      hostId,
-      isDeleted: 0,
+      hostId
     };
 
     const presentAttendanceRows = await db.Attendance.findAll({
@@ -643,26 +642,14 @@ export class GpsHistoryReportRepository {
       [Op.in]: allowedUserIds,
     };
 
-    (where as any)[Op.and] = db.sequelize.literal(`
-      \`GpsHistory\`.\`id\` = (
-        SELECT gh2.id
-        FROM wd_gps_history gh2
-        WHERE gh2.hostId = \`GpsHistory\`.\`hostId\`
-          AND gh2.userId = \`GpsHistory\`.\`userId\`
-          AND gh2.isDeleted = 0
-        ORDER BY gh2.createdAt DESC, gh2.id DESC
-        LIMIT 1
-      )
-    `);
-
-    const gpsRows = await db.GpsHistory.findAll({
+    const gpsRows = await db.UserLastLocation.findAll({
       attributes: [
         'userId',
         [db.sequelize.col('user.name'), 'employeeName'],
         [db.sequelize.col('user.profileImageUrl'), 'profileImageUrl'],
         'latitude',
         'longitude',
-        ['createdAt', 'locationTime'],
+        'locationTime',
       ],
       where,
       include: [
@@ -677,7 +664,6 @@ export class GpsHistoryReportRepository {
       ],
       subQuery: false,
       logging: console.log, // Enable logging for debugging
-      order: [['createdAt', 'DESC'], ['id', 'DESC']],
     });
 
     return {

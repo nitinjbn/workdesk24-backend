@@ -39,6 +39,7 @@ import { initUserDailySummary } from './schemas/UserDailySummary';
 import { initVisitSummary } from './schemas/VisitSummary';
 import { initApiLog } from './schemas/ApiLog';
 import { initActivityLog } from './schemas/ActivityLog';
+import { initUserLastLocation } from './schemas/UserLastLocations';
 
 dotenv.config();
 
@@ -133,6 +134,7 @@ const UserDailySummary = initUserDailySummary(sequelize);
 const VisitSummary = initVisitSummary(sequelize);
 const ApiLog = initApiLog(sequelize);
 const ActivityLog = initActivityLog(sequelize);
+const UserLastLocation = initUserLastLocation(sequelize);
 
 // Store models in an object
 const db: any = {
@@ -175,6 +177,7 @@ const db: any = {
   VisitSummary,
   ApiLog,
   ActivityLog,
+  UserLastLocation,
   connectionManager,
 };
 
@@ -248,6 +251,7 @@ export {
   CustomerMedia,
   CustomerAttribute,
   CustomerType,
+  UserLastLocation,
   UserRefreshToken,
   Designation,
   Product,
