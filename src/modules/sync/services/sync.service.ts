@@ -182,7 +182,7 @@ export class SyncService {
         await this.logActivity(
           record,
           (r) => ({
-            module: ActivityModule.ATTENDANCE,
+            module: previousRecord ? ActivityModule.DAYOVER : ActivityModule.ATTENDANCE,
             action: previousRecord ? 'DAYOVER_MARKED' : 'ATTENDANCE_MARKED',
             descriptionKey: previousRecord ? ACTIVITY_DESCRIPTION_KEYS.DAYOVER_MARKED : ACTIVITY_DESCRIPTION_KEYS.ATTENDANCE_MARKED,
             metadata: {

@@ -425,6 +425,8 @@ export class ReportService {
     );
 
     const enriched = plainData.map((record: any) => ({
+      userId: record.userId,
+      employeeName: record.employeeName,
       module: record.module,
       action: record.action,
       entityId: record.entityId,

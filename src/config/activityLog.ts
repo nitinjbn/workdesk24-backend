@@ -16,7 +16,7 @@ export const ACTIVITY_DETAILS = {
         payload: {
             filter: {
                 userId: '${userId}',
-                attendanceTime: {
+                reportTime: {
                     from: '${fromTime}',
                     to: '${toTime}'
                 }
@@ -30,7 +30,7 @@ export const ACTIVITY_DETAILS = {
         payload: {
             filter: {
                 userId: '${userId}',
-                attendanceTime: {
+                reportTime: {
                     from: '${fromTime}',
                     to: '${toTime}'
                 }
@@ -44,7 +44,7 @@ export const ACTIVITY_DETAILS = {
         payload: {
             filter: {
                 userId: '${userId}',
-                attendanceTime: {
+                reportTime: {
                     from: '${fromTime}',
                     to: '${toTime}'
                 }
@@ -58,7 +58,7 @@ export const ACTIVITY_DETAILS = {
         payload: {
             filter: {
                 userId: '${userId}',
-                attendanceTime: {
+                reportTime: {
                     from: '${fromTime}',
                     to: '${toTime}'
                 }
@@ -72,7 +72,7 @@ export const ACTIVITY_DETAILS = {
         payload: {
             filter: {
                 userId: '${userId}',
-                attendanceTime: {
+                reportTime: {
                     from: '${fromTime}',
                     to: '${toTime}'
                 }
@@ -86,7 +86,7 @@ export const ACTIVITY_DETAILS = {
         payload: {
             filter: {
                 userId: '${userId}',
-                attendanceTime: {
+                reportTime: {
                     from: '${fromTime}',
                     to: '${toTime}'
                 }
@@ -100,7 +100,7 @@ export const ACTIVITY_DETAILS = {
         payload: {
             filter: {
                 userId: '${userId}',
-                checkInTime: {
+                reportTime: {
                     from: '${fromTime}',
                     to: '${toTime}'
                 }
@@ -114,7 +114,7 @@ export const ACTIVITY_DETAILS = {
         payload: {
             filter: {
                 userId: '${userId}',
-                orderTime: {
+                reportTime: {
                     from: '${fromTime}',
                     to: '${toTime}'
                 }
@@ -128,7 +128,7 @@ export const ACTIVITY_DETAILS = {
         payload: {
             filter: {
                 userId: '${userId}',
-                paymentCaptureTime: {
+                reportTime: {
                     from: '${fromTime}',
                     to: '${toTime}'
                 }
@@ -142,7 +142,7 @@ export const ACTIVITY_DETAILS = {
         payload: {
             filter: {
                 userId: '${userId}',
-                feedbackTime: {
+                reportTime: {
                     from: '${fromTime}',
                     to: '${toTime}'
                 }
@@ -156,7 +156,7 @@ export const ACTIVITY_DETAILS = {
         payload: {
             filter: {
                 userId: '${userId}',
-                capturedAt: {
+                reportTime: {
                     from: '${fromTime}',
                     to: '${toTime}'
                 }
@@ -170,7 +170,7 @@ export const ACTIVITY_DETAILS = {
         payload: {
             filter: {
                 userId: '${userId}',
-                checkInTime: {
+                reportTime: {
                     from: '${fromTime}',
                     to: '${toTime}'
                 }

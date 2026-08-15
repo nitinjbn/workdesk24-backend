@@ -28,8 +28,18 @@ export class ActivityLogsReportRepository {
     
     const query: FindAndCountOptions<any> = {
       attributes: {
-        exclude: ['createdAt', 'isDeleted']
+        exclude: ['createdAt', 'isDeleted'],
+        include: [
+          [db.sequelize.col('user.name'), 'employeeName'],
+        ],
       },
+      include: [
+        {
+          model: db.User,
+          as: 'user',
+          attributes: [],
+        }
+      ],
       where: activityWhere,
       order: [sortBy && sortOrder ? [sortBy, sortOrder] : ['activityTime', 'DESC']],
       logging: console.log, // Enable logging for debugging
