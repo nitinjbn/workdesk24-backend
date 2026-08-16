@@ -4,14 +4,22 @@ import { PushMessage, PushProvider, PushSendResult } from '../types/push.types';
 export class FirebasePushProvider implements PushProvider {
   async send(message: PushMessage): Promise<PushSendResult> {
     try {
-      const response = await getFirebaseMessaging().send({
+      const isSilent = String(message.data?.silent).toLowerCase() === 'true';
+
+      const fcmMessage: any = {
         token: message.token,
-        notification: {
+        data: message.data,
+        android: { priority: 'high' }
+      };
+
+      if (!isSilent) {
+        fcmMessage.notification = {
           title: message.data?.title,
           body: message.data?.body,
-        },
-        data: message.data,
-      });
+        };
+      }
+      
+      const response = await getFirebaseMessaging().send(fcmMessage);
 
       return {
         success: true,
