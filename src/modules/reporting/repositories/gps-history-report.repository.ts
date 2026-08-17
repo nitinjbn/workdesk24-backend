@@ -586,20 +586,28 @@ export class GpsHistoryReportRepository {
 
   async getLastLocationsReport(params: { hostId: number; filter?: Record<string, any> }): Promise<{ lastLocations: any[]; }> {
     const { hostId, filter } = params;
-    const where: Record<string, any> = {
-      hostId
+    const attendanceWhere: Record<string, any> = {
+      hostId,
+      isDeleted: 0,
+      attendanceStatus: 'Present',
+      attendanceTime: {
+        [Op.between]: [filter?.createdAt?.from, filter?.createdAt?.to],
+      },
     };
+
+    if (filter?.userId) {
+      if(Array.isArray(filter.userId)) {
+        attendanceWhere.userId = {
+          [Op.in]: filter.userId,
+        };
+      } else {
+        attendanceWhere.userId = filter.userId;
+      }
+    }
 
     const presentAttendanceRows = await db.Attendance.findAll({
       attributes: ['userId'],
-      where: {
-        hostId,
-        isDeleted: 0,
-        attendanceStatus: 'Present',
-        attendanceTime: {
-          [Op.between]: [filter?.createdAt?.from, filter?.createdAt?.to],
-        },
-      },
+      where: attendanceWhere,
       include: [
         {
           model: db.User,
@@ -627,10 +635,7 @@ export class GpsHistoryReportRepository {
       };
     }
 
-    const filteredUserId = Number(filter?.userId);
-    const allowedUserIds = Number.isFinite(filteredUserId) && filteredUserId > 0
-      ? presentUserIds.filter((userId) => userId === filteredUserId)
-      : presentUserIds;
+    const allowedUserIds = presentUserIds;
 
     if (!allowedUserIds.length) {
       return {
@@ -638,7 +643,11 @@ export class GpsHistoryReportRepository {
       };
     }
 
-    where.userId = {
+    const lastLocationWhere: Record<string, any> = {
+      hostId
+    };
+
+    lastLocationWhere.userId = {
       [Op.in]: allowedUserIds,
     };
 
@@ -651,7 +660,7 @@ export class GpsHistoryReportRepository {
         'longitude',
         'locationTime',
       ],
-      where,
+      where: lastLocationWhere,
       include: [
         {
           model: db.User,
