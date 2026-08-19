@@ -3,4 +3,6 @@ export interface AIRequestContext {
     hostId: string;
     role: string;
     timezone: string;
+    lastEmployeeSearchUserIds?: Set<string>;
+    lastEmployeeSearchMatchCount?: number;
 }

@@ -29,6 +29,14 @@ type UserInstance = typeof User.prototype;
 type DesignationInstance = typeof Designation.prototype;
 type RoleInstance = typeof Role.prototype;
 export class UserService {
+  async searchEmployeesForAI(hostId: number, search: string) {
+    return usersRepository.searchEmployeesForAI({ hostId, search });
+  }
+
+  async findActiveEmployeeForAI(hostId: number, userId: number) {
+    return usersRepository.findActiveEmployeeForAI({ hostId, userId });
+  }
+
   async getAppUsers(
     payload: GetUsersPayload,
     scope: ReportScope

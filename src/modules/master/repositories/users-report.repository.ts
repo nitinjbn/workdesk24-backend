@@ -17,6 +17,51 @@ export interface GetUsersQuery {
 }
 
 export class usersRepository {
+  async searchEmployeesForAI(params: {
+    hostId: number;
+    search: string;
+  }): Promise<Array<Pick<UserInstance, 'id' | 'name' | 'employeeCode' | 'email'>>> {
+    const search = params.search.trim();
+
+    if (!search) {
+      return [];
+    }
+
+    const users = await User.findAll({
+      attributes: ['id', 'name', 'employeeCode', 'email'],
+      where: {
+        hostId: params.hostId,
+        isDeleted: 0,
+        accountStatus: 'ACTIVE',
+        [Op.or]: [
+          { name: { [Op.like]: `%${search}%` } },
+          { employeeCode: { [Op.like]: `%${search}%` } },
+          { email: { [Op.like]: `%${search}%` } },
+        ],
+      },
+      order: [['name', 'ASC'], ['id', 'ASC']],
+    });
+
+    return users;
+  }
+
+  async findActiveEmployeeForAI(params: {
+    hostId: number;
+    userId: number;
+  }): Promise<Pick<UserInstance, 'id' | 'name' | 'employeeCode'> | null> {
+    const user = await User.findOne({
+      attributes: ['id', 'name', 'employeeCode'],
+      where: {
+        id: params.userId,
+        hostId: params.hostId,
+        isDeleted: 0,
+        accountStatus: 'ACTIVE',
+      },
+    });
+
+    return user;
+  }
+
   async getUsers(params: GetUsersQuery): Promise<ReportResponse<UserInstance>> {
     const { page, limit, filter={}, hostId, sortBy, sortOrder } = params;
     const { offset } = baseReportHelper.normalizePagination({ page, limit });

@@ -189,6 +189,15 @@ export interface AdminGpsHistoryJourneyResponse {
 
 export type AttendanceReportFilter = UserScopedReportFilter;
 
+export interface AttendanceTimeRangeFilter {
+  from: number;
+  to: number;
+}
+
+export interface AttendanceReportFilterWithTime extends AttendanceReportFilter {
+  attendanceTime?: AttendanceTimeRangeFilter;
+}
+
 export interface AttendanceReportPayload extends UserScopedReportPayload {}
 
 export interface ReportScope {

@@ -1,6 +1,6 @@
-import { FindAndCountOptions, Includeable } from 'sequelize';
+import { FindAndCountOptions, Includeable, Op } from 'sequelize';
 import db, { Attendance } from '../../../models';
-import { AttendanceReportFilter, CommonReportSortBy, ReportResponse, ReportSortDirection } from '../types/report.types';
+import { AttendanceReportFilter, AttendanceReportFilterWithTime, CommonReportSortBy, ReportResponse, ReportSortDirection } from '../types/report.types';
 import baseReportHelper from '../helpers/base-report.helper';
 import { buildCommonReportOrder, buildDynamicModelFilters, buildUserInclude, buildUserScopedWhere, extractUserFilter } from './user-scoped-report.helper';
 
@@ -69,11 +69,24 @@ export class AttendanceReportRepository {
 
   private buildWhere(filter: AttendanceReportFilter, userId?: number): Record<string, unknown> {
     const baseWhere = buildUserScopedWhere<AttendanceInstance>(filter, userId) as Record<string, unknown>;
-    const dynamicWhere = buildDynamicModelFilters(filter, ATTENDANCE_COLUMNS, ['userId', 'User', 'user']);
+    const attendanceTime = (filter as AttendanceReportFilterWithTime).attendanceTime;
+    const dynamicWhere = buildDynamicModelFilters(
+      filter,
+      ATTENDANCE_COLUMNS,
+      ['userId', 'User', 'user', 'attendanceTime'],
+    );
 
     return {
       ...baseWhere,
       ...dynamicWhere,
+      ...(attendanceTime
+        ? {
+            attendanceTime: {
+              [Op.gte]: attendanceTime.from,
+              [Op.lt]: attendanceTime.to,
+            },
+          }
+        : {}),
     };
   }
 }
