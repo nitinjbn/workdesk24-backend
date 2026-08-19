@@ -9,6 +9,7 @@ import customerRoutes from './customers.routes';
 import reportRoutes from './reports.routes';
 import inquiryRoutes from './inquiries.routes';
 import dashboardRoutes from './dashboard.routes';
+import aiRoutes from './ai.routes'; 
 import { apiLogRouteContext } from '../../../modules/api-logs';
 
 const router = Router();
@@ -27,5 +28,6 @@ router.use(apiLogRouteContext('admin', 'customers'), customerRoutes);
 router.use(apiLogRouteContext('admin', 'reports'), reportRoutes);
 router.use(apiLogRouteContext('admin', 'inquiries'), inquiryRoutes);
 router.use(apiLogRouteContext('admin', 'dashboard'), dashboardRoutes);
+router.use(apiLogRouteContext('admin', 'ai'), aiRoutes);
 
 export default router;
