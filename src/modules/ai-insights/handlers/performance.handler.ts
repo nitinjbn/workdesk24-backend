@@ -5,6 +5,7 @@ import {
 
 import { AiInsightHandler } from "./insight-handler.types";
 import performanceInsightRepository, { PerformanceInsightRepository } from '../repositories/performance-insight.repository';
+import { DEFAULT_PERFORMANCE_WEIGHTS } from '../constants/performance.constants';
 
 export class PerformanceInsightHandler
   implements AiInsightHandler {
@@ -80,6 +81,8 @@ export class PerformanceInsightHandler
         items: rankings
       },
 
+      weightage: DEFAULT_PERFORMANCE_WEIGHTS,
+
       answer: {
         text: winner
           ? `${winner.employee?.name} is the best performer with a weighted score of ${winner.score ?? 0} in the selected period.`
@@ -106,6 +109,7 @@ export class PerformanceInsightHandler
         type: "ranking",
         items: rankings,
       },
+      weightage: DEFAULT_PERFORMANCE_WEIGHTS,
       answer: {
         text: lowest
           ? `${lowest.employee?.name} is the lowest performer with a weighted score of ${lowest.score ?? 0} in the selected period.`

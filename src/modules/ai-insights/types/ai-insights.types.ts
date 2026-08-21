@@ -254,6 +254,8 @@ export interface AiInsightQueryResponse {
 
   answer: AiInsightAnswer;
 
+  weightage?: AiInsightWeightage;
+
   actions?: AiInsightAction[];
 }
 
@@ -353,10 +355,19 @@ export interface AiInsightAction {
 // EXECUTION RESULT
 // ============================================================
 
+export interface AiInsightWeightage {
+  orderValue: number;
+  paymentValue: number;
+  visitProductivity: number;
+  attendance: number;
+}
+
 export interface AiInsightExecutionResult {
   result: AiInsightResult;
 
   answer: AiInsightAnswer;
+
+  weightage?: AiInsightWeightage;
 
   actions?: AiInsightAction[];
 }

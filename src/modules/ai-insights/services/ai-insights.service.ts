@@ -216,6 +216,8 @@ export class AiInsightsService {
 
       answer: executionResult.answer,
 
+      weightage: executionResult.weightage,
+
       actions: executionResult.actions
     };
   }
