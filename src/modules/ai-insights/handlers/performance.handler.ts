@@ -25,6 +25,11 @@ export class PerformanceInsightHandler
           params.context
         );
 
+      case "performance.lowest":
+        return this.getLowestPerformers(
+          params.context
+        );
+
       case "performance.most_improved":
         return this.getMostImproved(
           params.context
@@ -77,9 +82,35 @@ export class PerformanceInsightHandler
 
       answer: {
         text: winner
-          ? `${winner.employee?.name} is leading by order value in the selected period.`
+          ? `${winner.employee?.name} is the best performer with a weighted score of ${winner.score ?? 0} in the selected period.`
           : "No performance data found for the selected period."
       }
+    };
+  }
+
+  private async getLowestPerformers(
+    context: AiInsightExecutionContext
+  ): Promise<AiInsightExecutionResult> {
+    const rankings = await this.repository.getLowestPerformers({
+      hostId: context.hostId,
+      startDateTime: context.dateRange.startDateTime,
+      endDateTime: context.dateRange.endDateTime,
+      employeeIds: context.filters.employees?.ids,
+      limit: context.options.limit,
+    });
+
+    const lowest = rankings[0];
+
+    return {
+      result: {
+        type: "ranking",
+        items: rankings,
+      },
+      answer: {
+        text: lowest
+          ? `${lowest.employee?.name} is the lowest performer with a weighted score of ${lowest.score ?? 0} in the selected period.`
+          : "No performance data found for the selected period.",
+      },
     };
   }
 

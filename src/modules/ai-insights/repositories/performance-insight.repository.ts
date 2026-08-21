@@ -1,6 +1,8 @@
 import { Op } from 'sequelize';
 import db from '../../../models';
 import { AiInsightBaseQueryParams, AiInsightResultItem } from '../types/ai-insights.types';
+import { DEFAULT_PERFORMANCE_WEIGHTS } from '../constants/performance.constants';
+import { calculatePerformanceScore } from '../helpers/performance-score.helper';
 
 interface PerformanceInsightParams extends AiInsightBaseQueryParams {}
 
@@ -143,65 +145,165 @@ export class PerformanceInsightRepository {
 		return result;
 	}
 
-	async getBestPerformers(params: PerformanceInsightParams): Promise<AiInsightResultItem[]> {
+	private async getPresentDayCounts(hostId: number, range: Range, employeeIds?: number[]): Promise<NumericMap> {
+		const where: any = {
+			hostId,
+			isDeleted: 0,
+			attendanceStatus: 'Present',
+			reportDate: {
+				[Op.gte]: range.startUnix,
+				[Op.lte]: range.endUnix,
+			},
+		};
+
+		if (employeeIds?.length) {
+			where.userId = { [Op.in]: employeeIds };
+		}
+
+		const rows = await db.UserDailySummary.findAll({
+			attributes: [
+				'userId',
+				[db.Sequelize.fn('COUNT', db.Sequelize.fn('DISTINCT', db.Sequelize.col('reportDate'))), 'value'],
+			],
+			where,
+			group: ['userId'],
+			raw: true,
+		});
+
+		const result: NumericMap = new Map();
+		rows.forEach((row: any) => {
+			result.set(Number(row.userId), Number(row.value || 0));
+		});
+
+		return result;
+	}
+
+	private async getPerformanceRankings(
+		params: PerformanceInsightParams,
+		direction: 'asc' | 'desc'
+	): Promise<AiInsightResultItem[]> {
 		const range = this.toUnixRange(params);
 		const limit = params.limit ?? 5;
 
-		const [users, visits, orders, payments] = await Promise.all([
+		const [users, visits, orders, payments, presentDays] = await Promise.all([
 			this.getUsersByHost(params.hostId, params.employeeIds),
 			this.getVisitCounts(params.hostId, range, params.employeeIds),
 			this.getOrderValues(params.hostId, range, params.employeeIds),
 			this.getPaymentValues(params.hostId, range, params.employeeIds),
+			this.getPresentDayCounts(params.hostId, range, params.employeeIds),
 		]);
 
-		const rows: AiInsightResultItem[] = [];
+		const candidates: Array<{
+			userId: number;
+			name: string;
+			employeeCode?: string;
+			totalVisits: number;
+			totalOrderValue: number;
+			totalPaymentValue: number;
+			presentDays: number;
+		}> = [];
 
 		users.forEach((user, userId) => {
 			const visitCount = visits.get(userId) || 0;
 			const orderValue = orders.get(userId) || 0;
 			const paymentValue = payments.get(userId) || 0;
+			const employeePresentDays = presentDays.get(userId) || 0;
 
 			if (visitCount === 0 && orderValue === 0 && paymentValue === 0) {
 				return;
 			}
 
-			rows.push({
-				employee: {
-					id: userId,
-					employeeCode: user.employeeCode,
-					name: user.name,
-				},
-				score: Number(orderValue.toFixed(2)),
-				metrics: {
-					totalVisits: visitCount,
-					totalOrderValue: Number(orderValue.toFixed(2)),
-					totalPaymentValue: Number(paymentValue.toFixed(2)),
-				},
+			candidates.push({
+				userId,
+				name: user.name,
+				employeeCode: user.employeeCode,
+				totalVisits: visitCount,
+				totalOrderValue: orderValue,
+				totalPaymentValue: paymentValue,
+				presentDays: employeePresentDays,
 			});
 		});
 
+		const maxOrderValue = Math.max(0, ...candidates.map((candidate) => candidate.totalOrderValue));
+		const maxPaymentValue = Math.max(0, ...candidates.map((candidate) => candidate.totalPaymentValue));
+		const maxPresentDays = Math.max(0, ...candidates.map((candidate) => candidate.presentDays));
+		const maxVisits = Math.max(0, ...candidates.map((candidate) => candidate.totalVisits));
+		const weights = DEFAULT_PERFORMANCE_WEIGHTS;
+		const rows = candidates.map((candidate) => {
+			const score = calculatePerformanceScore({
+				totalOrderValue: candidate.totalOrderValue,
+				totalPaymentValue: candidate.totalPaymentValue,
+				totalVisits: candidate.totalVisits,
+				presentDays: candidate.presentDays,
+				maxOrderValue,
+				maxPaymentValue,
+				maxPresentDays,
+				maxVisits,
+				weights,
+			});
+
+			return {
+				row: {
+					employee: {
+						id: candidate.userId,
+						employeeCode: candidate.employeeCode,
+						name: candidate.name,
+					},
+					score: score.score,
+					metrics: {
+						totalVisits: candidate.totalVisits,
+						totalOrderValue: Number(candidate.totalOrderValue.toFixed(2)),
+						totalPaymentValue: Number(candidate.totalPaymentValue.toFixed(2)),
+						presentDays: candidate.presentDays,
+						orderScore: score.orderScore,
+						paymentScore: score.paymentScore,
+						visitScore: score.visitScore,
+						attendanceScore: score.attendanceScore,
+					},
+				},
+				totalOrderValue: candidate.totalOrderValue,
+				totalPaymentValue: candidate.totalPaymentValue,
+				totalVisits: candidate.totalVisits,
+				userId: candidate.userId,
+			};
+		});
+
 		rows.sort((a, b) => {
-			const aOrder = Number(a.metrics?.totalOrderValue || 0);
-			const bOrder = Number(b.metrics?.totalOrderValue || 0);
-			if (bOrder !== aOrder) {
-				return bOrder - aOrder;
+			const scoreDifference = Number(a.row.score || 0) - Number(b.row.score || 0);
+			if (scoreDifference !== 0) {
+				return direction === 'desc' ? -scoreDifference : scoreDifference;
 			}
 
-			const aPayment = Number(a.metrics?.totalPaymentValue || 0);
-			const bPayment = Number(b.metrics?.totalPaymentValue || 0);
-			if (bPayment !== aPayment) {
-				return bPayment - aPayment;
+			const orderDifference = a.totalOrderValue - b.totalOrderValue;
+			if (orderDifference !== 0) {
+				return direction === 'desc' ? -orderDifference : orderDifference;
 			}
 
-			const aVisits = Number(a.metrics?.totalVisits || 0);
-			const bVisits = Number(b.metrics?.totalVisits || 0);
-			return bVisits - aVisits;
+			const paymentDifference = a.totalPaymentValue - b.totalPaymentValue;
+			if (paymentDifference !== 0) {
+				return direction === 'desc' ? -paymentDifference : paymentDifference;
+			}
+
+			const visitDifference = a.totalVisits - b.totalVisits;
+			if (visitDifference !== 0) {
+				return direction === 'desc' ? -visitDifference : visitDifference;
+			}
+
+			return direction === 'desc' ? b.userId - a.userId : a.userId - b.userId;
 		});
 
 		return rows.slice(0, limit).map((item, index) => ({
-			...item,
+			...item.row,
 			rank: index + 1,
 		}));
+	}
+
+	async getBestPerformers(params: PerformanceInsightParams): Promise<AiInsightResultItem[]> {
+		return this.getPerformanceRankings(params, 'desc');
+	}
+
+	async getLowestPerformers(params: PerformanceInsightParams): Promise<AiInsightResultItem[]> {
+		return this.getPerformanceRankings(params, 'asc');
 	}
 
 	async getMostImproved(params: PerformanceInsightParams): Promise<AiInsightResultItem[]> {

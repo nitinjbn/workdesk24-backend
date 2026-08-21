@@ -437,6 +437,33 @@ export const AI_INSIGHTS_CONFIG: AiInsightCategory[] = [
       },
 
       {
+        id: "performance.lowest",
+        question: "Who is the lowest performer?",
+        shortQuestion: "Lowest performer",
+        description:
+          "Find the lowest-performing employees using the weighted performance score",
+        icon: "trending-down",
+        resultType: "ranking",
+
+        filters: [
+          DATE_FILTER,
+          EMPLOYEE_FILTER,
+        ],
+
+        options: {
+          limit: {
+            enabled: true,
+            default: 5,
+            min: 1,
+            max: 50
+          },
+          comparison: {
+            enabled: true
+          }
+        }
+      },
+
+      {
         id: "performance.most_improved",
         question: "Who improved the most?",
         shortQuestion: "Most improved",
