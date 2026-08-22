@@ -341,7 +341,14 @@ export class GpsHistoryReportRepository {
     }
 
     const coordinates = this.extractCoordinates(newJourney);
-    const totalDistanceKm = newJourney.reduce((sum, journey) => sum + journey.distanceKm, 0);
+    const totalDistanceKm = finalJourney.reduce((sum, journey) => {
+      if (journey.type !== 'TRAVEL') {
+        return sum;
+      }
+
+      const segmentDistance = this.toFiniteNumber(journey.distanceKm) || 0;
+      return sum + segmentDistance;
+    }, 0);
 
     const attendanceTime = attendanceJson?.attendanceTime || null;
     const dayoverTime = attendanceJson?.dayoverTime || null;

@@ -19,9 +19,10 @@ export class ActivityLogsReportRepository {
         activityWhere.customerId = filter.customerId;
       }
       if(filter.activityTime) {
+        const { from, to } = filter.activityTime;
         activityWhere.activityTime = {
-          [Op.gte]: filter.activityTime?.from,
-          [Op.lte]: filter.activityTime?.to,
+          [Op.gte]: from,
+          [Op.lte]: to,
         };
       }
     }

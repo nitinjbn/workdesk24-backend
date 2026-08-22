@@ -119,6 +119,15 @@ export class usersRepository {
       ];
     }
 
+    if(filter.joiningDate) {
+      const { from, to } = filter.joiningDate;
+      if(from && to) {
+        where.joiningDate = {
+          [Op.between]: [from, to]
+        }
+      }
+    }
+
     const roleFilter:any = {
       isDeleted: 0
     }

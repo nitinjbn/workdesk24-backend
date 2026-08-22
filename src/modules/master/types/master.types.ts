@@ -64,7 +64,11 @@ export interface GetUsersFilter {
   mobile?: number,
   accountStatus?: 'ACTIVE' | 'INACTIVE',
   roleCode?: string[],
-  searchKey?: string
+  searchKey?: string,
+  joiningDate?: {
+    from?: number;
+    to?: number;
+  }
 }
 
 export interface GetRolesPayload {
