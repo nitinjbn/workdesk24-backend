@@ -34,6 +34,8 @@ interface UserAttributes extends BaseModel {
   district?: string;
   pinCode?: string;
   timezone?: string;
+  holidayCalendarId?: number;
+  leavePolicyId?: number;
   // reportingTime?: string;
   // shiftEndTime?: string;
   // weeklyOffMask?: number;
@@ -80,6 +82,8 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
   public district?: string
   public pinCode?: string;
   public timezone?: string;
+  public holidayCalendarId?: number;
+  public leavePolicyId?: number;
   public dateOfBirth?: number;
   //public employmentStatus!: 'ACTIVE' | 'RESIGNED' | 'TERMINATED' | 'RETIRED' | 'CONTRACT_COMPLETED' | 'TRANSFERRED';
   //public accountStatusUpdatedAt?: number;
@@ -125,6 +129,12 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
     User.hasOne(models.UserDevice, {
       foreignKey: 'userId',
       as: 'device',
+    });
+
+    User.hasOne(models.HolidayCalendar, {
+      foreignKey: 'id',
+      sourceKey: 'holidayCalendarId',
+      as: 'holidayCalendar',
     });
   }
 }
@@ -278,6 +288,14 @@ export function initUser(sequelize: Sequelize): typeof User {
       },
       timezone: {
         type: DataTypes.STRING(50),
+        allowNull: true,
+      },
+      holidayCalendarId: {
+        type: DataTypes.BIGINT,
+        allowNull: true,
+      },
+      leavePolicyId: {
+        type: DataTypes.BIGINT,
         allowNull: true,
       },
       // reportingTime: {

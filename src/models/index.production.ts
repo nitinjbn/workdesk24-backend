@@ -40,6 +40,18 @@ import { initVisitSummary } from './schemas/VisitSummary';
 import { initApiLog } from './schemas/ApiLog';
 import { initActivityLog } from './schemas/ActivityLog';
 import { initUserLastLocation } from './schemas/UserLastLocations';
+import { initLeaveYear } from './schemas/LeaveYear';
+import { initLeaveType } from './schemas/LeaveType';
+import { initLeavePolicy } from './schemas/LeavePolicy';
+import { initLeavePolicyRule } from './schemas/LeavePolicyRule';
+import { initLeavePolicyAssignment } from './schemas/LeavePolicyAssignment';
+import { initLeaveRequest } from './schemas/LeaveRequest';
+import { initLeaveRequestDay } from './schemas/LeaveRequestDay';
+import { initLeaveRequestApproval } from './schemas/LeaveRequestApproval';
+import { initLeaveBalance } from './schemas/LeaveBalance';
+import { initLeaveBalanceTransaction } from './schemas/LeaveBalanceTransaction';
+import { initHoliday } from './schemas/Holiday';
+import { initHolidayCalendar } from './schemas/HolidayCalendar';
 
 dotenv.config();
 
@@ -135,6 +147,18 @@ const VisitSummary = initVisitSummary(sequelize);
 const ApiLog = initApiLog(sequelize);
 const ActivityLog = initActivityLog(sequelize);
 const UserLastLocation = initUserLastLocation(sequelize);
+const LeaveYear = initLeaveYear(sequelize);
+const LeaveType = initLeaveType(sequelize);
+const LeavePolicy = initLeavePolicy(sequelize);
+const LeavePolicyRule = initLeavePolicyRule(sequelize);
+const LeavePolicyAssignment = initLeavePolicyAssignment(sequelize);
+const LeaveRequest = initLeaveRequest(sequelize);
+const LeaveRequestApproval = initLeaveRequestApproval(sequelize);
+const LeaveRequestDay = initLeaveRequestDay(sequelize);
+const LeaveBalance = initLeaveBalance(sequelize);
+const LeaveBalanceTransaction = initLeaveBalanceTransaction(sequelize);
+const Holiday = initHoliday(sequelize);
+const HolidayCalendar = initHolidayCalendar(sequelize);
 
 // Store models in an object
 const db: any = {
@@ -178,6 +202,18 @@ const db: any = {
   ApiLog,
   ActivityLog,
   UserLastLocation,
+  LeaveYear,
+  LeaveType,
+  LeavePolicy,
+  LeavePolicyRule,
+  LeavePolicyAssignment,
+  LeaveRequest,
+  LeaveRequestApproval,
+  LeaveRequestDay,
+  LeaveBalance,
+  LeaveBalanceTransaction,
+  Holiday,
+  HolidayCalendar,
   connectionManager,
 };
 
@@ -269,6 +305,18 @@ export {
   VisitSummary,
   ApiLog,
   ActivityLog,
+  LeaveYear,
+  LeaveType,
+  LeavePolicy,
+  LeavePolicyRule,
+  LeavePolicyAssignment,
+  LeaveRequest,
+  LeaveRequestApproval,
+  LeaveRequestDay,
+  LeaveBalance,
+  LeaveBalanceTransaction,
+  Holiday,
+  HolidayCalendar,
 };
 
 export default db;
