@@ -28,7 +28,8 @@ class LeaveRequest extends Model<LeaveRequestAttributes, LeaveRequestCreationAtt
   public withdrawnAt?: number;
   public createdAt!: number;
   public updatedAt!: number;
-
+  public isDeleted!: number;
+  public deletedAt?: number | null;
   
   public static associate(models: any): void {
     LeaveRequest.belongsTo(models.Host, {
@@ -128,6 +129,16 @@ export function initLeaveRequest(sequelize: Sequelize): typeof LeaveRequest {
       updatedAt: {
         type: DataTypes.BIGINT,
         allowNull: true,
+      },
+      isDeleted: {
+        type: DataTypes.TINYINT,
+        allowNull: false,
+        defaultValue: 0,
+      },
+      deletedAt: {
+        type: DataTypes.BIGINT,
+        allowNull: true,
+        defaultValue: null,
       }
     },
     {

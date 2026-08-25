@@ -1,0 +1,1259 @@
+{
+  "name": "Leave Management",
+  "description": "Self-contained Postman folder for WorkDesk24 leave APIs. Uses implemented backend routes under /api/v1/admin and /api/v1/app/leave.",
+  "item": [
+    {
+      "name": "Leave Years",
+      "item": [
+        {
+          "name": "Create",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is success', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); });",
+                  "const res = pm.response.json();",
+                  "pm.test('Response success true', function () { pm.expect(res.success).to.eql(true); });",
+                  "const id = res?.data?.leaveYear?.id || res?.data?.id;",
+                  "if (id) { pm.collectionVariables.set('leaveYearId', String(id)); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{csrfToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"year\": 2026,\n  \"startDate\": \"2026-01-01\",\n  \"endDate\": \"2026-12-31\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/createLeaveYear",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "admin", "createLeaveYear"]
+            }
+          }
+        },
+        {
+          "name": "List",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{csrfToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"filter\": {},\n  \"page\": 1,\n  \"limit\": 20,\n  \"sortBy\": \"year\",\n  \"sortOrder\": \"DESC\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/getLeaveYears",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "admin", "getLeaveYears"]
+            }
+          }
+        },
+        {
+          "name": "Get",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{csrfToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"leaveYearId\": {{leaveYearId}}\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/getLeaveYearById",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "admin", "getLeaveYearById"]
+            }
+          }
+        },
+        {
+          "name": "Update",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{csrfToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"leaveYearId\": {{leaveYearId}},\n  \"year\": 2026,\n  \"startDate\": \"2026-01-01\",\n  \"endDate\": \"2026-12-31\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/updateLeaveYear",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "admin", "updateLeaveYear"]
+            }
+          }
+        },
+        {
+          "name": "Delete",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{csrfToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"leaveYearId\": {{leaveYearId}}\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/deleteLeaveYear",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "admin", "deleteLeaveYear"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Holiday Calendars",
+      "item": [
+        {
+          "name": "Create",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is success', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); });",
+                  "const res = pm.response.json();",
+                  "const id = res?.data?.holidayCalendar?.id || res?.data?.id;",
+                  "if (id) { pm.collectionVariables.set('holidayCalendarId', String(id)); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{csrfToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"leaveYearId\": {{leaveYearId}},\n  \"name\": \"India Standard Holidays\",\n  \"description\": \"Standard holiday calendar\",\n  \"isDefault\": 1\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/createHolidayCalendar",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "admin", "createHolidayCalendar"]
+            }
+          }
+        },
+        {
+          "name": "List",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{csrfToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"filter\": {\n    \"leaveYearId\": {{leaveYearId}}\n  },\n  \"page\": 1,\n  \"limit\": 20\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/getHolidayCalendars",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "admin", "getHolidayCalendars"]
+            }
+          }
+        },
+        {
+          "name": "Get",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{csrfToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"holidayCalendarId\": {{holidayCalendarId}}\n}" },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/getHolidayCalendarById",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "admin", "getHolidayCalendarById"]
+            }
+          }
+        },
+        {
+          "name": "Update",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{csrfToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"holidayCalendarId\": {{holidayCalendarId}},\n  \"name\": \"India Standard Holidays Updated\",\n  \"description\": \"Updated description\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/updateHolidayCalendar",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "admin", "updateHolidayCalendar"]
+            }
+          }
+        },
+        {
+          "name": "Set Default",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{csrfToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"holidayCalendarId\": {{holidayCalendarId}}\n}" },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/setHolidayCalendarAsDefault",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "admin", "setHolidayCalendarAsDefault"]
+            }
+          }
+        },
+        {
+          "name": "Change Status",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{csrfToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"holidayCalendarId\": {{holidayCalendarId}},\n  \"isEnabled\": 1\n}" },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/enableDisableHolidayCalendar",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "admin", "enableDisableHolidayCalendar"]
+            }
+          }
+        },
+        {
+          "name": "Delete",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{csrfToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"holidayCalendarId\": {{holidayCalendarId}}\n}" },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/deleteHolidayCalendar",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "admin", "deleteHolidayCalendar"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Holidays",
+      "item": [
+        {
+          "name": "Create",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is success', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); });",
+                  "const res = pm.response.json();",
+                  "const id = res?.data?.holiday?.id || res?.data?.id;",
+                  "if (id) { pm.collectionVariables.set('holidayId', String(id)); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{csrfToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"holidayCalendarId\": {{holidayCalendarId}},\n  \"holidayDate\": \"2026-08-15\",\n  \"name\": \"Independence Day\",\n  \"description\": \"National holiday\",\n  \"isOptional\": 0\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/createHoliday",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "admin", "createHoliday"]
+            }
+          }
+        },
+        {
+          "name": "List",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{csrfToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"holidayCalendarId\": {{holidayCalendarId}},\n  \"filter\": {},\n  \"page\": 1,\n  \"limit\": 20\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/getHolidaysByCalendar",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "admin", "getHolidaysByCalendar"]
+            }
+          }
+        },
+        {
+          "name": "Get",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{csrfToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"holidayId\": {{holidayId}}\n}" },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/getHolidayById",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "admin", "getHolidayById"]
+            }
+          }
+        },
+        {
+          "name": "Update",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{csrfToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"holidayId\": {{holidayId}},\n  \"holidayDate\": \"2026-08-15\",\n  \"name\": \"Independence Day Updated\",\n  \"description\": \"National holiday updated\",\n  \"isOptional\": 0,\n  \"isEnabled\": 1\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/updateHoliday",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "admin", "updateHoliday"]
+            }
+          }
+        },
+        {
+          "name": "Change Status",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{csrfToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"holidayId\": {{holidayId}},\n  \"isEnabled\": 1\n}" },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/enableDisableHoliday",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "admin", "enableDisableHoliday"]
+            }
+          }
+        },
+        {
+          "name": "Delete",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{csrfToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"holidayId\": {{holidayId}}\n}" },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/deleteHoliday",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "admin", "deleteHoliday"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Leave Types",
+      "item": [
+        {
+          "name": "Create",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res = pm.response.json();",
+                  "const id = res?.data?.leaveType?.id || res?.data?.id;",
+                  "if (id) { pm.collectionVariables.set('leaveTypeId', String(id)); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{csrfToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Casual Leave\",\n  \"code\": \"CL\",\n  \"description\": \"Casual leave\",\n  \"isPaid\": 1,\n  \"allowHalfDay\": 1,\n  \"allowPastDate\": 0,\n  \"allowFutureDate\": 1,\n  \"requiresDocument\": 0,\n  \"documentAfterDays\": null,\n  \"color\": \"#4CAF50\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/createLeaveType",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "admin", "createLeaveType"]
+            }
+          }
+        },
+        {
+          "name": "List",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{csrfToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"filter\": {},\n  \"page\": 1,\n  \"limit\": 20\n}" },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/getLeaveTypes",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "admin", "getLeaveTypes"]
+            }
+          }
+        },
+        {
+          "name": "Get",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{csrfToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"leaveTypeId\": {{leaveTypeId}}\n}" },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/getLeaveTypeById",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "admin", "getLeaveTypeById"]
+            }
+          }
+        },
+        {
+          "name": "Update",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{csrfToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"leaveTypeId\": {{leaveTypeId}},\n  \"name\": \"Casual Leave Updated\",\n  \"code\": \"CL\",\n  \"description\": \"Casual leave updated\",\n  \"isPaid\": 1,\n  \"allowHalfDay\": 1,\n  \"allowPastDate\": 0,\n  \"allowFutureDate\": 1,\n  \"requiresDocument\": 0,\n  \"documentAfterDays\": null,\n  \"color\": \"#4CAF50\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/updateLeaveType",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "admin", "updateLeaveType"]
+            }
+          }
+        },
+        {
+          "name": "Change Status",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{csrfToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"leaveTypeId\": {{leaveTypeId}},\n  \"isEnabled\": 1\n}" },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/enableDisableLeaveType",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "admin", "enableDisableLeaveType"]
+            }
+          }
+        },
+        {
+          "name": "Delete",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{csrfToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"leaveTypeId\": {{leaveTypeId}}\n}" },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/deleteLeaveType",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "admin", "deleteLeaveType"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Leave Policies",
+      "item": [
+        {
+          "name": "Create",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res = pm.response.json();",
+                  "const id = res?.data?.leavePolicy?.id || res?.data?.id;",
+                  "if (id) { pm.collectionVariables.set('leavePolicyId', String(id)); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{csrfToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Standard Policy 2026\",\n  \"description\": \"Default employee leave policy\",\n  \"effectiveFrom\": \"2026-01-01\",\n  \"effectiveTill\": \"2026-12-31\",\n  \"isDefault\": 1,\n  \"isEnabled\": 1,\n  \"rules\": []\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/createLeavePolicy",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "admin", "createLeavePolicy"]
+            }
+          }
+        },
+        {
+          "name": "List",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{csrfToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"filter\": {},\n  \"page\": 1,\n  \"limit\": 20\n}" },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/getLeavePolicies",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "admin", "getLeavePolicies"]
+            }
+          }
+        },
+        {
+          "name": "Get",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{csrfToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"leavePolicyId\": {{leavePolicyId}}\n}" },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/getLeavePolicyById",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "admin", "getLeavePolicyById"]
+            }
+          }
+        },
+        {
+          "name": "Update",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{csrfToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"leavePolicyId\": {{leavePolicyId}},\n  \"name\": \"Standard Policy 2026 Updated\",\n  \"description\": \"Updated policy\",\n  \"effectiveFrom\": \"2026-01-01\",\n  \"effectiveTill\": \"2026-12-31\",\n  \"isDefault\": 0,\n  \"isEnabled\": 1,\n  \"rules\": []\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/updateLeavePolicy",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "admin", "updateLeavePolicy"]
+            }
+          }
+        },
+        {
+          "name": "Set Default",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{csrfToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"leavePolicyId\": {{leavePolicyId}}\n}" },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/setLeavePolicyAsDefault",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "admin", "setLeavePolicyAsDefault"]
+            }
+          }
+        },
+        {
+          "name": "Change Status",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{csrfToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"leavePolicyId\": {{leavePolicyId}},\n  \"isEnabled\": 1\n}" },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/enableDisableLeavePolicy",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "admin", "enableDisableLeavePolicy"]
+            }
+          }
+        },
+        {
+          "name": "Delete",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{csrfToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"leavePolicyId\": {{leavePolicyId}}\n}" },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/deleteLeavePolicy",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "admin", "deleteLeavePolicy"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Leave Policy Rules",
+      "item": [
+        {
+          "name": "Create",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res = pm.response.json();",
+                  "const id = res?.data?.rule?.id || res?.data?.id;",
+                  "if (id) { pm.collectionVariables.set('leavePolicyRuleId', String(id)); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{csrfToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"leavePolicyId\": {{leavePolicyId}},\n  \"leaveTypeId\": {{leaveTypeId}},\n  \"annualEntitlement\": 12,\n  \"accrualType\": \"MONTHLY\",\n  \"allowCarryForward\": 1,\n  \"maxCarryForward\": 5,\n  \"allowEncashment\": 0,\n  \"allowHalfDay\": 1,\n  \"minimumNoticeDays\": 1,\n  \"maximumAdvanceDays\": 60,\n  \"maximumConsecutiveDays\": 5,\n  \"allowNegativeBalance\": 0,\n  \"requiresApproval\": 1,\n  \"isEnabled\": 1\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/addLeaveTypeRule",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "admin", "addLeaveTypeRule"]
+            }
+          }
+        },
+        {
+          "name": "List",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{csrfToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"leavePolicyId\": {{leavePolicyId}},\n  \"filter\": {},\n  \"page\": 1,\n  \"limit\": 20\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/getLeavePolicyRules",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "admin", "getLeavePolicyRules"]
+            }
+          }
+        },
+        {
+          "name": "Get",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{csrfToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"leavePolicyId\": {{leavePolicyId}},\n  \"filter\": {\n    \"id\": {{leavePolicyRuleId}}\n  },\n  \"page\": 1,\n  \"limit\": 1\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/getLeavePolicyRules",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "admin", "getLeavePolicyRules"]
+            }
+          }
+        },
+        {
+          "name": "Update",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{csrfToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ruleId\": {{leavePolicyRuleId}},\n  \"annualEntitlement\": 14,\n  \"accrualType\": \"MONTHLY\",\n  \"allowCarryForward\": 1,\n  \"maxCarryForward\": 5,\n  \"allowEncashment\": 0,\n  \"allowHalfDay\": 1,\n  \"minimumNoticeDays\": 1,\n  \"maximumAdvanceDays\": 60,\n  \"maximumConsecutiveDays\": 5,\n  \"allowNegativeBalance\": 0,\n  \"requiresApproval\": 1,\n  \"isEnabled\": 1\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/updateLeaveTypeRule",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "admin", "updateLeaveTypeRule"]
+            }
+          }
+        },
+        {
+          "name": "Delete",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{csrfToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"ruleId\": {{leavePolicyRuleId}}\n}" },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/deleteLeaveTypeRule",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "admin", "deleteLeaveTypeRule"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Employee Leave Configuration",
+      "item": [
+        {
+          "name": "Get",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{csrfToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"userId\": {{userId}}\n}" },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/getEmployeeLeaveConfiguration",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "admin", "getEmployeeLeaveConfiguration"]
+            }
+          }
+        },
+        {
+          "name": "Update",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{csrfToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": {{userId}},\n  \"holidayCalendarId\": {{holidayCalendarId}},\n  \"leavePolicyId\": {{leavePolicyId}}\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/updateEmployeeLeaveConfiguration",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "admin", "updateEmployeeLeaveConfiguration"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Leave Balances",
+      "item": [
+        {
+          "name": "List",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{csrfToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": {{userId}},\n  \"filter\": {},\n  \"page\": 1,\n  \"limit\": 20\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/getEmployeeLeaveBalances",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "admin", "getEmployeeLeaveBalances"]
+            }
+          }
+        },
+        {
+          "name": "Employee Balance",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{csrfToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"userId\": {{userId}},\n  \"filter\": {}\n}" },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/getEmployeeLeaveBalances",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "admin", "getEmployeeLeaveBalances"]
+            }
+          }
+        },
+        {
+          "name": "Year Balance",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{csrfToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": {{userId}},\n  \"leaveYearId\": {{leaveYearId}}\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/getEmployeeBalanceForLeaveYear",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "admin", "getEmployeeBalanceForLeaveYear"]
+            }
+          }
+        },
+        {
+          "name": "Leave Type Balance",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{csrfToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": {{userId}},\n  \"leaveTypeId\": {{leaveTypeId}},\n  \"leaveYearId\": {{leaveYearId}}\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/getBalanceByLeaveType",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "admin", "getBalanceByLeaveType"]
+            }
+          }
+        },
+        {
+          "name": "Manual Adjustment",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{csrfToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": {{userId}},\n  \"leaveYearId\": {{leaveYearId}},\n  \"leaveTypeId\": {{leaveTypeId}},\n  \"quantity\": 2,\n  \"reason\": \"Manual correction\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/manualBalanceAdjustment",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "admin", "manualBalanceAdjustment"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Leave Balance Transactions",
+      "item": [
+        {
+          "name": "List",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{csrfToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": {{userId}},\n  \"filter\": {\n    \"leaveYearId\": {{leaveYearId}},\n    \"leaveTypeId\": {{leaveTypeId}},\n    \"transactionType\": \"LEAVE_DEBIT\"\n  },\n  \"page\": 1,\n  \"limit\": 20,\n  \"sortBy\": \"createdAt\",\n  \"sortOrder\": \"DESC\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/getBalanceTransactionHistory",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "admin", "getBalanceTransactionHistory"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Employee Leave Requests",
+      "item": [
+        {
+          "name": "Summary",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{}" },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/app/leave/getSummary",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "app", "leave", "getSummary"]
+            }
+          }
+        },
+        {
+          "name": "Leave Types",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{}" },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/app/leave/getLeaveTypes",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "app", "leave", "getLeaveTypes"]
+            }
+          }
+        },
+        {
+          "name": "Holidays",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"leaveYearId\": {{leaveYearId}}\n}" },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/app/leave/getHolidays",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "app", "leave", "getHolidays"]
+            }
+          }
+        },
+        {
+          "name": "Balances",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"filter\": {},\n  \"page\": 1,\n  \"limit\": 20\n}" },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/app/leave/getBalances",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "app", "leave", "getBalances"]
+            }
+          }
+        },
+        {
+          "name": "List Requests",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"filter\": {\n    \"status\": \"PENDING\"\n  },\n  \"page\": 1,\n  \"limit\": 20,\n  \"sortBy\": \"submittedAt\",\n  \"sortOrder\": \"DESC\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/app/leave/getRequests",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "app", "leave", "getRequests"]
+            }
+          }
+        },
+        {
+          "name": "Get Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"id\": {{leaveRequestId}}\n}" },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/app/leave/getRequestById",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "app", "leave", "getRequestById"]
+            }
+          }
+        },
+        {
+          "name": "Create Request",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res = pm.response.json();",
+                  "const id = res?.data?.request?.id || res?.data?.id;",
+                  "if (id) { pm.collectionVariables.set('leaveRequestId', String(id)); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"leaveTypeId\": {{leaveTypeId}},\n  \"fromDate\": \"2026-09-10\",\n  \"tillDate\": \"2026-09-12\",\n  \"reason\": \"Personal work\",\n  \"days\": [\n    {\n      \"leaveDate\": \"2026-09-10\",\n      \"durationType\": \"FULL_DAY\"\n    },\n    {\n      \"leaveDate\": \"2026-09-11\",\n      \"durationType\": \"FULL_DAY\"\n    },\n    {\n      \"leaveDate\": \"2026-09-12\",\n      \"durationType\": \"FULL_DAY\"\n    }\n  ],\n  \"requestLocalId\": \"android-local-request-001\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/app/leave/createRequest",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "app", "leave", "createRequest"]
+            }
+          }
+        },
+        {
+          "name": "Submit Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"id\": {{leaveRequestId}}\n}" },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/app/leave/submitRequest",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "app", "leave", "submitRequest"]
+            }
+          }
+        },
+        {
+          "name": "Cancel Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"id\": {{leaveRequestId}}\n}" },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/app/leave/cancelRequest",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "app", "leave", "cancelRequest"]
+            }
+          }
+        },
+        {
+          "name": "Withdraw Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"id\": {{leaveRequestId}}\n}" },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/app/leave/withdrawRequest",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "app", "leave", "withdrawRequest"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Leave Request Approvals",
+      "item": [
+        {
+          "name": "List Requests",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{csrfToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"filter\": {\n    \"status\": \"PENDING\"\n  },\n  \"page\": 1,\n  \"limit\": 20,\n  \"sortBy\": \"submittedAt\",\n  \"sortOrder\": \"DESC\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/getPendingLeaveRequests",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "admin", "getPendingLeaveRequests"]
+            }
+          }
+        },
+        {
+          "name": "Get Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{csrfToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"leaveRequestId\": {{leaveRequestId}}\n}" },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/getLeaveRequestDetails",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "admin", "getLeaveRequestDetails"]
+            }
+          }
+        },
+        {
+          "name": "Approve",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{csrfToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"leaveRequestId\": {{leaveRequestId}},\n  \"comment\": \"Approved\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/approveLeaveRequest",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "admin", "approveLeaveRequest"]
+            }
+          }
+        },
+        {
+          "name": "Reject",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{csrfToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"leaveRequestId\": {{leaveRequestId}},\n  \"comment\": \"Insufficient leave balance\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/rejectLeaveRequest",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "admin", "rejectLeaveRequest"]
+            }
+          }
+        },
+        {
+          "name": "Cancel",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{csrfToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"leaveRequestId\": {{leaveRequestId}},\n  \"comment\": \"Cancelled by approver\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/cancelLeaveRequestByApprover",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "admin", "cancelLeaveRequestByApprover"]
+            }
+          }
+        },
+        {
+          "name": "Approval History",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{csrfToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"leaveRequestId\": {{leaveRequestId}}\n}" },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/admin/getLeaveRequestApprovalHistory",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "admin", "getLeaveRequestApprovalHistory"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -18,6 +18,8 @@ class LeaveBalance extends Model<LeaveBalanceAttributes, LeaveBalanceCreationAtt
   public availableBalance!: number;
   public createdAt!: number;
   public updatedAt!: number;
+  public isDeleted!: number;
+  public deletedAt?: number | null;
 
   public static associate(models: any): void {
     LeaveBalance.belongsTo(models.Host, {
@@ -108,6 +110,16 @@ export function initLeaveBalance(sequelize: Sequelize): typeof LeaveBalance {
       updatedAt: {
         type: DataTypes.BIGINT,
         allowNull: true,
+      },
+      isDeleted: {
+        type: DataTypes.TINYINT,
+        allowNull: false,
+        defaultValue: 0,
+      },
+      deletedAt: {
+        type: DataTypes.BIGINT,
+        allowNull: true,
+        defaultValue: null,
       }
     },
     {

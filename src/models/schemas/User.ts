@@ -131,10 +131,16 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
       as: 'device',
     });
 
-    User.hasOne(models.HolidayCalendar, {
-      foreignKey: 'id',
-      sourceKey: 'holidayCalendarId',
+    User.belongsTo(models.HolidayCalendar, {
+      foreignKey: 'holidayCalendarId',
+      targetKey: 'id',
       as: 'holidayCalendar',
+    });
+
+    User.belongsTo(models.LeavePolicy, {
+      foreignKey: 'leavePolicyId',
+      targetKey: 'id',
+      as: 'leavePolicy',
     });
   }
 }

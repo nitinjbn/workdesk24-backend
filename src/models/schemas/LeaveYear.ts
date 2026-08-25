@@ -10,6 +10,9 @@ class LeaveYear extends Model<LeaveYearAttributes, LeaveYearCreationAttributes> 
   public startDate!: string;
   public endDate!: string;
   public createdAt!: number;
+  public updatedAt?: number;
+  public isDeleted!: number;
+  public deletedAt?: number | null;
 
   public static associate(models: any): void {
     LeaveYear.belongsTo(models.Host, {
@@ -46,7 +49,21 @@ export function initLeaveYear(sequelize: Sequelize): typeof LeaveYear {
       createdAt: {
         type: DataTypes.BIGINT,
         allowNull: false,
-      }
+      },
+      updatedAt: {
+        type: DataTypes.BIGINT,
+        allowNull: true,
+      },
+      isDeleted: {
+        type: DataTypes.TINYINT,
+        allowNull: false,
+        defaultValue: 0,
+      },
+      deletedAt: {
+        type: DataTypes.BIGINT,
+        allowNull: true,
+        defaultValue: null,
+      },
     },
     {
       sequelize,

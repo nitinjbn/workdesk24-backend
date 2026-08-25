@@ -5,6 +5,9 @@ export interface LeaveYearAttributes {
   startDate: string; // Start date of the leave year in YYYY-MM-DD format
   endDate: string; // End date of the leave year in YYYY-MM-DD format
   createdAt: number; // Timestamp when the leave year was created
+  updatedAt?: number; // Timestamp when the leave year was last updated
+  isDeleted: number; // Indicates if the leave year is deleted (1 for deleted, 0 for not deleted)
+  deletedAt?: number | null; // Timestamp when the leave year was deleted (if applicable)
 }
 
 export interface LeaveTypeAttributes {
@@ -94,6 +97,8 @@ export interface LeaveBalanceAttributes {
   availableBalance: number; // Leave balance that is currently available for the employee to use
   createdAt: number;
   updatedAt?: number | null;
+  isDeleted: number;
+  deletedAt?: number | null;
 }
 
 export interface LeaveBalanceTransactionAttributes {
@@ -145,6 +150,8 @@ export interface LeaveRequestAttributes {
   withdrawnAt?: number;
   createdAt: number;
   updatedAt: number;
+  isDeleted: number;
+  deletedAt?: number | null;
 }
 
 export interface LeaveRequestDayAttributes {

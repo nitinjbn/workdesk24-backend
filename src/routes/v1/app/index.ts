@@ -6,6 +6,7 @@ import { AuthRequest } from '../../../types';
 import syncController from '../../../modules/sync/controllers/sync.controller';
 import reportController from '../../../modules/reporting/controllers/report.app.controller';
 import userController from '../../../modules/master/controllers/user.controller';
+import leaveRoutes from './leaves.routes';
 import { apiLogRouteContext } from '../../../modules/api-logs';
 
 const router = Router();
@@ -16,6 +17,7 @@ router.use('/sync', apiLogRouteContext('app', 'sync'));
 router.use('/reports', apiLogRouteContext('app', 'reports'));
 router.use('/device', apiLogRouteContext('app', 'device'));
 router.use('/profile', apiLogRouteContext('app', 'profile'));
+router.use('/leave', apiLogRouteContext('app', 'leave'), leaveRoutes);
 
 // Sync related routes
 router.post('/sync/attendance', syncController.syncAttendance.bind(syncController));

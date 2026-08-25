@@ -68,5 +68,240 @@
         "code": "EMAIL_LINKED_WITH_OTHER_HOST",
         "status": 400,
         "message": "Email address is linked with another host, please use a different email address."
+    },
+    "LEAVE_YEAR_NOT_FOUND": {
+        "code": "LEAVE_YEAR_NOT_FOUND",
+        "status": 404,
+        "message": "Leave year not found."
+    },
+    "DUPLICATE_LEAVE_YEAR": {
+        "code": "DUPLICATE_LEAVE_YEAR",
+        "status": 400,
+        "message": "A leave year with this year already exists for this organization."
+    },
+    "INVALID_YEAR": {
+        "code": "INVALID_YEAR",
+        "status": 400,
+        "message": "Year must be a valid number between 2000 and 2100."
+    },
+    "INVALID_DATE_FORMAT": {
+        "code": "INVALID_DATE_FORMAT",
+        "status": 400,
+        "message": "Date must be in YYYY-MM-DD format."
+    },
+    "INVALID_DATE_RANGE": {
+        "code": "INVALID_DATE_RANGE",
+        "status": 400,
+        "message": "Start date must be before or equal to end date."
+    },
+    "LEAVE_YEAR_HAS_DEPENDENTS": {
+        "code": "LEAVE_YEAR_HAS_DEPENDENTS",
+        "status": 400,
+        "message": "Cannot delete leave year as dependent records exist."
+    },
+    "INVALID_INPUT": {
+        "code": "INVALID_INPUT",
+        "status": 400,
+        "message": "Invalid input provided."
+    },
+    "HOLIDAY_CALENDAR_NOT_FOUND": {
+        "code": "HOLIDAY_CALENDAR_NOT_FOUND",
+        "status": 404,
+        "message": "Holiday calendar not found."
+    },
+    "MISSING_EMPLOYEE_HOLIDAY_CALENDAR": {
+        "code": "MISSING_EMPLOYEE_HOLIDAY_CALENDAR",
+        "status": 400,
+        "message": "Employee holiday calendar is not configured."
+    },
+    "HOLIDAY_CALENDAR_LEAVE_YEAR_MISMATCH": {
+        "code": "HOLIDAY_CALENDAR_LEAVE_YEAR_MISMATCH",
+        "status": 400,
+        "message": "Employee holiday calendar is linked to a different leave year."
+    },
+    "DUPLICATE_CALENDAR_NAME": {
+        "code": "DUPLICATE_CALENDAR_NAME",
+        "status": 400,
+        "message": "A calendar with this name already exists for the selected leave year."
+    },
+    "INVALID_CALENDAR_NAME": {
+        "code": "INVALID_CALENDAR_NAME",
+        "status": 400,
+        "message": "Calendar name must be 1-100 characters."
+    },
+    "INVALID_LEAVE_YEAR": {
+        "code": "INVALID_LEAVE_YEAR",
+        "status": 400,
+        "message": "Leave year not found or does not belong to this organization."
+    },
+    "DEFAULT_CALENDAR_EXISTS": {
+        "code": "DEFAULT_CALENDAR_EXISTS",
+        "status": 400,
+        "message": "A default calendar already exists for this leave year."
+    },
+    "HOLIDAY_NOT_FOUND": {
+        "code": "HOLIDAY_NOT_FOUND",
+        "status": 404,
+        "message": "Holiday not found."
+    },
+    "DUPLICATE_HOLIDAY_DATE": {
+        "code": "DUPLICATE_HOLIDAY_DATE",
+        "status": 400,
+        "message": "A holiday with this date already exists in the calendar."
+    },
+    "INVALID_HOLIDAY_NAME": {
+        "code": "INVALID_HOLIDAY_NAME",
+        "status": 400,
+        "message": "Holiday name must be 1-100 characters."
+    },
+    "HOLIDAY_DATE_OUT_OF_RANGE": {
+        "code": "HOLIDAY_DATE_OUT_OF_RANGE",
+        "status": 400,
+        "message": "Holiday date must be within the associated leave year date range."
+    },
+    "LEAVE_TYPE_NOT_FOUND": {
+        "code": "LEAVE_TYPE_NOT_FOUND",
+        "status": 404,
+        "message": "Leave type not found."
+    },
+    "DUPLICATE_LEAVE_TYPE_CODE": {
+        "code": "DUPLICATE_LEAVE_TYPE_CODE",
+        "status": 400,
+        "message": "A leave type with this code already exists."
+    },
+    "INVALID_LEAVE_TYPE_NAME": {
+        "code": "INVALID_LEAVE_TYPE_NAME",
+        "status": 400,
+        "message": "Leave type name must be 1-100 characters."
+    },
+    "INVALID_LEAVE_TYPE_CODE": {
+        "code": "INVALID_LEAVE_TYPE_CODE",
+        "status": 400,
+        "message": "Leave type code must be 1-50 characters."
+    },
+    "DOCUMENT_AFTER_DAYS_REQUIRED": {
+        "code": "DOCUMENT_AFTER_DAYS_REQUIRED",
+        "status": 400,
+        "message": "documentAfterDays is required when requiresDocument is enabled."
+    },
+    "INVALID_DOCUMENT_AFTER_DAYS": {
+        "code": "INVALID_DOCUMENT_AFTER_DAYS",
+        "status": 400,
+        "message": "documentAfterDays must be an integer between 1 and 365."
+    },
+    "INVALID_COLOR": {
+        "code": "INVALID_COLOR",
+        "status": 400,
+        "message": "Color must be a valid hex color code (#RRGGBB or #RGB)."
+    },
+    "LEAVE_TYPE_HAS_DEPENDENTS": {
+        "code": "LEAVE_TYPE_HAS_DEPENDENTS",
+        "status": 400,
+        "message": "Cannot delete leave type due to dependent records. Consider disabling the leave type instead."
+    },
+    "LEAVE_POLICY_NOT_FOUND": {
+        "code": "LEAVE_POLICY_NOT_FOUND",
+        "status": 404,
+        "message": "Leave policy not found."
+    },
+    "DUPLICATE_POLICY_NAME": {
+        "code": "DUPLICATE_POLICY_NAME",
+        "status": 400,
+        "message": "A leave policy with this name already exists."
+    },
+    "INVALID_POLICY_NAME": {
+        "code": "INVALID_POLICY_NAME",
+        "status": 400,
+        "message": "Policy name must be 1-100 characters."
+    },
+    "LEAVE_POLICY_HAS_DEPENDENTS": {
+        "code": "LEAVE_POLICY_HAS_DEPENDENTS",
+        "status": 400,
+        "message": "Cannot delete leave policy due to dependent records. Consider disabling the policy instead."
+    },
+    "LEAVE_POLICY_RULE_NOT_FOUND": {
+        "code": "LEAVE_POLICY_RULE_NOT_FOUND",
+        "status": 404,
+        "message": "Leave policy rule not found."
+    },
+    "DUPLICATE_POLICY_RULE": {
+        "code": "DUPLICATE_POLICY_RULE",
+        "status": 400,
+        "message": "A leave type already has an active rule in this policy."
+    },
+    "INVALID_ACCRUAL_TYPE": {
+        "code": "INVALID_ACCRUAL_TYPE",
+        "status": 400,
+        "message": "Invalid accrual type provided."
+    },
+    "INVALID_MAX_CARRY_FORWARD": {
+        "code": "INVALID_MAX_CARRY_FORWARD",
+        "status": 400,
+        "message": "maxCarryForward must be 0 when allowCarryForward is false."
+    },
+    "LEAVE_TYPE_DISABLED_OR_NOT_FOUND": {
+        "code": "LEAVE_TYPE_DISABLED_OR_NOT_FOUND",
+        "status": 400,
+        "message": "Leave type not found or not enabled for this organization."
+    },
+    "USER_NOT_FOUND": {
+        "code": "USER_NOT_FOUND",
+        "status": 404,
+        "message": "User not found."
+    },
+    "HOLIDAY_CALENDAR_DISABLED": {
+        "code": "HOLIDAY_CALENDAR_DISABLED",
+        "status": 400,
+        "message": "Holiday calendar is disabled and cannot be assigned."
+    },
+    "LEAVE_POLICY_DISABLED": {
+        "code": "LEAVE_POLICY_DISABLED",
+        "status": 400,
+        "message": "Leave policy is disabled and cannot be assigned."
+    },
+    "LEAVE_BALANCE_NOT_FOUND": {
+        "code": "LEAVE_BALANCE_NOT_FOUND",
+        "status": 404,
+        "message": "Leave balance not found."
+    },
+    "INVALID_BALANCE_CHANGE": {
+        "code": "INVALID_BALANCE_CHANGE",
+        "status": 400,
+        "message": "Invalid leave balance change request."
+    },
+    "NEGATIVE_BALANCE_NOT_ALLOWED": {
+        "code": "NEGATIVE_BALANCE_NOT_ALLOWED",
+        "status": 400,
+        "message": "Negative leave balance is not allowed by policy rule."
+    },
+    "LEAVE_REQUEST_NOT_FOUND": {
+        "code": "LEAVE_REQUEST_NOT_FOUND",
+        "status": 404,
+        "message": "Leave request not found."
+    },
+    "INVALID_REQUEST_STATUS_TRANSITION": {
+        "code": "INVALID_REQUEST_STATUS_TRANSITION",
+        "status": 400,
+        "message": "Invalid leave request status transition."
+    },
+    "INSUFFICIENT_LEAVE_BALANCE": {
+        "code": "INSUFFICIENT_LEAVE_BALANCE",
+        "status": 400,
+        "message": "Insufficient leave balance for requested leave days."
+    },
+    "OVERLAPPING_LEAVE_REQUEST_EXISTS": {
+        "code": "OVERLAPPING_LEAVE_REQUEST_EXISTS",
+        "status": 400,
+        "message": "Overlapping leave request already exists."
+    },
+    "LEAVE_REQUEST_VALIDATION_FAILED": {
+        "code": "LEAVE_REQUEST_VALIDATION_FAILED",
+        "status": 400,
+        "message": "Leave request validation failed."
+    },
+    "LEAVE_APPROVER_NOT_AUTHORIZED": {
+        "code": "LEAVE_APPROVER_NOT_AUTHORIZED",
+        "status": 403,
+        "message": "You are not authorized to approve/reject/cancel this leave request."
     }
 }

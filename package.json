@@ -19,6 +19,10 @@
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
     "test": "jest",
+    "test:leave": "node --test tests/leave/leave-calculation.unit.test.js tests/leave/leave-request-lifecycle.integration.test.js tests/leave/leave-concurrency-idempotency.integration.test.js",
+    "test:leave:unit": "node --test tests/leave/leave-calculation.unit.test.js",
+    "test:leave:lifecycle": "node --test tests/leave/leave-request-lifecycle.integration.test.js",
+    "test:leave:concurrency": "node --test tests/leave/leave-concurrency-idempotency.integration.test.js",
     "manualRun": "nodemon dist/server.production.js"
   },
   "keywords": [
