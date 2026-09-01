@@ -1,7 +1,7 @@
 import { sequelize } from '../../../models';
 import { createConfiguredError } from '../../../shared/utils/error.util';
 import { getHostDateTimeSettings } from '../../../shared/utils/host-settings.util';
-import { formatDateTimeFieldsBySettings } from '../../../shared/utils/date-time-format.util';
+import { formatDateTimeFieldsBySettings, getDayNameFromDateString } from '../../../shared/utils/date-time-format.util';
 import leaveBalanceService from './leave-balance.service';
 import leaveCalculationService from './leave-calculation.service';
 import leavePolicyService from './leave-policy.service';
@@ -129,9 +129,13 @@ export class LeaveAppService {
     });
 
     const dateTimeSettings = await getHostDateTimeSettings(hostId);
-    const holidayPlain = holidays.map((item: any) =>
-      item && typeof item.toJSON === 'function' ? item.toJSON() : item
-    );
+    const holidayPlain = holidays.map((item: any) => {
+      const plain = item && typeof item.toJSON === 'function' ? item.toJSON() : item;
+      return {
+        ...plain,
+        dayName: plain?.holidayDate ? getDayNameFromDateString(plain.holidayDate) : null,
+      };
+    });
 
     return {
       holidayCalendar: {
@@ -186,9 +190,14 @@ export class LeaveAppService {
     });
 
     const dateTimeSettings = await getHostDateTimeSettings(hostId);
-    const data = report.data.map((item: any) =>
-      item && typeof item.toJSON === 'function' ? item.toJSON() : item
-    );
+    const data = report.data.map((item: any) => {
+      const plain = item && typeof item.toJSON === 'function' ? item.toJSON() : item;
+      return {
+        ...plain,
+        fromDayName: plain?.fromDate ? getDayNameFromDateString(plain.fromDate) : null,
+        tillDayName: plain?.tillDate ? getDayNameFromDateString(plain.tillDate) : null,
+      };
+    });
 
     return {
       requests: formatDateTimeFieldsBySettings(data, dateTimeSettings),
@@ -210,7 +219,13 @@ export class LeaveAppService {
     ]);
 
     const requestPlain = request && typeof request.toJSON === 'function' ? request.toJSON() : request;
-    const dayPlain = days.map((item: any) => (item && typeof item.toJSON === 'function' ? item.toJSON() : item));
+    const dayPlain = days.map((item: any) => {
+      const plain = item && typeof item.toJSON === 'function' ? item.toJSON() : item;
+      return {
+        ...plain,
+        dayName: plain?.leaveDate ? getDayNameFromDateString(plain.leaveDate) : null,
+      };
+    });
     const approvalPlain = approvals.map((item: any) =>
       item && typeof item.toJSON === 'function' ? item.toJSON() : item
     );
@@ -581,20 +596,11 @@ private async resolveLeaveYearForRequest(payload: {
         transaction,
       });
 
-      const breakdownMap = new Map<string, { durationDays: number; excludedByHoliday: boolean }>();
-      const mappedDays = payload.days
-      .map((day) => {
-        const breakdown = breakdownMap.get(day.leaveDate);
-        if (!breakdown || breakdown.excludedByHoliday || breakdown.durationDays <= 0) {
-          return null;
-        }
-        return {
-          leaveDate: day.leaveDate,
-          durationType: day.durationType,
-          durationDays: day.durationType === 'FULL_DAY' ? 1 : 0.5,
-        };
-      })
-      .filter((item): item is { leaveDate: string; durationType: 'FULL_DAY' | 'FIRST_HALF' | 'SECOND_HALF'; durationDays: number } => !!item);
+      const mappedDays = payload.days.map((day) => ({
+        leaveDate: day.leaveDate,
+        durationType: day.durationType,
+        durationDays: day.durationType === 'FULL_DAY' ? 1 : 0.5,
+      }));
 
       await leaveRequestAppRepository.createLeaveRequestDays({
         hostId,

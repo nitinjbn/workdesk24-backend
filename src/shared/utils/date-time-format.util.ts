@@ -168,10 +168,24 @@ export class DateTimeFormatUtil {
 
     return dateTime.date();
   }
+
+  // dateStr is a DATEONLY string (YYYY-MM-DD); parsed as UTC to avoid timezone shifting the day
+  static getDayNameFromDateString(dateStr: string): string | null {
+    if (!dateStr) {
+      return null;
+    }
+
+    const date = moment.utc(String(dateStr).slice(0, 10), 'YYYY-MM-DD', true);
+    return date.isValid() ? date.format('dddd') : null;
+  }
 }
 
 export const formatDateTimeFieldsBySettings = <T>(data: T, settings?: HostDateTimeSettings, fieldFormatConfig?: Record<string, 'date' | 'datetime'>): T => {
   return DateTimeFormatUtil.formatDateTimeFieldsBySettings(data, settings, fieldFormatConfig);
+};
+
+export const getDayNameFromDateString = (dateStr: string): string | null => {
+  return DateTimeFormatUtil.getDayNameFromDateString(dateStr);
 };
 
 export { FIELD_FORMAT_CONFIG };
