@@ -15,7 +15,7 @@ export class LeaveRequestAppRepository {
     return new Date().toISOString().slice(0, 10);
   }
 
-  private async resolveLeaveYearForDate(hostId: number, date: string): Promise<any | null> {
+  async resolveLeaveYearForDate(hostId: number, date: string): Promise<any | null> {
     return LeaveYear.findOne({
       where: {
         hostId,
@@ -502,6 +502,46 @@ export class LeaveRequestAppRepository {
         hostId: payload.hostId,
         userId: payload.userId,
         leaveTypeId: payload.leaveTypeId,
+        leaveYearId: payload.leaveYearId,
+        fromDate: payload.fromDate,
+        tillDate: payload.tillDate,
+        totalDays: payload.totalDays,
+        reason: payload.reason?.trim() || null,
+        requestLocalId: payload.requestLocalId?.trim() || null,
+        status: payload.status,
+        submittedAt: payload.submittedAt || null,
+        approvedAt: null,
+        rejectedAt: null,
+        cancelledAt: null,
+        withdrawnAt: null,
+        isDeleted: 0,
+        deletedAt: null,
+        createdAt: now,
+        updatedAt: now,
+      } as any,
+      { transaction: payload.transaction }
+    );
+  }
+
+  async createLeaveRequestV1(payload: {
+    hostId: number;
+    userId: number;
+    leaveYearId: number;
+    fromDate: string;
+    tillDate: string;
+    totalDays: number;
+    reason?: string;
+    requestLocalId?: string;
+    status: 'DRAFT' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'WITHDRAWN';
+    submittedAt?: number;
+    transaction: Transaction;
+  }): Promise<any> {
+    const now = Math.floor(Date.now() / 1000);
+
+    return LeaveRequest.create(
+      {
+        hostId: payload.hostId,
+        userId: payload.userId,
         leaveYearId: payload.leaveYearId,
         fromDate: payload.fromDate,
         tillDate: payload.tillDate,

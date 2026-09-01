@@ -114,6 +114,26 @@ export class LeaveAppController {
     }
   }
 
+  async getHolidaysV1(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const hostId = req.user!.hostId;
+      const userId = req.user!.id;
+
+      const result = await leaveAppService.getHolidaysV1({
+        hostId,
+        userId,
+      });
+
+      res.json({
+        success: true,
+        message: 'Holidays retrieved successfully',
+        data: result,
+      } as ApiResponse);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async getRequests(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const hostId = req.user!.hostId;
@@ -197,6 +217,33 @@ export class LeaveAppController {
     }
   }
 
+
+  async createRequestV1(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const hostId = req.user!.hostId;
+      const userId = req.user!.id;
+      const { fromDate, tillDate, reason, requestLocalId, days } = req.body;
+
+      const result = await leaveAppService.createLeaveRequestV1({
+        hostId,
+        userId,
+        fromDate,
+        tillDate,
+        reason,
+        requestLocalId,
+        days,
+      });
+
+      res.json({
+        success: true,
+        message: 'Leave request submitted successfully',
+        data: result,
+      } as ApiResponse);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async submitRequest(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const hostId = req.user!.hostId;
@@ -242,6 +289,36 @@ export class LeaveAppController {
       }
 
       const result = await leaveAppService.cancelLeaveRequest({
+        hostId,
+        userId,
+        leaveRequestId: id,
+      });
+
+      res.json({
+        success: true,
+        message: 'Leave request cancelled successfully',
+        data: result,
+      } as ApiResponse);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async cancelRequestV1(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const hostId = req.user!.hostId;
+      const userId = req.user!.id;
+      const { id } = req.body;
+
+      if (!id) {
+        res.status(400).json({
+          success: false,
+          message: 'id is required',
+        } as ApiResponse);
+        return;
+      }
+
+      const result = await leaveAppService.cancelLeaveRequestV1({
         hostId,
         userId,
         leaveRequestId: id,

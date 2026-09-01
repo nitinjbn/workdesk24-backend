@@ -72,7 +72,8 @@ export function initLeaveRequest(sequelize: Sequelize): typeof LeaveRequest {
       },
       leaveTypeId: {
         type: DataTypes.BIGINT,
-        allowNull: false,
+        allowNull: true, // Made leaveTypeId optional due to phase 1 release without leave types
+        defaultValue: 0,
       },
       leaveYearId: {
         type: DataTypes.BIGINT,

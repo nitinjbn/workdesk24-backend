@@ -144,6 +144,26 @@ export class LeaveAppService {
     };
   }
 
+  async getHolidaysV1(payload: { hostId: number; userId: number }): Promise<any> {
+    const { hostId, userId } = payload;
+    const today = new Date().toISOString().slice(0, 10);
+    const currentLeaveYear = await leaveRequestAppRepository.resolveLeaveYearForDate(hostId, today);
+
+    if (!currentLeaveYear) {
+      throw createConfiguredError(
+        'LEAVE_YEAR_NOT_FOUND',
+        'No active leave year found for the current date',
+        400
+      );
+    }
+
+    return this.getHolidays({
+      hostId,
+      userId,
+      leaveYearId: Number((currentLeaveYear as any).id),
+    });
+  }
+
   async getLeaveRequests(payload: {
     hostId: number;
     userId: number;
@@ -436,6 +456,194 @@ export class LeaveAppService {
     }
   }
 
+private async resolveLeaveYearForRequest(payload: {
+    hostId: number;
+    userId: number;
+    leaveYearId?: number;
+    fromDate?: string;
+    tillDate?: string;
+  }): Promise<number> {
+    const { hostId, userId, leaveYearId, fromDate, tillDate } = payload;
+
+    if (leaveYearId) {
+      return Number(leaveYearId);
+    }
+
+    const dateForResolution = fromDate || tillDate || new Date().toISOString().slice(0, 10);
+    const resolvedYear = await leaveRequestAppRepository.resolveLeaveYearForDate(hostId, dateForResolution);
+
+    if (!resolvedYear) {
+      throw createConfiguredError(
+        'LEAVE_YEAR_NOT_FOUND',
+        'No active leave year found for the requested date',
+        400
+      );
+    }
+
+    const resolvedLeaveYearId = Number((resolvedYear as any).id);
+    if (!resolvedLeaveYearId) {
+      throw createConfiguredError(
+        'LEAVE_YEAR_NOT_FOUND',
+        'Unable to resolve leave year for the requested date',
+        400
+      );
+    }
+
+    return resolvedLeaveYearId;
+  }
+
+  async createLeaveRequestV1(payload: {
+    hostId: number;
+    userId: number;
+    leaveYearId?: number;
+    fromDate: string;
+    tillDate: string;
+    reason?: string;
+    requestLocalId?: string;
+    days: Array<{ leaveDate: string; durationType: 'FULL_DAY' | 'FIRST_HALF' | 'SECOND_HALF' }>;
+  }): Promise<any> {
+    const { hostId, userId, leaveYearId, fromDate, tillDate, reason, requestLocalId, days } = payload;
+
+    if (!fromDate || !tillDate || !Array.isArray(days) || days.length === 0) {
+      throw createConfiguredError(
+        'INVALID_INPUT',
+        'fromDate, tillDate, and days are required',
+        400
+      );
+    }
+
+    const resolvedLeaveYearId = await this.resolveLeaveYearForRequest({
+      hostId,
+      userId,
+      leaveYearId,
+      fromDate,
+      tillDate,
+    });
+
+    const normalizedRequestLocalId = requestLocalId?.trim();
+    const transaction = await sequelize.transaction();
+
+    try {
+      const lockedUser = await leaveRequestAppRepository.lockUserForLeaveOps(hostId, userId, transaction);
+      if (!lockedUser) {
+        throw createConfiguredError('USER_NOT_FOUND', 'User not found', 404);
+      }
+
+      if (normalizedRequestLocalId) {
+        const existing = await leaveRequestAppRepository.getLeaveRequestByLocalId(
+          hostId,
+          userId,
+          normalizedRequestLocalId,
+          transaction,
+          true
+        );
+
+        if (existing) {
+          await transaction.commit();
+          return this.getLeaveRequestById({
+            hostId,
+            userId,
+            leaveRequestId: Number((existing as any).id),
+          });
+        }
+      }
+
+      const overlappingRequests = await leaveRequestAppRepository.findOverlappingLeaveRequests({
+        hostId,
+        userId,
+        fromDate,
+        tillDate,
+        transaction,
+      });
+
+      if (overlappingRequests.length > 0) {
+        throw createConfiguredError(
+          'OVERLAPPING_LEAVE_REQUEST_EXISTS',
+          'Overlapping leave request already exists for the employee',
+          409
+        );
+      }
+
+
+      const now = Math.floor(Date.now() / 1000);
+
+      const createdRequest = await leaveRequestAppRepository.createLeaveRequestV1({
+        hostId,
+        userId,
+        leaveYearId: resolvedLeaveYearId,
+        fromDate,
+        tillDate,
+        totalDays: days.length,
+        reason,
+        requestLocalId: normalizedRequestLocalId,
+        status: 'PENDING',
+        submittedAt: now,
+        transaction,
+      });
+
+      const breakdownMap = new Map<string, { durationDays: number; excludedByHoliday: boolean }>();
+      const mappedDays = payload.days
+      .map((day) => {
+        const breakdown = breakdownMap.get(day.leaveDate);
+        if (!breakdown || breakdown.excludedByHoliday || breakdown.durationDays <= 0) {
+          return null;
+        }
+        return {
+          leaveDate: day.leaveDate,
+          durationType: day.durationType,
+          durationDays: day.durationType === 'FULL_DAY' ? 1 : 0.5,
+        };
+      })
+      .filter((item): item is { leaveDate: string; durationType: 'FULL_DAY' | 'FIRST_HALF' | 'SECOND_HALF'; durationDays: number } => !!item);
+
+      await leaveRequestAppRepository.createLeaveRequestDays({
+        hostId,
+        userId,
+        leaveRequestId: Number((createdRequest as any).id),
+        days: mappedDays,
+        transaction,
+      });
+
+      await leaveRequestAppRepository.createLeaveRequestApproval({
+        hostId,
+        leaveRequestId: Number((createdRequest as any).id),
+        approverUserId: userId,
+        action: 'SUBMITTED',
+        previousStatus: 'DRAFT',
+        newStatus: 'PENDING',
+        comment: 'Request submitted by employee',
+        transaction,
+      });
+
+
+      await transaction.commit();
+
+      return this.getLeaveRequestById({
+        hostId,
+        userId,
+        leaveRequestId: Number((createdRequest as any).id),
+      });
+    } catch (error: any) {
+      await transaction.rollback();
+
+      const message = String(error?.message || '').toLowerCase();
+      if (message.includes('uk_leave_request_host_user_local_id')) {
+        const existing = normalizedRequestLocalId
+          ? await leaveRequestAppRepository.getLeaveRequestByLocalId(hostId, userId, normalizedRequestLocalId)
+          : null;
+        if (existing) {
+          return this.getLeaveRequestById({
+            hostId,
+            userId,
+            leaveRequestId: Number((existing as any).id),
+          });
+        }
+      }
+
+      throw error;
+    }
+  }
+
   async submitLeaveRequest(payload: {
     hostId: number;
     userId: number;
@@ -644,6 +852,14 @@ export class LeaveAppService {
       await transaction.rollback();
       throw error;
     }
+  }
+
+  async cancelLeaveRequestV1(payload: {
+    hostId: number;
+    userId: number;
+    leaveRequestId: number;
+  }): Promise<any> {
+    return this.cancelLeaveRequest(payload);
   }
 
   async withdrawLeaveRequest(payload: {
