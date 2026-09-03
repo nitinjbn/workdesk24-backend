@@ -26,6 +26,7 @@ import { logger } from '../../../config/database';
 import { Op, Transaction } from 'sequelize';
 import { locationResolutionService, type LocationResolutionTarget } from '../../../infrastructure/background-jobs/services/location-resolution.service';
 import { getRedisConnectionStatus } from '../../../infrastructure/background-jobs/config/redis.config';
+import dashboardCacheInvalidationService, { type DashboardCacheInvalidationEvent } from '../../dashboard/services/dashboard-cache-invalidation.service';
 
 const attendanceRepository = new AttendanceRepository();
 const gpsHistoryRepository = new GpsHistoryRepository();
@@ -131,6 +132,25 @@ export class SyncService {
     }
 
     return Math.floor(parsedValue);
+  }
+
+  private async invalidateDashboardOverview(
+    event: DashboardCacheInvalidationEvent,
+    record: SyncRecord,
+    previousRecord?: SyncRecord,
+    timestampField?: string
+  ): Promise<void> {
+    const hostId = this.toPositiveInteger(record.hostId ?? previousRecord?.hostId);
+    if (hostId === null) {
+      return;
+    }
+
+    await dashboardCacheInvalidationService.invalidateOverview({
+      hostId,
+      event,
+      occurredAt: timestampField ? record[timestampField] : undefined,
+      previousOccurredAt: timestampField ? previousRecord?.[timestampField] : undefined,
+    });
   }
 
   private buildLocationCandidate(source: SyncRecord, map: LocationFieldMap): UserLastLocationUpsertPayload | null {
@@ -405,6 +425,12 @@ export class SyncService {
       },
       async (record, previousRecord) => {
         await this.scheduleAttendanceLocationJobs(record, previousRecord);
+        await this.invalidateDashboardOverview(
+          previousRecord && record.dayoverTime ? 'dayover.changed' : 'attendance.changed',
+          record,
+          previousRecord,
+          record.dayoverTime ? 'dayoverTime' : 'attendanceTime'
+        );
       }
     );
   }
@@ -571,6 +597,7 @@ export class SyncService {
       },
       async (record, previousRecord) => {
         await this.scheduleVisitLocationJobs(record, previousRecord);
+        await this.invalidateDashboardOverview('visit.changed', record, previousRecord, 'checkInTime');
       }
     );
   }
@@ -691,6 +718,7 @@ export class SyncService {
 
         // Its commented out because the location resolution jobs are already scheduled in the syncVisitSummaryForActivity method, which is called above. Scheduling them again here would be redundant and could lead to unnecessary processing.
         //await this.scheduleOrderLocationJobs(syncResult.persistedRecord, syncResult.previousRecord);
+        await this.invalidateDashboardOverview('order.changed', syncResult.persistedRecord, syncResult.previousRecord, 'orderTime');
 
         if (syncResult.status === 'updated') {
           results.updated.push({ localId, serverId: syncResult.serverId });
@@ -752,6 +780,9 @@ export class SyncService {
         );
         await this.upsertUserLastLocationFromRecord(payment, transaction, sourceRecord);
       },
+      async (record, previousRecord) => {
+        await this.invalidateDashboardOverview('payment.changed', record, previousRecord, 'paymentDate');
+      }
       // async (record, previousRecord) => {
       //   await this.schedulePaymentLocationJobs(record, previousRecord);
       // }
@@ -803,6 +834,9 @@ export class SyncService {
         );
         await this.upsertUserLastLocationFromRecord(feedback, transaction, sourceFeedback);
       },
+      async (record, previousRecord) => {
+        await this.invalidateDashboardOverview('feedback.changed', record, previousRecord, 'feedbackTime');
+      }
       // async (record, previousRecord) => {
       //   await this.scheduleFeedbackLocationJobs(record, previousRecord);
       // }
@@ -853,6 +887,9 @@ export class SyncService {
         );
         await this.upsertUserLastLocationFromRecord(image, transaction, sourceRecord);
       },
+      async (record, previousRecord) => {
+        await this.invalidateDashboardOverview('image.changed', record, previousRecord, 'capturedAt');
+      }
       // async (record, previousRecord) => {
       //   await this.scheduleImageLocationJobs(record, previousRecord);
       // }

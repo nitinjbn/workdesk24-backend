@@ -87,13 +87,11 @@ export class HolidayCalendarRepository extends BaseRepository<HolidayCalendarIns
 
   async checkCalendarNameExists(
     hostId: number,
-    leaveYearId: number,
     name: string,
     excludeId?: number
   ): Promise<boolean> {
     const where: any = {
       hostId,
-      leaveYearId,
       name: name.trim(),
       isDeleted: 0,
     };
@@ -108,12 +106,10 @@ export class HolidayCalendarRepository extends BaseRepository<HolidayCalendarIns
 
   async checkDefaultCalendarExists(
     hostId: number,
-    leaveYearId: number,
     excludeId?: number
   ): Promise<HolidayCalendarInstance | null> {
     const where: any = {
       hostId,
-      leaveYearId,
       isDefault: 1,
       isDeleted: 0,
     };
@@ -216,13 +212,11 @@ export class HolidayCalendarRepository extends BaseRepository<HolidayCalendarIns
   async setHolidayCalendarAsDefault(
     hostId: number,
     holidayCalendarId: number,
-    leaveYearId: number,
     transaction?: Transaction
   ): Promise<HolidayCalendarInstance | null> {
     // Unset previous default
     const previousDefault = await this.checkDefaultCalendarExists(
       hostId,
-      leaveYearId,
       holidayCalendarId
     );
 

@@ -76,10 +76,10 @@ export class HolidayCalendarService {
     const { hostId, leaveYearId, name, description, isDefault } = payload;
 
     // Validation
-    if (!leaveYearId || !name) {
+    if (!name) {
       throw createConfiguredError(
         'INVALID_INPUT',
-        'Leave year ID and calendar name are required',
+        'Calendar name is required',
         400
       );
     }
@@ -95,26 +95,27 @@ export class HolidayCalendarService {
     }
 
     // Validate leave year exists and belongs to this host
-    const leaveYear = await leaveYearRepository.getLeaveYearById(hostId, leaveYearId);
-    if (!leaveYear) {
-      throw createConfiguredError(
-        'INVALID_LEAVE_YEAR',
-        'Leave year not found or does not belong to this organization',
-        400
-      );
+    if(leaveYearId) {
+      const leaveYear = await leaveYearRepository.getLeaveYearById(hostId, leaveYearId);
+      if (!leaveYear) {
+        throw createConfiguredError(
+          'INVALID_LEAVE_YEAR',
+          'Leave year not found or does not belong to this organization',
+          400
+        );
+      }
     }
 
     // Check for duplicate calendar name within same host + leave year
     const isDuplicate = await holidayCalendarRepository.checkCalendarNameExists(
       hostId,
-      leaveYearId,
       trimmedName
     );
 
     if (isDuplicate) {
       throw createConfiguredError(
         'DUPLICATE_CALENDAR_NAME',
-        'A calendar with this name already exists for the selected leave year',
+        'A calendar with this name already exists',
         400
       );
     }
@@ -122,14 +123,13 @@ export class HolidayCalendarService {
     // If setting as default, check if another default exists
     if (isDefault === 1) {
       const existingDefault = await holidayCalendarRepository.checkDefaultCalendarExists(
-        hostId,
-        leaveYearId
+        hostId
       );
 
       if (existingDefault) {
         throw createConfiguredError(
           'DEFAULT_CALENDAR_EXISTS',
-          'A default calendar already exists for this leave year. Unset the existing default first.',
+          'A default calendar already exists. Unset the existing default first.',
           400
         );
       }
@@ -197,7 +197,6 @@ export class HolidayCalendarService {
       // Check for duplicate name (excluding current calendar)
       const isDuplicate = await holidayCalendarRepository.checkCalendarNameExists(
         hostId,
-        existingCalendar.leaveYearId,
         trimmedName,
         holidayCalendarId
       );
@@ -337,7 +336,6 @@ export class HolidayCalendarService {
       const updatedCalendar = await holidayCalendarRepository.setHolidayCalendarAsDefault(
         hostId,
         holidayCalendarId,
-        holidayCalendar.leaveYearId,
         transaction
       );
 

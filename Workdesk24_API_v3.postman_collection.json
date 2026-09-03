@@ -971,6 +971,39 @@
           "description": "Dashboard statistics",
           "item": [
             {
+              "name": "Get Overview",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{TOKEN}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "x-csrf-token",
+                    "value": "{{ADMIN_CSRF_TOKEN}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"filter\": {\n    \"date\": {\n      \"type\": \"preset\",\n      \"value\": \"today\"\n    }\n  },\n  \"options\": {\n    \"trendGranularity\": \"day\",\n    \"topPerformersLimit\": 5,\n    \"activityLimit\": 10,\n    \"includeActivity\": true\n  }\n}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/admin/dashboard/overview",
+                  "host": ["{{BASE_URL}}"],
+                  "path": ["api", "v1", "admin", "dashboard", "overview"]
+                },
+                "description": "Get aggregated admin dashboard overview"
+              },
+              "response": []
+            },
+            {
               "name": "Get Statistics",
               "request": {
                 "method": "POST",

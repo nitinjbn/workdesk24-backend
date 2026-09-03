@@ -5,6 +5,7 @@ import { getHostDateTimeSettings } from '../../../shared/utils/host-settings.uti
 import { formatDateTimeFieldsBySettings } from '../../../shared/utils/date-time-format.util';
 import leaveBalanceService from './leave-balance.service';
 import leaveRequestApprovalRepository from '../repositories/leave-request-approval.repository';
+import dashboardCacheInvalidationService from '../../dashboard/services/dashboard-cache-invalidation.service';
 
 type LeaveStatus = 'DRAFT' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'WITHDRAWN';
 
@@ -59,6 +60,10 @@ export class LeaveRequestApprovalService {
         400
       );
     }
+  }
+
+  private shouldInvalidateDashboardForLeaveChange(currentStatus: LeaveStatus, targetStatus: LeaveStatus): boolean {
+    return currentStatus === 'APPROVED' || targetStatus === 'APPROVED';
   }
 
   async listPendingLeaveRequests(payload: {
@@ -277,6 +282,15 @@ export class LeaveRequestApprovalService {
 
       await transaction.commit();
 
+      if (this.shouldInvalidateDashboardForLeaveChange(currentStatus, targetStatus)) {
+        await dashboardCacheInvalidationService.invalidateOverview({
+          hostId,
+          event: 'leave.status_changed',
+          occurredAt: (request as any).fromDate,
+          previousOccurredAt: (request as any).tillDate,
+        });
+      }
+
       return this.getLeaveRequestDetails({
         hostId,
         approverUserId,
@@ -367,6 +381,15 @@ export class LeaveRequestApprovalService {
       });
 
       await transaction.commit();
+
+      if (this.shouldInvalidateDashboardForLeaveChange(currentStatus, targetStatus)) {
+        await dashboardCacheInvalidationService.invalidateOverview({
+          hostId,
+          event: 'leave.status_changed',
+          occurredAt: (request as any).fromDate,
+          previousOccurredAt: (request as any).tillDate,
+        });
+      }
 
       return this.getLeaveRequestDetails({
         hostId,

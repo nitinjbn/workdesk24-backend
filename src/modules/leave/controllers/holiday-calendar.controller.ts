@@ -71,7 +71,7 @@ export class HolidayCalendarController {
   ): Promise<void> {
     try {
       const hostId = req.user!.hostId;
-      const { leaveYearId, name, description, isDefault } = req.body;
+      const { leaveYearId=0, name, description, isDefault } = req.body;
 
       const result = await holidayCalendarService.createHolidayCalendar({
         hostId,

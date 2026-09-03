@@ -23,6 +23,8 @@
     "test:leave:unit": "node --test tests/leave/leave-calculation.unit.test.js",
     "test:leave:lifecycle": "node --test tests/leave/leave-request-lifecycle.integration.test.js",
     "test:leave:concurrency": "node --test tests/leave/leave-concurrency-idempotency.integration.test.js",
+    "test:cache": "node --test tests/cache/cache.service.unit.test.js",
+    "test:dashboard": "node --test tests/dashboard/dashboard-overview.unit.test.js",
     "manualRun": "nodemon dist/server.production.js"
   },
   "keywords": [

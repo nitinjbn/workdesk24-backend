@@ -1,8 +1,12 @@
 import { Router } from 'express';
-import { Inquiry, User } from '../../../models/index';
+//import { Inquiry, User } from '../../../models/index';
+import dashboardController from '../../../modules/dashboard/controllers/dashboard.controller';
 
 const router = Router();
 
+router.post('/dashboard/overview', dashboardController.getOverview.bind(dashboardController));
+
+/*
 router.post('/dashboard/stats', async (req, res, next) => {
   try {
     const [totalUsers, totalInquiries, pendingInquiries, resolvedInquiries] = await Promise.all([
@@ -53,5 +57,6 @@ router.post('/dashboard/recent-inquiries', async (req, res, next) => {
     next(error);
   }
 });
+*/
 
 export default router;

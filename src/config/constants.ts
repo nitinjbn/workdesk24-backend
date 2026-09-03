@@ -1,7 +1,12 @@
+import cacheConfig from './cache';
+import dashboardConfig from './dashboard';
+
 export const CONFIG = {
   APP_CONFIG: {
     NAME: process.env.APP_NAME || 'WorkDesk24',
   },
+  CACHE: cacheConfig,
+  DASHBOARD: dashboardConfig,
   REPORTING: {
     TIMEZONE: 'Asia/Kolkata',
     DATE_FORMAT: 'DD-MMM-YYYY',
