@@ -98,15 +98,14 @@ export class DashboardOverviewRepository {
   }
 
   public async getKpiCounts(scope: DashboardAggregateScope): Promise<DashboardKpiCounts> {
-    console.log('############ Getting KPI counts for scope:', scope);
     const [totalEmployees, presentToday, onLeaveToday, totalVisits, orderCounts, paymentCounts, pendingDayovers] = await Promise.all([
       this.getTotalEmployees(scope.hostId, scope.filters.employeeIds),
-      this.getPresentCount(scope.hostId, scope.todayRange, scope.filters.employeeIds),
-      this.getOnLeaveCount(scope.hostId, scope.todayRange.startDate, scope.filters.employeeIds),
+      this.getPresentCount(scope.hostId, scope.range, scope.filters.employeeIds),
+      this.getOnLeaveCount(scope.hostId, scope.range, scope.filters.employeeIds),
       this.getVisitCounts(scope).then((result) => result.totalVisits),
       this.getOrderCounts(scope),
       this.getPaymentCounts(scope),
-      this.getPendingDayovers(scope.hostId, scope.todayRange, scope.filters.employeeIds),
+      this.getPendingDayovers(scope.hostId, scope.range, scope.filters.employeeIds),
     ]);
 
     return {
@@ -145,13 +144,13 @@ export class DashboardOverviewRepository {
     });
   }
 
-  public async getOnLeaveCount(hostId: number, leaveDate: string, employeeIds?: number[]): Promise<number> {
+  public async getOnLeaveCount(hostId: number, range: DashboardResolvedDateRange, employeeIds?: number[]): Promise<number> {
     return db.LeaveRequestDay.count({
       distinct: true,
       col: 'userId',
       where: {
         hostId,
-        leaveDate,
+        leaveDate: { [Op.between]: [range.startDate, range.endDate] },
         ...(employeeIds !== undefined ? { userId: { [Op.in]: employeeIds } } : {}),
       },
       include: [{
@@ -223,8 +222,8 @@ export class DashboardOverviewRepository {
 
   public async getDayoverCounts(scope: DashboardAggregateScope, totalEmployees: number, onLeaveToday: number): Promise<DashboardDayoverCounts> {
     const [completed, pending] = await Promise.all([
-      this.getCompletedDayovers(scope.hostId, scope.todayRange, scope.filters.employeeIds),
-      this.getPendingDayovers(scope.hostId, scope.todayRange, scope.filters.employeeIds),
+      this.getCompletedDayovers(scope.hostId, scope.range, scope.filters.employeeIds),
+      this.getPendingDayovers(scope.hostId, scope.range, scope.filters.employeeIds),
     ]);
 
     return {

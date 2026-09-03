@@ -91,8 +91,7 @@ export class DashboardService {
       filters: resolved.filters,
       granularity: resolved.granularity,
     };
-
-    //TODO: If custom range is provided then below data should be based on custom range only instead of today.
+    
     const [kpis, visitCounts, orderCounts, paymentCounts, feedbackCounts, imageCounts, summaryTrendRows, leaveTrend, performance, activity] = await Promise.all([
       this.repository.getKpiCounts(scope),
       this.repository.getVisitCounts(scope),
