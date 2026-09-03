@@ -1,5 +1,5 @@
 import { FindAndCountOptions, Includeable , Op} from 'sequelize';
-import db, { User, UserSettings, Role, Designation, UserDevice } from '../../../models';
+import db, { User, UserSettings, Role, Designation, UserDevice, HolidayCalendar } from '../../../models';
 import { CommonReportSortBy, GetUsersFilter, ReportResponse, ReportSortDirection, SingleRecordResponse } from '../types/master.types';
 import baseReportHelper from '../helpers/base-report.helper';
 import { buildCommonReportOrder } from './user-scoped-report.helper';
@@ -141,7 +141,8 @@ export class usersRepository {
         include: [
           [db.Sequelize.col('User.id'), 'userId'],
           [db.Sequelize.col('roles.roleName'), 'role'],
-          [db.Sequelize.col('designations.name'), 'designation']
+          [db.Sequelize.col('designations.name'), 'designation'],
+          [db.Sequelize.col('holidayCalendar.name'), 'holidayCalendarName']
         ]
       },
       where,
@@ -177,6 +178,15 @@ export class usersRepository {
           },
           model: UserDevice,
           as: "device",
+          required: false
+        },
+        {
+          attributes: [],
+          model: HolidayCalendar,
+          where: {
+            isDeleted: 0
+          },
+          as: "holidayCalendar",
           required: false
         }
       ],
@@ -261,7 +271,8 @@ export class usersRepository {
         include: [
           [db.Sequelize.col('User.id'), 'userId'],
           [db.Sequelize.col('roles.roleName'), 'role'],
-          [db.Sequelize.col('designations.name'), 'designation']
+          [db.Sequelize.col('designations.name'), 'designation'],
+          [db.Sequelize.col('holidayCalendar.name'), 'holidayCalendarName']
         ]
       },
       where,
@@ -292,6 +303,15 @@ export class usersRepository {
           },
           as: "designations",
           required: true
+        },
+        {
+          attributes: [],
+          model: HolidayCalendar,
+          where: {
+            isDeleted: 0
+          },
+          as: "holidayCalendar",
+          required: false
         },
         {
           attributes: {
