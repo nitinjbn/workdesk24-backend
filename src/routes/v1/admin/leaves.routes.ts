@@ -78,4 +78,8 @@ router.post('/rejectLeaveRequest', leaveRequestApprovalController.rejectLeaveReq
 router.post('/cancelLeaveRequestByApprover', leaveRequestApprovalController.cancelLeaveRequest.bind(leaveRequestApprovalController));
 router.post('/getLeaveRequestApprovalHistory', leaveRequestApprovalController.viewApprovalHistory.bind(leaveRequestApprovalController));
 
+// Version 1 APIs for leave requests
+router.post('/approveLeaveRequestV1', leaveRequestApprovalController.approveLeaveRequestV1.bind(leaveRequestApprovalController));
+router.post('/rejectLeaveRequestV1', leaveRequestApprovalController.rejectLeaveRequestV1.bind(leaveRequestApprovalController));
+
 export default router;

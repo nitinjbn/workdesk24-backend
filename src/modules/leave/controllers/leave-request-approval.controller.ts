@@ -121,6 +121,66 @@ export class LeaveRequestApprovalController {
     }
   }
 
+  async approveLeaveRequestV1(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const hostId = req.user!.hostId;
+      const approverUserId = req.user!.id;
+      const approverRoleId = req.user!.roleId;
+      const { leaveRequestId, comment } = req.body;
+
+      if (!leaveRequestId) {
+        res.status(400).json({ success: false, message: 'leaveRequestId is required' } as ApiResponse);
+        return;
+      }
+
+      const result = await leaveRequestApprovalService.approveLeaveRequestV1({
+        hostId,
+        approverUserId,
+        approverRoleId,
+        leaveRequestId,
+        comment,
+      });
+
+      res.json({
+        success: true,
+        message: 'Leave request approved successfully',
+        data: result,
+      } as ApiResponse);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async rejectLeaveRequestV1(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const hostId = req.user!.hostId;
+      const approverUserId = req.user!.id;
+      const approverRoleId = req.user!.roleId;
+      const { leaveRequestId, comment } = req.body;
+
+      if (!leaveRequestId) {
+        res.status(400).json({ success: false, message: 'leaveRequestId is required' } as ApiResponse);
+        return;
+      }
+
+      const result = await leaveRequestApprovalService.rejectLeaveRequestV1({
+        hostId,
+        approverUserId,
+        approverRoleId,
+        leaveRequestId,
+        comment,
+      });
+
+      res.json({
+        success: true,
+        message: 'Leave request rejected successfully',
+        data: result,
+      } as ApiResponse);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async cancelLeaveRequest(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const hostId = req.user!.hostId;

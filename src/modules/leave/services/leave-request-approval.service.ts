@@ -289,6 +289,97 @@ export class LeaveRequestApprovalService {
     }
   }
 
+  private async transitionRequestV1(payload: {
+    hostId: number;
+    approverUserId: number;
+    approverRoleId: number;
+    leaveRequestId: number;
+    targetStatus: LeaveStatus;
+    action: 'APPROVED' | 'REJECTED' | 'CANCELLED';
+    comment?: string;
+  }): Promise<any> {
+    const {
+      hostId,
+      approverUserId,
+      approverRoleId,
+      leaveRequestId,
+      targetStatus,
+      action,
+      comment,
+    } = payload;
+
+    const transaction = await sequelize.transaction();
+
+    try {
+      const request = await leaveRequestApprovalRepository.getLeaveRequestByIdForUpdate(
+        hostId,
+        leaveRequestId,
+        transaction
+      );
+
+      if (!request) {
+        throw createConfiguredError('LEAVE_REQUEST_NOT_FOUND', 'Leave request not found', 404);
+      }
+
+      const currentStatus = String((request as any).status) as LeaveStatus;
+
+      await this.assertApproverAuthorized({
+        hostId,
+        approverUserId,
+        approverRoleId,
+        requestOwnerUserId: Number((request as any).userId),
+      });
+
+      // idempotent handling for duplicate concurrent actions
+      if (currentStatus === targetStatus) {
+        await transaction.commit();
+        return this.getLeaveRequestDetails({
+          hostId,
+          approverUserId,
+          approverRoleId,
+          leaveRequestId,
+        });
+      }
+
+      this.assertAllowedTransition(currentStatus, targetStatus);
+
+      const now = Math.floor(Date.now() / 1000);
+
+      await leaveRequestApprovalRepository.updateLeaveRequestStatus({
+        hostId,
+        leaveRequestId,
+        status: targetStatus,
+        approvedAt: targetStatus === 'APPROVED' ? now : undefined,
+        rejectedAt: targetStatus === 'REJECTED' ? now : undefined,
+        cancelledAt: targetStatus === 'CANCELLED' ? now : undefined,
+        transaction,
+      });
+
+      await leaveRequestApprovalRepository.createApprovalAudit({
+        hostId,
+        leaveRequestId,
+        approverUserId,
+        action,
+        previousStatus: currentStatus,
+        newStatus: targetStatus,
+        comment,
+        transaction,
+      });
+
+      await transaction.commit();
+
+      return this.getLeaveRequestDetails({
+        hostId,
+        approverUserId,
+        approverRoleId,
+        leaveRequestId,
+      });
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  }
+
   async approveLeaveRequest(payload: {
     hostId: number;
     approverUserId: number;
@@ -311,6 +402,34 @@ export class LeaveRequestApprovalService {
     comment?: string;
   }): Promise<any> {
     return this.transitionRequest({
+      ...payload,
+      targetStatus: 'REJECTED',
+      action: 'REJECTED',
+    });
+  }
+
+  async approveLeaveRequestV1(payload: {
+    hostId: number;
+    approverUserId: number;
+    approverRoleId: number;
+    leaveRequestId: number;
+    comment?: string;
+  }): Promise<any> {
+    return this.transitionRequestV1({
+      ...payload,
+      targetStatus: 'APPROVED',
+      action: 'APPROVED',
+    });
+  }
+
+  async rejectLeaveRequestV1(payload: {
+    hostId: number;
+    approverUserId: number;
+    approverRoleId: number;
+    leaveRequestId: number;
+    comment?: string;
+  }): Promise<any> {
+    return this.transitionRequestV1({
       ...payload,
       targetStatus: 'REJECTED',
       action: 'REJECTED',
