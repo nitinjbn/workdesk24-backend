@@ -1,5 +1,5 @@
 import { Op } from 'sequelize';
-import { CreatedAtRangeFilter, ReportPaginationMeta, ReportPaginationParams, ReportSortDirection, ReportSortDirectionInput } from '../types/master.types';
+import { CreatedAtRangeFilter, ReportPaginationMeta, ReportPaginationParams, ReportSortDirection, ReportSortDirectionInput } from '../types/geo-fencing.types';
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 10;

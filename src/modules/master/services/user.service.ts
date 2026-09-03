@@ -219,7 +219,7 @@ export class UserService {
   }
 
   async createAppUser(payload: any): Promise<any> {
-    const { hostId, name, employeeCode, email, callingCode, enteredMobileNumber, mobile, dateOfBirth, password, reportingManagerId, roleId, designationId, profileImageUrl, joiningDate, gender, accountStatus, addressLine1, addressLine2, landmark, countryName, countryIsoCode, stateName, stateIsoCode, city, district, pinCode, timezone, holidayCalendarId, leavePolicyId } = payload;
+    const { hostId, name, employeeCode, email, callingCode, enteredMobileNumber, mobile, dateOfBirth, password, reportingManagerId, roleId, designationId, profileImageUrl, joiningDate, gender, accountStatus, addressLine1, addressLine2, landmark, countryName, countryIsoCode, stateName, stateIsoCode, city, district, pinCode, timezone, holidayCalendarId, leavePolicyId, attendanceLocations } = payload;
 
     let settings = payload.settings;
     if(settings && typeof settings !== 'object') {
@@ -297,6 +297,14 @@ export class UserService {
       createdAt: currentUnixTime
     });
 
+    if(attendanceLocations && attendanceLocations.length > 0) {
+      await usersRepository.createUserAttendanceLocations({
+        userId: createAppUserResult.id,
+        attendanceLocations,
+        createdAt: currentUnixTime
+      });
+    }
+
     return { user: createAppUserResult, settings: createUserSettingsResult };
   }
 
@@ -324,7 +332,7 @@ export class UserService {
   }
 
   async updateAppUser(payload: any): Promise<any> {
-    const { hostId, userId, name, employeeCode, email, callingCode, enteredMobileNumber, mobile, dateOfBirth, password, reportingManagerId, designationId, profileImageUrl, joiningDate, gender, accountStatus, addressLine1, addressLine2, landmark, countryName, countryIsoCode, stateName, stateIsoCode, city, district, pinCode, timezone, holidayCalendarId, leavePolicyId } = payload;
+    const { hostId, userId, name, employeeCode, email, callingCode, enteredMobileNumber, mobile, dateOfBirth, password, reportingManagerId, designationId, profileImageUrl, joiningDate, gender, accountStatus, addressLine1, addressLine2, landmark, countryName, countryIsoCode, stateName, stateIsoCode, city, district, pinCode, timezone, holidayCalendarId, leavePolicyId, attendanceLocations } = payload;
 
     let settings = payload.settings;
     if(settings && typeof settings !== 'object') {
@@ -399,6 +407,13 @@ export class UserService {
     const updateUserSettingsResult = await usersRepository.updateUserSettings({
       userId: updateAppUserResult.id,
       settings: CommonUtil.convertSettingsToArray(settings),
+      updatedAt: currentUnixTime
+    });
+
+    // Update attendance locations
+    const updateAttendanceLocationsResult = await usersRepository.updateUserAttendanceLocations({
+      userId: updateAppUserResult.id,
+      attendanceLocations,
       updatedAt: currentUnixTime
     });
 

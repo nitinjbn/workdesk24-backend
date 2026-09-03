@@ -1,5 +1,5 @@
 import { FindAndCountOptions, Includeable , Op} from 'sequelize';
-import db, { User, UserSettings, Role, Designation, UserDevice, HolidayCalendar } from '../../../models';
+import db, { User, UserSettings, Role, Designation, UserDevice, HolidayCalendar, UserAttendanceLocation } from '../../../models';
 import { CommonReportSortBy, GetUsersFilter, ReportResponse, ReportSortDirection, SingleRecordResponse } from '../types/master.types';
 import baseReportHelper from '../helpers/base-report.helper';
 import { buildCommonReportOrder } from './user-scoped-report.helper';
@@ -581,6 +581,81 @@ export class usersRepository {
     }
   }
 
+  async updateUserAttendanceLocations(payload: {
+    userId: number;
+    attendanceLocations: number[];
+    updatedAt?: number;
+  }): Promise<any> {
+    const { userId } = payload;
+    const updatedAt = payload.updatedAt ?? DateTimeFormatUtil.getCurrentUnixTime();
+    const locationIds = [...new Set(payload.attendanceLocations || [])];
+
+    await db.sequelize.transaction(async (transaction: any) => {
+      const existingLocations = await UserAttendanceLocation.findAll({
+        where: { userId },
+        order: [['isDeleted', 'ASC'], ['id', 'DESC']],
+        transaction,
+      });
+
+      const existingByLocationId = new Map<number, any>();
+      existingLocations.forEach((location) => {
+        if (!existingByLocationId.has(location.attendanceLocationId)) {
+          existingByLocationId.set(location.attendanceLocationId, location);
+        }
+      });
+
+      const requestedLocationIds = new Set(locationIds);
+
+      for (const location of existingLocations) {
+        if (!requestedLocationIds.has(location.attendanceLocationId) && location.isDeleted === 0) {
+          await location.update(
+            {
+              isDeleted: 1,
+              deletedAt: updatedAt,
+              updatedAt,
+            },
+            { transaction }
+          );
+        }
+      }
+
+      const newAttendanceLocations: Array<Record<string, number | null>> = [];
+      for (const locationId of locationIds) {
+        const existingLocation = existingByLocationId.get(locationId);
+
+        if (existingLocation) {
+          await existingLocation.update(
+            {
+              isDeleted: 0,
+              deletedAt: null,
+              updatedAt,
+            },
+            { transaction }
+          );
+        } else {
+          newAttendanceLocations.push({
+            userId,
+            attendanceLocationId: locationId,
+            isDeleted: 0,
+            deletedAt: null,
+            createdAt: updatedAt,
+            updatedAt,
+          });
+        }
+      }
+
+      if (newAttendanceLocations.length > 0) {
+        await UserAttendanceLocation.bulkCreate(newAttendanceLocations, { transaction });
+      }
+    });
+    
+    return {
+      userId,
+      attendanceLocations: locationIds,
+      updatedAt,
+    };
+  }
+
   async updateAppUser(updateObj: { [key: string]: any }, filter: {hostId: number, userId: number}): Promise<any> {    
    
     //console.log("###################### updateAppUser updateObj:", updateObj);
@@ -662,6 +737,27 @@ export class usersRepository {
         ...deviceData,
       });
     }
+  }
+
+  async createUserAttendanceLocations(payload: {
+    userId: number;
+    attendanceLocations: number[];
+    createdAt: number;
+  }): Promise<any> {
+    const { userId, attendanceLocations, createdAt } = payload;
+    if(!attendanceLocations || attendanceLocations.length === 0) {
+      throw new Error('No attendance locations provided');
+    }
+
+    const createdRecords = await UserAttendanceLocation.bulkCreate(
+      attendanceLocations.map(attendanceLocationId => ({
+        userId,
+        attendanceLocationId,
+        createdAt
+      }))
+    );
+
+    return createdRecords;
   }
 }
 
