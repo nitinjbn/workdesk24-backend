@@ -52,6 +52,8 @@ import { initLeaveBalance } from './schemas/LeaveBalance';
 import { initLeaveBalanceTransaction } from './schemas/LeaveBalanceTransaction';
 import { initHoliday } from './schemas/Holiday';
 import { initHolidayCalendar } from './schemas/HolidayCalendar';
+import { initAttendanceLocation } from './schemas/AttendanceLocation';
+import { initUserAttendanceLocation } from './schemas/UserAttendanceLocation';
 
 dotenv.config();
 
@@ -159,6 +161,8 @@ const LeaveBalance = initLeaveBalance(sequelize);
 const LeaveBalanceTransaction = initLeaveBalanceTransaction(sequelize);
 const Holiday = initHoliday(sequelize);
 const HolidayCalendar = initHolidayCalendar(sequelize);
+const AttendanceLocation = initAttendanceLocation(sequelize);
+const UserAttendanceLocation = initUserAttendanceLocation(sequelize);
 
 // Store models in an object
 const db: any = {
@@ -215,6 +219,8 @@ const db: any = {
   Holiday,
   HolidayCalendar,
   connectionManager,
+  AttendanceLocation,
+  UserAttendanceLocation,
 };
 
 // Setup associations
@@ -317,6 +323,8 @@ export {
   LeaveBalanceTransaction,
   Holiday,
   HolidayCalendar,
+  AttendanceLocation,
+  UserAttendanceLocation,
 };
 
 export default db;

@@ -124,6 +124,11 @@
         "status": 400,
         "message": "A calendar with this name already exists for the selected leave year."
     },
+    "DUPLICATE_ATTENDANCE_LOCATION_NAME": {
+        "code": "DUPLICATE_ATTENDANCE_LOCATION_NAME",
+        "status": 400,
+        "message": "An attendance location with this name already exists"
+    },
     "INVALID_CALENDAR_NAME": {
         "code": "INVALID_CALENDAR_NAME",
         "status": 400,

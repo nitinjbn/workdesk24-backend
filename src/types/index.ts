@@ -819,3 +819,28 @@ export interface UserDailySummaryAttributes {
   isDeleted?: number;
   deletedAt?: number | null;
 }
+
+export interface AttendanceLocationAttributes {
+  id: number;
+  hostId: number;
+  locationName: string;
+  latitude?: number;
+  longitude?: number;
+  radiusMeters?: number;
+  isEnabled: number;
+  createdAt: number;
+  updatedAt?: number;
+  deletedAt?: number | null;
+  isDeleted: number;
+}
+
+export interface UserAttendanceLocationAttributes {
+  id: number;
+  userId: number;
+  attendanceLocationId: number;
+  isEnabled: number;
+  createdAt: number;
+  updatedAt?: number;
+  deletedAt?: number | null;
+  isDeleted: number;
+}
