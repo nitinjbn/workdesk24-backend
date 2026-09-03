@@ -381,7 +381,7 @@ export class usersRepository {
   }
 
   async createAppUser(params: any): Promise<any> {
-    const { hostId, name, employeeCode, email, enteredMobileNumber, callingCode, mobile, dateOfBirth, password, reportingManagerId, roleId, designationId, profileImageUrl, joiningDate, accountStatus, createdAt, gender, addressLine1, addressLine2, landmark, countryName, countryIsoCode, stateName, stateIsoCode, city, district, pinCode, timezone } = params;
+    const { hostId, name, employeeCode, email, enteredMobileNumber, callingCode, mobile, dateOfBirth, password, reportingManagerId, roleId, designationId, profileImageUrl, joiningDate, accountStatus, createdAt, gender, addressLine1, addressLine2, landmark, countryName, countryIsoCode, stateName, stateIsoCode, city, district, pinCode, timezone, holidayCalendarId, leavePolicyId } = params;
     const newUser = await User.create({
       hostId,
       name,
@@ -411,6 +411,8 @@ export class usersRepository {
       district,
       pinCode,
       timezone,
+      holidayCalendarId,
+      leavePolicyId,
       isDeleted: 0,
       createdAt
     });

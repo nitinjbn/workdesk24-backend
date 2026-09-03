@@ -219,7 +219,7 @@ export class UserService {
   }
 
   async createAppUser(payload: any): Promise<any> {
-    const { hostId, name, employeeCode, email, callingCode, enteredMobileNumber, mobile, dateOfBirth, password, reportingManagerId, roleId, designationId, profileImageUrl, joiningDate, gender, accountStatus, addressLine1, addressLine2, landmark, countryName, countryIsoCode, stateName, stateIsoCode, city, district, pinCode, timezone } = payload;
+    const { hostId, name, employeeCode, email, callingCode, enteredMobileNumber, mobile, dateOfBirth, password, reportingManagerId, roleId, designationId, profileImageUrl, joiningDate, gender, accountStatus, addressLine1, addressLine2, landmark, countryName, countryIsoCode, stateName, stateIsoCode, city, district, pinCode, timezone, holidayCalendarId, leavePolicyId } = payload;
 
     let settings = payload.settings;
     if(settings && typeof settings !== 'object') {
@@ -269,6 +269,8 @@ export class UserService {
       designationId,
       profileImageUrl,
       joiningDate,
+      holidayCalendarId,
+      leavePolicyId,
       gender,
       accountStatus,
       addressLine1,
@@ -322,7 +324,7 @@ export class UserService {
   }
 
   async updateAppUser(payload: any): Promise<any> {
-    const { hostId, userId, name, employeeCode, email, callingCode, enteredMobileNumber, mobile, dateOfBirth, password, reportingManagerId, designationId, profileImageUrl, joiningDate, gender, accountStatus, addressLine1, addressLine2, landmark, countryName, countryIsoCode, stateName, stateIsoCode, city, district, pinCode, timezone } = payload;
+    const { hostId, userId, name, employeeCode, email, callingCode, enteredMobileNumber, mobile, dateOfBirth, password, reportingManagerId, designationId, profileImageUrl, joiningDate, gender, accountStatus, addressLine1, addressLine2, landmark, countryName, countryIsoCode, stateName, stateIsoCode, city, district, pinCode, timezone, holidayCalendarId, leavePolicyId } = payload;
 
     let settings = payload.settings;
     if(settings && typeof settings !== 'object') {
@@ -370,6 +372,8 @@ export class UserService {
       district,
       pinCode,
       timezone,
+      holidayCalendarId,
+      leavePolicyId,
       updatedAt: currentUnixTime
     };
 

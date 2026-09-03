@@ -127,7 +127,7 @@ export class UserController {
 
   async createAppUser(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { hostId, name, email, employeeCode, mobile, dateOfBirth, gender, password, reportingManagerId, designationId, joiningDate, accountStatus, addressLine1, addressLine2, landmark, countryName, countryIsoCode, stateName, stateIsoCode, city, district, pinCode, timezone, settings } =  req.body;
+      const { hostId, name, email, employeeCode, mobile, dateOfBirth, gender, password, reportingManagerId, designationId, joiningDate, accountStatus, addressLine1, addressLine2, landmark, countryName, countryIsoCode, stateName, stateIsoCode, city, district, pinCode, timezone, settings, holidayCalendarId, leavePolicyId } =  req.body;
       const file = req.file as Express.Multer.File | undefined;
 
       //Step 1: Validate the mobile number uniqueness and format using PhoneUtil
@@ -178,6 +178,8 @@ export class UserController {
         designationId,
         profileImageUrl,
         joiningDate,
+        holidayCalendarId,
+        leavePolicyId,
         accountStatus,
         addressLine1,
         addressLine2,
@@ -264,7 +266,7 @@ export class UserController {
 
   async updateAppUser(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { hostId, userId, name, email, employeeCode, mobile, dateOfBirth, gender, password, profileImageUrl, reportingManagerId, roleId, designationId, joiningDate, accountStatus, addressLine1, addressLine2, landmark, countryName, countryIsoCode, stateName, stateIsoCode, city, district, pinCode, timezone, settings } =  req.body;
+      const { hostId, userId, name, email, employeeCode, mobile, dateOfBirth, gender, password, profileImageUrl, reportingManagerId, roleId, designationId, joiningDate, accountStatus, addressLine1, addressLine2, landmark, countryName, countryIsoCode, stateName, stateIsoCode, city, district, pinCode, timezone, settings, holidayCalendarId, leavePolicyId } =  req.body;
       const file = req.file as Express.Multer.File | undefined;
 
       if(!userId) {
@@ -326,6 +328,8 @@ export class UserController {
         district,
         pinCode,
         timezone,
+        holidayCalendarId,
+        leavePolicyId,
         settings
       };
 
