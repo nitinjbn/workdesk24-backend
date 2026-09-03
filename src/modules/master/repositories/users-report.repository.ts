@@ -141,8 +141,7 @@ export class usersRepository {
         include: [
           [db.Sequelize.col('User.id'), 'userId'],
           [db.Sequelize.col('roles.roleName'), 'role'],
-          [db.Sequelize.col('designations.name'), 'designation'],
-          [db.Sequelize.col('holidayCalendar.name'), 'holidayCalendarName']
+          [db.Sequelize.col('designations.name'), 'designation']
         ]
       },
       where,
@@ -181,7 +180,7 @@ export class usersRepository {
           required: false
         },
         {
-          attributes: [],
+          attributes: ['name'],
           model: HolidayCalendar,
           where: {
             isDeleted: 0
@@ -220,6 +219,8 @@ export class usersRepository {
         } else {
           jsonRow.device = {};
         }
+        jsonRow.holidayCalendarName = jsonRow.holidayCalendar?.name || null;
+        delete jsonRow.holidayCalendar;
         return jsonRow;
       });
 
@@ -247,6 +248,8 @@ export class usersRepository {
         } else {
           jsonRow.device = {};
         }
+        jsonRow.holidayCalendarName = jsonRow.holidayCalendar?.name || null;
+        delete jsonRow.holidayCalendar;
         return jsonRow;
       });
       return {
@@ -271,8 +274,7 @@ export class usersRepository {
         include: [
           [db.Sequelize.col('User.id'), 'userId'],
           [db.Sequelize.col('roles.roleName'), 'role'],
-          [db.Sequelize.col('designations.name'), 'designation'],
-          [db.Sequelize.col('holidayCalendar.name'), 'holidayCalendarName']
+          [db.Sequelize.col('designations.name'), 'designation']
         ]
       },
       where,
@@ -305,7 +307,7 @@ export class usersRepository {
           required: true
         },
         {
-          attributes: [],
+          attributes: ['name'],
           model: HolidayCalendar,
           where: {
             isDeleted: 0
@@ -348,6 +350,8 @@ export class usersRepository {
     } else {
       jsonData.device = {};
     }
+    jsonData.holidayCalendarName = jsonData.holidayCalendar?.name || null;
+    delete jsonData.holidayCalendar;
     return jsonData;
   }
 

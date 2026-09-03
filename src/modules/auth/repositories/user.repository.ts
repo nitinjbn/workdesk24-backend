@@ -2,7 +2,7 @@ import { BaseRepository } from '../../../shared/repositories/base.repository';
 import User from '../../../models/schemas/User';
 import UserDevice from '../../../models/schemas/UserDevices';
 import { WhereOptions } from 'sequelize';
-import { UserOTP } from '../../../models';
+import { UserOTP, UserAttendanceLocation, AttendanceLocation } from '../../../models';
 import { DateTimeFormatUtil } from '../../../shared/utils/date-time-format.util';
 import UserOTPDeliveries from '../../../models/schemas/UserOTPDeliveries';
 
@@ -40,6 +40,30 @@ export class UserRepository extends BaseRepository<typeof User.prototype> {
       where: { email, isDeleted: 0 } as WhereOptions<typeof User.prototype>,
       attributes: { include: ['password'] },
     });
+  }
+
+  async getAttendanceLocationsForUser(userId: number): Promise<Array<{ locationName: string; latitude: number; longitude: number }>> {
+    const assignments = await UserAttendanceLocation.findAll({
+      where: { userId, isDeleted: 0, isEnabled: 1 },
+      include: [
+        {
+          model: AttendanceLocation,
+          as: 'attendanceLocation',
+          where: { isDeleted: 0, isEnabled: 1 },
+          attributes: ['locationName', 'latitude', 'longitude', 'radiusMeters'],
+          required: true,
+        },
+      ],
+      raw: true,
+      nest: true,
+    });
+
+    return assignments.map((assignment: any) => ({
+      locationName: assignment.attendanceLocation.locationName,
+      latitude: assignment.attendanceLocation.latitude,
+      longitude: assignment.attendanceLocation.longitude,
+      radiusMeters: assignment.attendanceLocation.radiusMeters,
+    }));
   }
 
   async getUsersByFilter(filter: any): Promise<any> {

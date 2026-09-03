@@ -253,6 +253,9 @@ export class AuthService {
     
     // Attach settings array to user object
     (user as any).settings = userSettings || [];
+
+    // Attach active attendance locations (used for geo-fencing on attendance marking)
+    (user as any).attendanceLocations = await userRepository.getAttendanceLocationsForUser(user.id);
     
     // Format user data with settings, datetime, and storage fields
     const formattedUser = await this.formatUserWithSettings(user);
@@ -449,6 +452,9 @@ export class AuthService {
     
     // Attach settings array to user object
     (user as any).settings = userSettings || [];
+
+    // Attach active attendance locations (used for geo-fencing on attendance marking)
+    (user as any).attendanceLocations = await userRepository.getAttendanceLocationsForUser(user.id);
     
     // Format user data with settings, datetime, and storage fields
     const formattedUser = await this.formatUserWithSettings(user);
