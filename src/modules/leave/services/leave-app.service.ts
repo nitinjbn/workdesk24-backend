@@ -865,7 +865,88 @@ private async resolveLeaveYearForRequest(payload: {
     userId: number;
     leaveRequestId: number;
   }): Promise<any> {
-    return this.cancelLeaveRequest(payload);
+    const { hostId, userId, leaveRequestId } = payload;
+
+    const transaction = await sequelize.transaction();
+
+    try {
+      const request = await leaveRequestAppRepository.getLeaveRequestByIdForUpdate(
+        hostId,
+        userId,
+        leaveRequestId,
+        transaction
+      );
+
+      if (!request) {
+        throw createConfiguredError('LEAVE_REQUEST_NOT_FOUND', 'Leave request not found', 404);
+      }
+
+      const lockedUser = await leaveRequestAppRepository.lockUserForLeaveOps(hostId, userId, transaction);
+      if (!lockedUser) {
+        throw createConfiguredError('USER_NOT_FOUND', 'User not found', 404);
+      }
+
+      const currentStatus = String((request as any).status);
+
+      if (currentStatus === 'CANCELLED') {
+        await transaction.commit();
+        return this.getLeaveRequestById({ hostId, userId, leaveRequestId });
+      }
+
+      if (!['DRAFT', 'PENDING'].includes(currentStatus)) {
+        throw createConfiguredError(
+          'INVALID_REQUEST_STATUS_TRANSITION',
+          `Cannot cancel leave request in ${currentStatus} status`,
+          400
+        );
+      }
+
+      const now = Math.floor(Date.now() / 1000);
+
+      await leaveRequestAppRepository.updateLeaveRequestStatus({
+        hostId,
+        userId,
+        leaveRequestId,
+        status: 'CANCELLED',
+        cancelledAt: now,
+        transaction,
+      });
+
+      await leaveRequestAppRepository.createLeaveRequestApproval({
+        hostId,
+        leaveRequestId,
+        approverUserId: userId,
+        action: 'CANCELLED',
+        previousStatus: currentStatus as any,
+        newStatus: 'CANCELLED',
+        comment: 'Request cancelled by employee',
+        transaction,
+      });
+
+      // if (currentStatus === 'PENDING') {
+      //   await leaveBalanceService.applyBalanceChange({
+      //     hostId,
+      //     userId,
+      //     leaveYearId: Number((request as any).leaveYearId),
+      //     leaveTypeId: Number((request as any).leaveTypeId),
+      //     transactionType: 'LEAVE_REVERSAL',
+      //     quantity: Number((request as any).totalDays) * -1,
+      //     reason: `Leave request cancelled: ${leaveRequestId}`,
+      //     createdBy: userId,
+      //     deltas: {
+      //       pendingBalanceDelta: Number((request as any).totalDays) * -1,
+      //     },
+      //     transaction,
+      //   });
+      // }
+
+      await transaction.commit();
+
+      return this.getLeaveRequestById({ hostId, userId, leaveRequestId });
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
   }
 
   async withdrawLeaveRequest(payload: {
