@@ -143,6 +143,7 @@ export class DashboardOverviewRepository {
       where: {
         hostId,
         isDeleted: 0,
+        isFieldAppUser: 1,
         accountStatus: 'ACTIVE',
         ...(employeeIds !== undefined ? { id: { [Op.in]: employeeIds } } : {}),
       },
