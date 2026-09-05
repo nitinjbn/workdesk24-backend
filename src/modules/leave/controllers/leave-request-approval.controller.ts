@@ -4,14 +4,14 @@ import { ApiResponse } from '../../../shared/types/base.types';
 import leaveRequestApprovalService from '../services/leave-request-approval.service';
 
 export class LeaveRequestApprovalController {
-  async listPendingLeaveRequests(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  async listLeaveRequests(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const hostId = req.user!.hostId;
       const approverUserId = req.user!.id;
       const approverRoleId = req.user!.roleId;
       const { filter, page, limit, sortBy, sortOrder } = req.body;
 
-      const result = await leaveRequestApprovalService.listPendingLeaveRequests({
+      const result = await leaveRequestApprovalService.listLeaveRequests({
         hostId,
         approverUserId,
         approverRoleId,
@@ -24,7 +24,7 @@ export class LeaveRequestApprovalController {
 
       res.json({
         success: true,
-        message: 'Pending leave requests retrieved successfully',
+        message: 'Leave requests retrieved successfully',
         data: result,
       } as ApiResponse);
     } catch (error) {
@@ -40,7 +40,9 @@ export class LeaveRequestApprovalController {
       const { leaveRequestId } = req.body;
 
       if (!leaveRequestId) {
-        res.status(400).json({ success: false, message: 'leaveRequestId is required' } as ApiResponse);
+        res
+          .status(400)
+          .json({ success: false, message: 'leaveRequestId is required' } as ApiResponse);
         return;
       }
 
@@ -69,7 +71,9 @@ export class LeaveRequestApprovalController {
       const { leaveRequestId, comment } = req.body;
 
       if (!leaveRequestId) {
-        res.status(400).json({ success: false, message: 'leaveRequestId is required' } as ApiResponse);
+        res
+          .status(400)
+          .json({ success: false, message: 'leaveRequestId is required' } as ApiResponse);
         return;
       }
 
@@ -99,7 +103,9 @@ export class LeaveRequestApprovalController {
       const { leaveRequestId, comment } = req.body;
 
       if (!leaveRequestId) {
-        res.status(400).json({ success: false, message: 'leaveRequestId is required' } as ApiResponse);
+        res
+          .status(400)
+          .json({ success: false, message: 'leaveRequestId is required' } as ApiResponse);
         return;
       }
 
@@ -129,7 +135,9 @@ export class LeaveRequestApprovalController {
       const { leaveRequestId, comment } = req.body;
 
       if (!leaveRequestId) {
-        res.status(400).json({ success: false, message: 'leaveRequestId is required' } as ApiResponse);
+        res
+          .status(400)
+          .json({ success: false, message: 'leaveRequestId is required' } as ApiResponse);
         return;
       }
 
@@ -159,7 +167,9 @@ export class LeaveRequestApprovalController {
       const { leaveRequestId, comment } = req.body;
 
       if (!leaveRequestId) {
-        res.status(400).json({ success: false, message: 'leaveRequestId is required' } as ApiResponse);
+        res
+          .status(400)
+          .json({ success: false, message: 'leaveRequestId is required' } as ApiResponse);
         return;
       }
 
@@ -189,7 +199,9 @@ export class LeaveRequestApprovalController {
       const { leaveRequestId, comment } = req.body;
 
       if (!leaveRequestId) {
-        res.status(400).json({ success: false, message: 'leaveRequestId is required' } as ApiResponse);
+        res
+          .status(400)
+          .json({ success: false, message: 'leaveRequestId is required' } as ApiResponse);
         return;
       }
 
@@ -219,7 +231,9 @@ export class LeaveRequestApprovalController {
       const { leaveRequestId } = req.body;
 
       if (!leaveRequestId) {
-        res.status(400).json({ success: false, message: 'leaveRequestId is required' } as ApiResponse);
+        res
+          .status(400)
+          .json({ success: false, message: 'leaveRequestId is required' } as ApiResponse);
         return;
       }
 

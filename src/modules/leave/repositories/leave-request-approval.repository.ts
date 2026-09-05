@@ -22,7 +22,6 @@ export class LeaveRequestApprovalRepository {
 
     const where: any = {
       hostId,
-      status: 'PENDING',
       isDeleted: 0,
     };
 
@@ -51,10 +50,10 @@ export class LeaveRequestApprovalRepository {
       }
       if (filter.leaveDate) {
         where.fromDate = {
-          [Op.gte]: [filter.leaveDate],
+          [Op.gte]: filter.leaveDate,
         };
         where.tillDate = {
-          [Op.lte]: [filter.leaveDate],
+          [Op.lte]: filter.leaveDate,
         };
       }
     }
@@ -102,6 +101,14 @@ export class LeaveRequestApprovalRepository {
           as: 'leaveYear',
           required: false,
           where: { hostId, isDeleted: 0 },
+        },
+        {
+          model: LeaveRequestApproval,
+          as: 'approvalHistory',
+          required: false,
+          separate: true,
+          where: { hostId },
+          order: [['createdAt', 'DESC']],
         },
       ],
     };
@@ -197,7 +204,7 @@ export class LeaveRequestApprovalRepository {
           attributes: ['id', 'name', 'email'],
         },
       ],
-      order: [['createdAt', 'ASC']],
+      order: [['createdAt', 'DESC']],
     } as any);
   }
 

@@ -69,7 +69,7 @@ export class LeaveRequestApprovalService {
     return currentStatus === 'APPROVED' || targetStatus === 'APPROVED';
   }
 
-  async listPendingLeaveRequests(payload: {
+  async listLeaveRequests(payload: {
     hostId: number;
     approverUserId: number;
     approverRoleId: number;

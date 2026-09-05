@@ -48,6 +48,11 @@ class LeaveRequest
       foreignKey: 'leaveYearId',
       as: 'leaveYear',
     });
+
+    LeaveRequest.hasMany(models.LeaveRequestApproval, {
+      foreignKey: 'leaveRequestId',
+      as: 'approvalHistory',
+    });
   }
 }
 

@@ -30,7 +30,10 @@ export class LeaveRequestAppRepository {
     } as any);
   }
 
-  async getDefaultHolidayCalendarByLeaveYear(hostId: number, leaveYearId: number): Promise<any | null> {
+  async getDefaultHolidayCalendarByLeaveYear(
+    hostId: number,
+    leaveYearId: number
+  ): Promise<any | null> {
     return (User as any).sequelize.models.HolidayCalendar.findOne({
       where: {
         hostId,
@@ -58,7 +61,12 @@ export class LeaveRequestAppRepository {
     hostId: number;
     userId: number;
     leaveYearId?: number;
-  }): Promise<{ user: any | null; holidayCalendar: any | null; source: 'USER' | 'DEFAULT' | null; leaveYearId: number | null }> {
+  }): Promise<{
+    user: any | null;
+    holidayCalendar: any | null;
+    source: 'USER' | 'DEFAULT' | null;
+    leaveYearId: number | null;
+  }> {
     const { hostId, userId, leaveYearId } = payload;
 
     const user = await this.getUserWithLeaveConfig(hostId, userId);
@@ -115,7 +123,10 @@ export class LeaveRequestAppRepository {
       };
     }
 
-    const defaultHolidayCalendar = await this.getDefaultHolidayCalendarByLeaveYear(hostId, targetLeaveYearId);
+    const defaultHolidayCalendar = await this.getDefaultHolidayCalendarByLeaveYear(
+      hostId,
+      targetLeaveYearId
+    );
 
     return {
       user: userPlain,
@@ -299,7 +310,15 @@ export class LeaveRequestAppRepository {
     const order = buildSafeOrder({
       sortBy,
       sortOrder,
-      allowedSortBy: ['id', 'status', 'fromDate', 'tillDate', 'submittedAt', 'createdAt', 'updatedAt'],
+      allowedSortBy: [
+        'id',
+        'status',
+        'fromDate',
+        'tillDate',
+        'submittedAt',
+        'createdAt',
+        'updatedAt',
+      ],
       defaultOrder: [['createdAt', 'DESC']],
     });
 
@@ -385,7 +404,11 @@ export class LeaveRequestAppRepository {
     } as any);
   }
 
-  async lockUserForLeaveOps(hostId: number, userId: number, transaction: Transaction): Promise<any | null> {
+  async lockUserForLeaveOps(
+    hostId: number,
+    userId: number,
+    transaction: Transaction
+  ): Promise<any | null> {
     return User.findOne({
       where: {
         hostId,
@@ -477,7 +500,7 @@ export class LeaveRequestAppRepository {
         hostId,
         leaveRequestId,
       },
-      order: [['createdAt', 'ASC']],
+      order: [['createdAt', 'DESC']],
     } as any);
   }
 
@@ -567,7 +590,11 @@ export class LeaveRequestAppRepository {
     hostId: number;
     userId: number;
     leaveRequestId: number;
-    days: Array<{ leaveDate: string; durationType: 'FULL_DAY' | 'FIRST_HALF' | 'SECOND_HALF'; durationDays: number }>;
+    days: Array<{
+      leaveDate: string;
+      durationType: 'FULL_DAY' | 'FIRST_HALF' | 'SECOND_HALF';
+      durationDays: number;
+    }>;
     transaction: Transaction;
   }): Promise<any[]> {
     const now = Math.floor(Date.now() / 1000);
@@ -639,9 +666,12 @@ export class LeaveRequestAppRepository {
     await request.update(
       {
         status: payload.status,
-        submittedAt: payload.submittedAt !== undefined ? payload.submittedAt : (request as any).submittedAt,
-        cancelledAt: payload.cancelledAt !== undefined ? payload.cancelledAt : (request as any).cancelledAt,
-        withdrawnAt: payload.withdrawnAt !== undefined ? payload.withdrawnAt : (request as any).withdrawnAt,
+        submittedAt:
+          payload.submittedAt !== undefined ? payload.submittedAt : (request as any).submittedAt,
+        cancelledAt:
+          payload.cancelledAt !== undefined ? payload.cancelledAt : (request as any).cancelledAt,
+        withdrawnAt:
+          payload.withdrawnAt !== undefined ? payload.withdrawnAt : (request as any).withdrawnAt,
         updatedAt: now,
       } as any,
       { transaction: payload.transaction }
