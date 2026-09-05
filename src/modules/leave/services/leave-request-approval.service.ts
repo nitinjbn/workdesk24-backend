@@ -31,10 +31,10 @@ export class LeaveRequestApprovalService {
       throw createConfiguredError('USER_NOT_FOUND', 'Request owner user not found', 404);
     }
 
-    const admin = await isAdminRole(hostId, approverRoleId);
-    const manager = Number((requestOwner as any).reportingManagerId || 0) === Number(approverUserId);
+    const manager =
+      Number((requestOwner as any).reportingManagerId || 0) === Number(approverUserId);
 
-    if (!admin && !manager) {
+    if (!(approver as any).isAdminUser && !manager) {
       throw createConfiguredError(
         'LEAVE_APPROVER_NOT_AUTHORIZED',
         'You are not authorized to approve/reject/cancel this leave request',
@@ -62,7 +62,10 @@ export class LeaveRequestApprovalService {
     }
   }
 
-  private shouldInvalidateDashboardForLeaveChange(currentStatus: LeaveStatus, targetStatus: LeaveStatus): boolean {
+  private shouldInvalidateDashboardForLeaveChange(
+    currentStatus: LeaveStatus,
+    targetStatus: LeaveStatus
+  ): boolean {
     return currentStatus === 'APPROVED' || targetStatus === 'APPROVED';
   }
 
@@ -76,13 +79,11 @@ export class LeaveRequestApprovalService {
     sortBy?: string;
     sortOrder?: 'ASC' | 'DESC';
   }): Promise<any> {
-    const { hostId, approverUserId, approverRoleId, filter, page, limit, sortBy, sortOrder } = payload;
-
-    const admin = await isAdminRole(hostId, approverRoleId);
+    const { hostId, approverUserId, approverRoleId, filter, page, limit, sortBy, sortOrder } =
+      payload;
 
     const report = await leaveRequestApprovalRepository.getPendingLeaveRequests({
       hostId,
-      managerUserId: admin ? undefined : approverUserId,
       filter,
       page,
       limit,
@@ -109,7 +110,10 @@ export class LeaveRequestApprovalService {
   }): Promise<any> {
     const { hostId, approverUserId, approverRoleId, leaveRequestId } = payload;
 
-    const request = await leaveRequestApprovalRepository.getLeaveRequestById(hostId, leaveRequestId);
+    const request = await leaveRequestApprovalRepository.getLeaveRequestById(
+      hostId,
+      leaveRequestId
+    );
     if (!request) {
       throw createConfiguredError('LEAVE_REQUEST_NOT_FOUND', 'Leave request not found', 404);
     }
@@ -126,8 +130,11 @@ export class LeaveRequestApprovalService {
       leaveRequestApprovalRepository.getApprovalHistory(hostId, leaveRequestId),
     ]);
 
-    const requestPlain = request && typeof request.toJSON === 'function' ? request.toJSON() : request;
-    const dayPlain = days.map((item: any) => (item && typeof item.toJSON === 'function' ? item.toJSON() : item));
+    const requestPlain =
+      request && typeof request.toJSON === 'function' ? request.toJSON() : request;
+    const dayPlain = days.map((item: any) =>
+      item && typeof item.toJSON === 'function' ? item.toJSON() : item
+    );
     const approvalPlain = approvals.map((item: any) =>
       item && typeof item.toJSON === 'function' ? item.toJSON() : item
     );
@@ -246,7 +253,10 @@ export class LeaveRequestApprovalService {
         });
       }
 
-      if (currentStatus === 'PENDING' && ['REJECTED', 'CANCELLED', 'WITHDRAWN'].includes(targetStatus)) {
+      if (
+        currentStatus === 'PENDING' &&
+        ['REJECTED', 'CANCELLED', 'WITHDRAWN'].includes(targetStatus)
+      ) {
         await leaveBalanceService.applyBalanceChange({
           hostId,
           userId: requestOwnerUserId,
@@ -481,7 +491,10 @@ export class LeaveRequestApprovalService {
   }): Promise<any> {
     const { hostId, approverUserId, approverRoleId, leaveRequestId } = payload;
 
-    const request = await leaveRequestApprovalRepository.getLeaveRequestById(hostId, leaveRequestId);
+    const request = await leaveRequestApprovalRepository.getLeaveRequestById(
+      hostId,
+      leaveRequestId
+    );
     if (!request) {
       throw createConfiguredError('LEAVE_REQUEST_NOT_FOUND', 'Leave request not found', 404);
     }
@@ -493,7 +506,10 @@ export class LeaveRequestApprovalService {
       requestOwnerUserId: Number((request as any).userId),
     });
 
-    const approvals = await leaveRequestApprovalRepository.getApprovalHistory(hostId, leaveRequestId);
+    const approvals = await leaveRequestApprovalRepository.getApprovalHistory(
+      hostId,
+      leaveRequestId
+    );
     const dateTimeSettings = await getHostDateTimeSettings(hostId);
     const approvalPlain = approvals.map((item: any) =>
       item && typeof item.toJSON === 'function' ? item.toJSON() : item

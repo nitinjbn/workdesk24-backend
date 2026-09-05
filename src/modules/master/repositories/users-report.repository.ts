@@ -193,7 +193,7 @@ export class usersRepository {
           model: Role,
           where: roleFilter,
           as: 'roles',
-          required: true,
+          required: false,
         },
         {
           attributes: [],
@@ -326,7 +326,7 @@ export class usersRepository {
             isDeleted: 0,
           },
           as: 'roles',
-          required: true,
+          required: false,
         },
         {
           attributes: [],

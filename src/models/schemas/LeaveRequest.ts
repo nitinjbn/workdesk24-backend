@@ -3,7 +3,10 @@ import { LeaveRequestAttributes } from '../../types/leave.types';
 
 interface LeaveRequestCreationAttributes extends Optional<LeaveRequestAttributes, 'id'> {}
 
-class LeaveRequest extends Model<LeaveRequestAttributes, LeaveRequestCreationAttributes> implements LeaveRequestAttributes {
+class LeaveRequest
+  extends Model<LeaveRequestAttributes, LeaveRequestCreationAttributes>
+  implements LeaveRequestAttributes
+{
   public id!: number;
   public hostId!: number;
   public userId!: number;
@@ -13,13 +16,7 @@ class LeaveRequest extends Model<LeaveRequestAttributes, LeaveRequestCreationAtt
   public tillDate!: string;
   public totalDays!: number;
   public reason?: string;
-  public status:
-    | 'DRAFT'
-    | 'PENDING'
-    | 'APPROVED'
-    | 'REJECTED'
-    | 'CANCELLED'
-    | 'WITHDRAWN';
+  public status: 'DRAFT' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'WITHDRAWN';
   public requestLocalId?: string;
   public submittedAt?: number;
   public approvedAt?: number;
@@ -30,7 +27,7 @@ class LeaveRequest extends Model<LeaveRequestAttributes, LeaveRequestCreationAtt
   public updatedAt!: number;
   public isDeleted!: number;
   public deletedAt?: number | null;
-  
+
   public static associate(models: any): void {
     LeaveRequest.belongsTo(models.Host, {
       foreignKey: 'hostId',
@@ -41,7 +38,7 @@ class LeaveRequest extends Model<LeaveRequestAttributes, LeaveRequestCreationAtt
       foreignKey: 'userId',
       as: 'user',
     });
-    
+
     LeaveRequest.belongsTo(models.LeaveType, {
       foreignKey: 'leaveTypeId',
       as: 'leaveType',
@@ -64,7 +61,7 @@ export function initLeaveRequest(sequelize: Sequelize): typeof LeaveRequest {
       },
       hostId: {
         type: DataTypes.BIGINT,
-        allowNull: false
+        allowNull: false,
       },
       userId: {
         type: DataTypes.BIGINT,
@@ -140,7 +137,7 @@ export function initLeaveRequest(sequelize: Sequelize): typeof LeaveRequest {
         type: DataTypes.BIGINT,
         allowNull: true,
         defaultValue: null,
-      }
+      },
     },
     {
       sequelize,

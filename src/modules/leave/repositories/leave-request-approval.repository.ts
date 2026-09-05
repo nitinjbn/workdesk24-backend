@@ -1,18 +1,24 @@
 import { FindAndCountOptions, Op, Transaction } from 'sequelize';
-import { LeaveRequest, LeaveRequestApproval, LeaveRequestDay, LeaveType, LeaveYear, User } from '../../../models';
+import {
+  LeaveRequest,
+  LeaveRequestApproval,
+  LeaveRequestDay,
+  LeaveType,
+  LeaveYear,
+  User,
+} from '../../../models';
 import { buildPagination, buildSafeOrder, resolvePagination } from './query-safety.util';
 
 export class LeaveRequestApprovalRepository {
   async getPendingLeaveRequests(params: {
     hostId: number;
-    managerUserId?: number;
     filter?: Record<string, unknown>;
     page?: number;
     limit?: number;
     sortBy?: string;
     sortOrder?: 'ASC' | 'DESC';
   }): Promise<{ data: any[]; pagination?: any }> {
-    const { hostId, managerUserId, filter, page, limit, sortBy, sortOrder } = params;
+    const { hostId, filter, page, limit, sortBy, sortOrder } = params;
 
     const where: any = {
       hostId,
@@ -40,12 +46,31 @@ export class LeaveRequestApprovalRepository {
           [Op.lte]: filter.tillDate,
         };
       }
+      if (filter.status !== undefined) {
+        where.status = filter.status;
+      }
+      if (filter.leaveDate) {
+        where.fromDate = {
+          [Op.gte]: [filter.leaveDate],
+        };
+        where.tillDate = {
+          [Op.lte]: [filter.leaveDate],
+        };
+      }
     }
 
     const order = buildSafeOrder({
       sortBy,
       sortOrder,
-      allowedSortBy: ['id', 'userId', 'leaveYearId', 'leaveTypeId', 'fromDate', 'tillDate', 'submittedAt', 'createdAt', 'updatedAt'],
+      allowedSortBy: [
+        'id',
+        'fromDate',
+        'tillDate',
+        'submittedAt',
+        'createdAt',
+        'updatedAt',
+        'totalDays',
+      ],
       defaultOrder: [
         ['submittedAt', 'ASC'],
         ['id', 'ASC'],
@@ -59,11 +84,10 @@ export class LeaveRequestApprovalRepository {
         {
           model: User,
           as: 'user',
-          required: !!managerUserId,
+          required: true,
           where: {
             hostId,
             isDeleted: 0,
-            ...(managerUserId ? { reportingManagerId: managerUserId } : {}),
           },
           attributes: ['id', 'name', 'email', 'reportingManagerId'],
         },
@@ -177,7 +201,11 @@ export class LeaveRequestApprovalRepository {
     } as any);
   }
 
-  async getUserById(hostId: number, userId: number, transaction?: Transaction): Promise<any | null> {
+  async getUserById(
+    hostId: number,
+    userId: number,
+    transaction?: Transaction
+  ): Promise<any | null> {
     return User.findOne({
       where: {
         hostId,
@@ -185,7 +213,15 @@ export class LeaveRequestApprovalRepository {
         isDeleted: 0,
       },
       transaction,
-      attributes: ['id', 'name', 'email', 'roleId', 'reportingManagerId'],
+      attributes: [
+        'id',
+        'name',
+        'email',
+        'roleId',
+        'reportingManagerId',
+        'isFieldAppUser',
+        'isAdminUser',
+      ],
     } as any);
   }
 
@@ -213,8 +249,10 @@ export class LeaveRequestApprovalRepository {
     await request.update(
       {
         status: payload.status,
-        approvedAt: payload.approvedAt !== undefined ? payload.approvedAt : (request as any).approvedAt,
-        rejectedAt: payload.rejectedAt !== undefined ? payload.rejectedAt : (request as any).rejectedAt,
+        approvedAt:
+          payload.approvedAt !== undefined ? payload.approvedAt : (request as any).approvedAt,
+        rejectedAt:
+          payload.rejectedAt !== undefined ? payload.rejectedAt : (request as any).rejectedAt,
         cancelledAt:
           payload.cancelledAt !== undefined ? payload.cancelledAt : (request as any).cancelledAt,
         withdrawnAt:
