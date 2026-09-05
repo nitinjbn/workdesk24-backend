@@ -1,6 +1,20 @@
-import { FindAndCountOptions, Includeable , Op} from 'sequelize';
-import db, { User, UserSettings, Role, Designation, UserDevice, HolidayCalendar, UserAttendanceLocation } from '../../../models';
-import { CommonReportSortBy, GetUsersFilter, ReportResponse, ReportSortDirection, SingleRecordResponse } from '../types/master.types';
+import { FindAndCountOptions, Includeable, Op } from 'sequelize';
+import db, {
+  User,
+  UserSettings,
+  Role,
+  Designation,
+  UserDevice,
+  HolidayCalendar,
+  UserAttendanceLocation,
+} from '../../../models';
+import {
+  CommonReportSortBy,
+  GetUsersFilter,
+  ReportResponse,
+  ReportSortDirection,
+  SingleRecordResponse,
+} from '../types/master.types';
 import baseReportHelper from '../helpers/base-report.helper';
 import { buildCommonReportOrder } from './user-scoped-report.helper';
 import { DateTimeFormatUtil } from '../../../shared/utils/date-time-format.util';
@@ -32,6 +46,7 @@ export class usersRepository {
       where: {
         hostId: params.hostId,
         isDeleted: 0,
+        isFieldAppUser: 1,
         accountStatus: 'ACTIVE',
         [Op.or]: [
           { name: { [Op.like]: `%${search}%` } },
@@ -39,7 +54,10 @@ export class usersRepository {
           { email: { [Op.like]: `%${search}%` } },
         ],
       },
-      order: [['name', 'ASC'], ['id', 'ASC']],
+      order: [
+        ['name', 'ASC'],
+        ['id', 'ASC'],
+      ],
     });
 
     return users;
@@ -63,38 +81,45 @@ export class usersRepository {
   }
 
   async getUsers(params: GetUsersQuery): Promise<ReportResponse<UserInstance>> {
-    const { page, limit, filter={}, hostId, sortBy, sortOrder } = params;
+    const { page, limit, filter = {}, hostId, sortBy, sortOrder } = params;
     const { offset } = baseReportHelper.normalizePagination({ page, limit });
     const order = buildCommonReportOrder(sortBy, sortOrder, {
-      createdAt: 'createdAt'
+      createdAt: 'createdAt',
     });
 
-    const where:any = {
+    const where: any = {
       hostId,
-      isDeleted:0
+      isDeleted: 0,
+    };
+    if (filter.isFieldAppUser !== undefined) {
+      where.isFieldAppUser = filter.isFieldAppUser;
     }
-    if(filter.accountStatus) {
+    if (filter.isAdminUser !== undefined) {
+      where.isAdminUser = filter.isAdminUser;
+    }
+
+    if (filter.accountStatus) {
       where.accountStatus = filter.accountStatus;
     }
 
-    if(filter.userId || filter.id) {
+    if (filter.userId || filter.id) {
       filter.id = filter.userId || filter.id;
     }
 
-    if(filter.name) {
+    if (filter.name) {
       where.name = {
         [Op.like]: `%${filter.name.trim()}%`,
-      }
+      };
     }
-    if(filter.email) {
+    if (filter.email) {
       where.email = {
         [Op.like]: `%${filter.email.trim()}%`,
-      }
+      };
     }
-    if(filter.mobile) {
+    if (filter.mobile) {
       where.mobile = {
         [Op.like]: `%${filter.mobile}%`,
-      }
+      };
     }
 
     if (filter.searchKey?.trim()) {
@@ -119,30 +144,38 @@ export class usersRepository {
       ];
     }
 
-    if(filter.joiningDate) {
+    if (filter.joiningDate) {
       const { from, to } = filter.joiningDate;
-      if(from && to) {
+      if (from && to) {
         where.joiningDate = {
-          [Op.between]: [from, to]
-        }
+          [Op.between]: [from, to],
+        };
       }
     }
 
-    const roleFilter:any = {
-      isDeleted: 0
-    }
-    if(filter.roleCode) {
+    const roleFilter: any = {
+      isDeleted: 0,
+    };
+    if (filter.roleCode) {
       roleFilter.roleCode = filter.roleCode;
     }
-   
+
     const query: FindAndCountOptions<UserInstance> = {
       attributes: {
-        exclude: ['id', 'roleId', 'designationId', 'password', 'reportingManagerId', 'isDeleted', 'deletedAt'],
+        exclude: [
+          'id',
+          'roleId',
+          'designationId',
+          'password',
+          'reportingManagerId',
+          'isDeleted',
+          'deletedAt',
+        ],
         include: [
           [db.Sequelize.col('User.id'), 'userId'],
           [db.Sequelize.col('roles.roleName'), 'role'],
-          [db.Sequelize.col('designations.name'), 'designation']
-        ]
+          [db.Sequelize.col('designations.name'), 'designation'],
+        ],
       },
       where,
       include: [
@@ -150,51 +183,51 @@ export class usersRepository {
           attributes: ['settingName', 'settingValue', 'isEnabled'],
           model: UserSettings,
           where: {
-            isDeleted: 0
+            isDeleted: 0,
           },
-          as: "settings",
-          required: false
+          as: 'settings',
+          required: false,
         },
         {
           attributes: [],
           model: Role,
           where: roleFilter,
-          as: "roles",
-          required: true
+          as: 'roles',
+          required: true,
         },
         {
           attributes: [],
           model: Designation,
           where: {
-            isDeleted: 0
+            isDeleted: 0,
           },
-          as: "designations",
-          required: true
+          as: 'designations',
+          required: true,
         },
         {
           attributes: {
-            exclude: ['id', 'hostId',  'userId'],
+            exclude: ['id', 'hostId', 'userId'],
           },
           model: UserDevice,
-          as: "device",
-          required: false
+          as: 'device',
+          required: false,
         },
         {
           attributes: ['name'],
           model: HolidayCalendar,
           where: {
-            isDeleted: 0
+            isDeleted: 0,
           },
-          as: "holidayCalendar",
-          required: false
-        }
+          as: 'holidayCalendar',
+          required: false,
+        },
       ],
       order,
       raw: false,
       logging: console.log, // Enable logging for debugging
     };
 
-    if(page && limit) {
+    if (page && limit) {
       query.limit = limit;
       query.offset = offset;
       query.distinct = true;
@@ -202,19 +235,19 @@ export class usersRepository {
       const { rows, count } = await User.findAndCountAll(query);
       //console.log("########################################## rows:", rows);
 
-      const cleanedRows = rows.map(row => {
+      const cleanedRows = rows.map((row) => {
         const jsonRow = row.toJSON() as any;
-        if(jsonRow.settings && Array.isArray(jsonRow.settings)) {
+        if (jsonRow.settings && Array.isArray(jsonRow.settings)) {
           jsonRow.settings = jsonRow.settings.map((s: any) => ({
             settingName: s.settingName,
             settingValue: s.settingValue,
-            isEnabled: s.isEnabled
+            isEnabled: s.isEnabled,
           }));
         }
         // Convert devices to plain object (single device per user)
-        if(jsonRow.device && typeof jsonRow.device.toJSON === 'function') {
+        if (jsonRow.device && typeof jsonRow.device.toJSON === 'function') {
           jsonRow.device = jsonRow.device.toJSON();
-        } else if(jsonRow.device) {
+        } else if (jsonRow.device) {
           jsonRow.device = jsonRow.device;
         } else {
           jsonRow.device = {};
@@ -228,22 +261,21 @@ export class usersRepository {
         data: cleanedRows as any,
         pagination: baseReportHelper.buildPagination(count, page, limit),
       };
-
     } else {
       const rows = await User.findAll(query);
-      const cleanedRows = rows.map(row => {
+      const cleanedRows = rows.map((row) => {
         const jsonRow = row.toJSON() as any;
-        if(jsonRow.settings && Array.isArray(jsonRow.settings)) {
+        if (jsonRow.settings && Array.isArray(jsonRow.settings)) {
           jsonRow.settings = jsonRow.settings.map((s: any) => ({
             settingName: s.settingName,
             settingValue: s.settingValue,
-            isEnabled: s.isEnabled
+            isEnabled: s.isEnabled,
           }));
         }
         // Convert devices to plain object (single device per user)
-        if(jsonRow.device && typeof jsonRow.device.toJSON === 'function') {
+        if (jsonRow.device && typeof jsonRow.device.toJSON === 'function') {
           jsonRow.device = jsonRow.device.toJSON();
-        } else if(jsonRow.device) {
+        } else if (jsonRow.device) {
           jsonRow.device = jsonRow.device;
         } else {
           jsonRow.device = {};
@@ -253,29 +285,28 @@ export class usersRepository {
         return jsonRow;
       });
       return {
-        data: cleanedRows as any
+        data: cleanedRows as any,
       };
     }
   }
 
-
-  async getUserById(params: {hostId: number, userId: number}): Promise<any> {
+  async getUserById(params: { hostId: number; userId: number }): Promise<any> {
     const { hostId, userId } = params;
 
-    const where:any = {
+    const where: any = {
       hostId,
       id: userId,
-      isDeleted:0
-    }
-   
+      isDeleted: 0,
+    };
+
     const query: FindAndCountOptions<UserInstance> = {
       attributes: {
         exclude: ['id', 'roleId', 'password', 'reportingManagerId', 'isDeleted', 'deletedAt'],
         include: [
           [db.Sequelize.col('User.id'), 'userId'],
           [db.Sequelize.col('roles.roleName'), 'role'],
-          [db.Sequelize.col('designations.name'), 'designation']
-        ]
+          [db.Sequelize.col('designations.name'), 'designation'],
+        ],
       },
       where,
       include: [
@@ -283,46 +314,46 @@ export class usersRepository {
           attributes: ['settingName', 'settingValue', 'isEnabled'],
           model: UserSettings,
           where: {
-            isDeleted: 0
+            isDeleted: 0,
           },
-          as: "settings",
-          required: false
+          as: 'settings',
+          required: false,
         },
         {
           attributes: [],
           model: Role,
           where: {
-            isDeleted: 0
+            isDeleted: 0,
           },
-          as: "roles",
-          required: true
+          as: 'roles',
+          required: true,
         },
         {
           attributes: [],
           model: Designation,
           where: {
-            isDeleted: 0
+            isDeleted: 0,
           },
-          as: "designations",
-          required: true
+          as: 'designations',
+          required: true,
         },
         {
           attributes: ['name'],
           model: HolidayCalendar,
           where: {
-            isDeleted: 0
+            isDeleted: 0,
           },
-          as: "holidayCalendar",
-          required: false
+          as: 'holidayCalendar',
+          required: false,
         },
         {
           attributes: {
-            exclude: ['id', 'hostId',  'userId'],
+            exclude: ['id', 'hostId', 'userId'],
           },
           model: UserDevice,
-          as: "device",
-          required: false
-        }
+          as: 'device',
+          required: false,
+        },
       ],
       subQuery: false,
       raw: false,
@@ -333,19 +364,19 @@ export class usersRepository {
     if (!data) {
       return {};
     }
-    
+
     const jsonData = data.toJSON() as any;
-    if(jsonData.settings && Array.isArray(jsonData.settings)) {
+    if (jsonData.settings && Array.isArray(jsonData.settings)) {
       jsonData.settings = jsonData.settings.map((s: any) => ({
         settingName: s.settingName,
         settingValue: s.settingValue,
-        isEnabled: s.isEnabled
+        isEnabled: s.isEnabled,
       }));
     }
     // Convert devices to plain object (single device per user)
-    if(jsonData.device && typeof jsonData.device.toJSON === 'function') {
+    if (jsonData.device && typeof jsonData.device.toJSON === 'function') {
       jsonData.device = jsonData.device.toJSON();
-    } else if(jsonData.device) {
+    } else if (jsonData.device) {
       jsonData.device = jsonData.device;
     } else {
       jsonData.device = {};
@@ -355,25 +386,32 @@ export class usersRepository {
     return jsonData;
   }
 
-  async getDesignations(params: {hostId: number, page?: number, limit?: number, filter?: any, sortBy: CommonReportSortBy, sortOrder: ReportSortDirection}): Promise<ReportResponse<any>> {
-    const { hostId, page, limit, filter={}, sortBy, sortOrder } = params;
+  async getDesignations(params: {
+    hostId: number;
+    page?: number;
+    limit?: number;
+    filter?: any;
+    sortBy: CommonReportSortBy;
+    sortOrder: ReportSortDirection;
+  }): Promise<ReportResponse<any>> {
+    const { hostId, page, limit, filter = {}, sortBy, sortOrder } = params;
     const { offset } = baseReportHelper.normalizePagination({ page, limit });
     const order = buildCommonReportOrder(sortBy, sortOrder, {
-      createdAt: 'createdAt'
+      createdAt: 'createdAt',
     });
-    const where:any = {
+    const where: any = {
       hostId,
-      isDeleted:0
-    }
-    if(filter.isEnabled!==undefined) {
+      isDeleted: 0,
+    };
+    if (filter.isEnabled !== undefined) {
       where.isEnabled = filter.isEnabled;
     } else {
       where.isEnabled = 1;
     }
-    if(filter.name) {
+    if (filter.name) {
       where.name = {
         [Op.like]: `%${filter.name.trim()}%`,
-      }
+      };
     }
     const query: FindAndCountOptions<any> = {
       attributes: {
@@ -385,7 +423,7 @@ export class usersRepository {
       logging: console.log, // Enable logging for debugging
     };
 
-    if(page && limit) {
+    if (page && limit) {
       query.limit = limit;
       query.offset = offset;
 
@@ -395,17 +433,48 @@ export class usersRepository {
         data: rows,
         pagination: baseReportHelper.buildPagination(count, page, limit),
       };
-
     } else {
       const rows = await Designation.findAll(query);
       return {
-        data: rows
+        data: rows,
       };
     }
   }
 
   async createAppUser(params: any): Promise<any> {
-    const { hostId, name, employeeCode, email, enteredMobileNumber, callingCode, mobile, dateOfBirth, password, reportingManagerId, roleId, designationId, profileImageUrl, joiningDate, accountStatus, createdAt, gender, addressLine1, addressLine2, landmark, countryName, countryIsoCode, stateName, stateIsoCode, city, district, pinCode, timezone, holidayCalendarId, leavePolicyId } = params;
+    const {
+      hostId,
+      name,
+      employeeCode,
+      email,
+      enteredMobileNumber,
+      callingCode,
+      mobile,
+      dateOfBirth,
+      password,
+      reportingManagerId,
+      roleId,
+      designationId,
+      profileImageUrl,
+      joiningDate,
+      accountStatus,
+      createdAt,
+      gender,
+      addressLine1,
+      addressLine2,
+      landmark,
+      countryName,
+      countryIsoCode,
+      stateName,
+      stateIsoCode,
+      city,
+      district,
+      pinCode,
+      timezone,
+      holidayCalendarId,
+      leavePolicyId,
+      isFieldAppUser,
+    } = params;
     const newUser = await User.create({
       hostId,
       name,
@@ -422,7 +491,7 @@ export class usersRepository {
       profileImageUrl,
       joiningDate,
       accountStatus,
-      accountStatusUpdatedAt:createdAt,
+      accountStatusUpdatedAt: createdAt,
       gender,
       addressLine1,
       addressLine2,
@@ -437,21 +506,22 @@ export class usersRepository {
       timezone,
       holidayCalendarId,
       leavePolicyId,
+      isFieldAppUser,
       isDeleted: 0,
-      createdAt
+      createdAt,
     });
 
     return newUser;
   }
 
   async getUsersByFilter(filter: any): Promise<any> {
-    if(!filter) {
+    if (!filter) {
       throw new Error('Filter is required');
     }
-    const where:any = filter;
-    
+    const where: any = filter;
+
     // Ensure that isDeleted is always checked to be 0 unless explicitly provided in the filter
-    if(!Object.prototype.hasOwnProperty.call(where, 'isDeleted')) {
+    if (!Object.prototype.hasOwnProperty.call(where, 'isDeleted')) {
       where.isDeleted = 0;
     }
     const users = await User.findAll({
@@ -469,11 +539,11 @@ export class usersRepository {
   }): Promise<any[]> {
     const { userId, settings, createdAt } = params;
 
-    if(!settings || !Array.isArray(settings) || settings.length === 0) {
+    if (!settings || !Array.isArray(settings) || settings.length === 0) {
       return [];
     }
 
-    if(!userId) {
+    if (!userId) {
       throw new Error('userId is required');
     }
 
@@ -500,7 +570,7 @@ export class usersRepository {
   }): Promise<any[]> {
     const { userId, settings, updatedAt } = params;
 
-    if(!userId) {
+    if (!userId) {
       throw new Error('userId is required');
     }
 
@@ -514,25 +584,27 @@ export class usersRepository {
           order: [
             ['isDeleted', 'ASC'],
             ['updatedAt', 'DESC'],
-            ['id', 'DESC']
+            ['id', 'DESC'],
           ],
           transaction,
         });
 
         const existingByName = new Map<string, any>();
         existingSettings.forEach((setting) => {
-          if(!existingByName.has(setting.settingName)) {
+          if (!existingByName.has(setting.settingName)) {
             existingByName.set(setting.settingName, setting);
           }
         });
 
-        const payloadSettingNames = new Set(normalizedSettings.map((setting) => setting.settingName));
+        const payloadSettingNames = new Set(
+          normalizedSettings.map((setting) => setting.settingName)
+        );
         const savedSettings: any[] = [];
 
-        for(const setting of normalizedSettings) {
+        for (const setting of normalizedSettings) {
           const existingSetting = existingByName.get(setting.settingName);
 
-          if(existingSetting) {
+          if (existingSetting) {
             await existingSetting.update(
               {
                 settingValue: setting.settingValue,
@@ -567,7 +639,7 @@ export class usersRepository {
           (setting) => setting.isDeleted === 0 && !payloadSettingNames.has(setting.settingName)
         );
 
-        for(const setting of settingsToSoftDelete) {
+        for (const setting of settingsToSoftDelete) {
           await setting.update(
             {
               isDeleted: 1,
@@ -597,7 +669,10 @@ export class usersRepository {
     await db.sequelize.transaction(async (transaction: any) => {
       const existingLocations = await UserAttendanceLocation.findAll({
         where: { userId },
-        order: [['isDeleted', 'ASC'], ['id', 'DESC']],
+        order: [
+          ['isDeleted', 'ASC'],
+          ['id', 'DESC'],
+        ],
         transaction,
       });
 
@@ -652,7 +727,7 @@ export class usersRepository {
         await UserAttendanceLocation.bulkCreate(newAttendanceLocations, { transaction });
       }
     });
-    
+
     return {
       userId,
       attendanceLocations: locationIds,
@@ -660,27 +735,29 @@ export class usersRepository {
     };
   }
 
-  async updateAppUser(updateObj: { [key: string]: any }, filter: {hostId: number, userId: number}): Promise<any> {    
-   
+  async updateAppUser(
+    updateObj: { [key: string]: any },
+    filter: { hostId: number; userId: number }
+  ): Promise<any> {
     //console.log("###################### updateAppUser updateObj:", updateObj);
-    if(!filter || !filter.hostId || !filter.userId) {
+    if (!filter || !filter.hostId || !filter.userId) {
       throw new Error('hostId and userId are required for updating user');
     }
 
-    if(!updateObj || Object.keys(updateObj).length === 0) {
+    if (!updateObj || Object.keys(updateObj).length === 0) {
       throw new Error('No fields provided for update');
     }
 
     const [updatedCount] = await User.update(
       {
-        ...updateObj
+        ...updateObj,
       },
       {
-        where: {          
+        where: {
           id: filter.userId,
-          hostId: filter.hostId
+          hostId: filter.hostId,
         },
-        individualHooks: true
+        individualHooks: true,
       }
     );
 
@@ -689,7 +766,7 @@ export class usersRepository {
     }
 
     return {
-      id: filter.userId
+      id: filter.userId,
     };
   }
 
@@ -715,7 +792,7 @@ export class usersRepository {
   }): Promise<any> {
     const { hostId, userId, deviceId, ...deviceData } = payload;
 
-    if(!deviceData.createdAt) {
+    if (!deviceData.createdAt) {
       deviceData.createdAt = DateTimeFormatUtil.getCurrentUnixTime();
     }
 
@@ -749,15 +826,15 @@ export class usersRepository {
     createdAt: number;
   }): Promise<any> {
     const { userId, attendanceLocations, createdAt } = payload;
-    if(!attendanceLocations || attendanceLocations.length === 0) {
+    if (!attendanceLocations || attendanceLocations.length === 0) {
       throw new Error('No attendance locations provided');
     }
 
     const createdRecords = await UserAttendanceLocation.bulkCreate(
-      attendanceLocations.map(attendanceLocationId => ({
+      attendanceLocations.map((attendanceLocationId) => ({
         userId,
         attendanceLocationId,
-        createdAt
+        createdAt,
       }))
     );
 

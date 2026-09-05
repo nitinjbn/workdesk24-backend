@@ -3,8 +3,13 @@ import crypto from 'crypto';
 import userRepository from '../repositories/user.repository';
 import bcrypt from 'bcryptjs';
 import userRefreshTokenRepository from '../repositories/user-refresh-token.repository';
-import rolePermissionRepository, { RolePermissionAssignmentView, RolePermissionView } from '../repositories/role-permission.repository';
-import userPermissionRepository, { UserPermissionAssignmentView } from '../repositories/user-permission.repository';
+import rolePermissionRepository, {
+  RolePermissionAssignmentView,
+  RolePermissionView,
+} from '../repositories/role-permission.repository';
+import userPermissionRepository, {
+  UserPermissionAssignmentView,
+} from '../repositories/user-permission.repository';
 import { UserSettings } from '../../../models';
 import {
   getJwtExpiresIn,
@@ -17,7 +22,10 @@ import {
 import { createConfiguredError } from '../../../shared/utils/error.util';
 import { CommonUtil } from '../../../shared/utils/common.util';
 import { CONFIG } from '../../../config/constants';
-import { DateTimeFormatUtil, formatDateTimeFieldsBySettings } from '../../../shared/utils/date-time-format.util';
+import {
+  DateTimeFormatUtil,
+  formatDateTimeFieldsBySettings,
+} from '../../../shared/utils/date-time-format.util';
 import { formatStorageFieldsByConfig } from '../../../shared/utils/storage-format.util';
 import { getHostDateTimeSettings } from '../../../shared/utils/host-settings.util';
 
@@ -61,7 +69,7 @@ interface VerifyOtpDto {
     storageTotalBytes?: number | null;
     storageAvailableBytes?: number | null;
     storageUsedBytes?: number | null;
-  }
+  };
 }
 
 interface AuthResponse {
@@ -105,7 +113,19 @@ type AuthUser = NonNullable<Awaited<ReturnType<typeof userRepository.findById>>>
 
 export class AuthService {
   async register(data: RegisterDto): Promise<AuthResponse> {
-    const { hostId, email, password, name, roleId, designationId, mobile, employeeCode, reportingManagerId, profileImageUrl, joiningDate } = data;
+    const {
+      hostId,
+      email,
+      password,
+      name,
+      roleId,
+      designationId,
+      mobile,
+      employeeCode,
+      reportingManagerId,
+      profileImageUrl,
+      joiningDate,
+    } = data;
 
     const exists = await userRepository.existsByEmail(email);
     if (exists) {
@@ -139,13 +159,23 @@ export class AuthService {
     const otpCode = payload.otpCode?.trim();
 
     if (!identifier || !otpCode) {
-      throw createConfiguredError('INVALID_OTP', 'Identifier and OTP are required', 400, 'VALIDATION_ERROR');
+      throw createConfiguredError(
+        'INVALID_OTP',
+        'Identifier and OTP are required',
+        400,
+        'VALIDATION_ERROR'
+      );
     }
 
     const user = await this.getUserByIdentifier({ identifier });
     //console.log("################ AuthService.verifyOtp: User found:", user);
     if (user.accountStatus != 'ACTIVE') {
-      throw createConfiguredError('ACCOUNT_INACTIVE', 'User account is inactive', 403, 'ACCOUNT_INACTIVE');
+      throw createConfiguredError(
+        'ACCOUNT_INACTIVE',
+        'User account is inactive',
+        403,
+        'ACCOUNT_INACTIVE'
+      );
     }
 
     const otpEntry = await userRepository.findLatestOtpByIdentifier({
@@ -165,7 +195,12 @@ export class AuthService {
     const now = Math.floor(Date.now() / 1000);
 
     if (otpEntry.status === 'VERIFIED') {
-      throw createConfiguredError('INVALID_OTP', 'OTP is already verified', 400, 'OTP_ALREADY_VERIFIED');
+      throw createConfiguredError(
+        'INVALID_OTP',
+        'OTP is already verified',
+        400,
+        'OTP_ALREADY_VERIFIED'
+      );
     }
 
     if (otpEntry.expiresAt < now || otpEntry.status === 'EXPIRED') {
@@ -175,7 +210,12 @@ export class AuthService {
 
     if (otpEntry.attemptCount > otpEntry.maxAttempts) {
       await userRepository.updateOtpStatus({ otpId: Number(otpEntry.id), status: 'EXPIRED' });
-      throw createConfiguredError('INVALID_OTP', 'Maximum OTP attempts exceeded', 429, 'OTP_MAX_ATTEMPTS_EXCEEDED');
+      throw createConfiguredError(
+        'INVALID_OTP',
+        'Maximum OTP attempts exceeded',
+        429,
+        'OTP_MAX_ATTEMPTS_EXCEEDED'
+      );
     }
 
     const isOtpValid = await otpEntry.compareOtp(otpCode);
@@ -196,9 +236,9 @@ export class AuthService {
     if (!loginUser) {
       throw createConfiguredError('USER_NOT_FOUND', 'User not found', 404, 'NOT_FOUND');
     }
-    
+
     // Update user device details
-    if(payload.deviceDetails) {
+    if (payload.deviceDetails) {
       await userRepository.updateUserDeviceDetails({
         hostId: user.hostId,
         userId: user.id,
@@ -235,31 +275,44 @@ export class AuthService {
   private async buildAppLoginResponse(user: any, deviceDetails?: any): Promise<AuthResponse> {
     // Try to get plain object if method exists, otherwise use as-is
     user = (user?.get ? user.get({ plain: true }) : user) as unknown as LoginUser;
-    const isAllowedAppLogin = await isAppLoginRole(user.hostId, user.roleId);
-    if (!isAllowedAppLogin) {
+    //const isAllowedAppLogin = await isAppLoginRole(user.hostId, user.roleId);
+    if (!user.isFieldAppUser) {
       throw createConfiguredError('APP_LOGIN_ACCESS_DENIED');
     }
 
-    const resolvedDeviceId = await this.resolveUserDeviceId(user.hostId, user.id, deviceDetails?.deviceId);
-    const sessionTokens = await this.createUserSessionTokens({ hostId: user.hostId, userId: user.id, deviceType: 'ANDROID', deviceId: resolvedDeviceId });
-    const permissionsByModule = await this.getPermissionsByModuleForUser(user.hostId, user.roleId, user.id);
-    
+    const resolvedDeviceId = await this.resolveUserDeviceId(
+      user.hostId,
+      user.id,
+      deviceDetails?.deviceId
+    );
+    const sessionTokens = await this.createUserSessionTokens({
+      hostId: user.hostId,
+      userId: user.id,
+      deviceType: 'ANDROID',
+      deviceId: resolvedDeviceId,
+    });
+    const permissionsByModule = await this.getPermissionsByModuleForUser(
+      user.hostId,
+      user.roleId,
+      user.id
+    );
+
     // Fetch user settings separately since they're in a different table
     const userSettings = await UserSettings.findAll({
       where: { userId: user.id, isDeleted: 0 },
       attributes: ['settingName', 'settingValue', 'isEnabled'],
       raw: true,
     });
-    
+
     // Attach settings array to user object
     (user as any).settings = userSettings || [];
 
     // Attach active attendance locations (used for geo-fencing on attendance marking)
     (user as any).attendanceLocations = await userRepository.getAttendanceLocationsForUser(user.id);
-    
+
     // Format user data with settings, datetime, and storage fields
     const formattedUser = await this.formatUserWithSettings(user);
-    
+
     return {
       user: formattedUser,
       accessToken: sessionTokens.accessToken,
@@ -268,7 +321,11 @@ export class AuthService {
     };
   }
 
-  private async formatUserWithSettings(user: { id: number; hostId: number; toJSON: () => any }): Promise<unknown> {
+  private async formatUserWithSettings(user: {
+    id: number;
+    hostId: number;
+    toJSON: () => any;
+  }): Promise<unknown> {
     const userData = user as any;
     // Convert settings array to key-value object
     if (userData.settings && Array.isArray(userData.settings)) {
@@ -276,7 +333,9 @@ export class AuthService {
 
       // If weeklyOffMask is present, convert it to weeklyOffDays and remove weeklyOffMask
       if (userData.settings?.weeklyOffMask) {
-        userData.settings.weeklyOffDays = DateTimeFormatUtil.getWeeklyOffDays(userData.settings.weeklyOffMask);
+        userData.settings.weeklyOffDays = DateTimeFormatUtil.getWeeklyOffDays(
+          userData.settings.weeklyOffMask
+        );
         delete userData.settings.weeklyOffMask;
       }
     }
@@ -287,13 +346,22 @@ export class AuthService {
     const user = await this.validateCredentials(data);
     //console.log("#################### user:", user);
 
-    const isAdmin = await isAdminRole(user.hostId, user.roleId);
-    if (!isAdmin) {
+    //const isAdmin = await isAdminRole(user.hostId, user.roleId);
+    if (!user.isAdminUser) {
       throw createConfiguredError('ADMIN_PORTAL_ACCESS_DENIED');
     }
 
-    const sessionTokens = await this.createUserSessionTokens({ hostId: user.hostId, userId: user.id, deviceType: 'WEB', deviceId: data.deviceDetails?.deviceId || 'default' });
-    const permissionsByModule = await this.getPermissionsByModuleForUser(user.hostId, user.roleId, user.id);
+    const sessionTokens = await this.createUserSessionTokens({
+      hostId: user.hostId,
+      userId: user.id,
+      deviceType: 'WEB',
+      deviceId: data.deviceDetails?.deviceId || 'default',
+    });
+    const permissionsByModule = await this.getPermissionsByModuleForUser(
+      user.hostId,
+      user.roleId,
+      user.id
+    );
 
     return {
       user: user.toJSON(),
@@ -312,7 +380,10 @@ export class AuthService {
     const tokenRecord = await userRefreshTokenRepository.findByTokenHash(tokenHash);
 
     if (!tokenRecord) {
-      console.log("#################### refreshAdminSession: Token record not found for hash:", tokenHash);
+      console.log(
+        '#################### refreshAdminSession: Token record not found for hash:',
+        tokenHash
+      );
       throw createConfiguredError('INVALID_REFRESH_TOKEN');
     }
 
@@ -327,14 +398,26 @@ export class AuthService {
     }
 
     if (tokenRecord.userId !== payload.userId || tokenRecord.tokenFamily !== payload.tokenFamily) {
-      console.log("#################### refreshAdminSession: Token record userId or tokenFamily mismatch. Expected userId:", payload.userId, "tokenFamily:", payload.tokenFamily, "but got userId:", tokenRecord.userId, "tokenFamily:", tokenRecord.tokenFamily);
+      console.log(
+        '#################### refreshAdminSession: Token record userId or tokenFamily mismatch. Expected userId:',
+        payload.userId,
+        'tokenFamily:',
+        payload.tokenFamily,
+        'but got userId:',
+        tokenRecord.userId,
+        'tokenFamily:',
+        tokenRecord.tokenFamily
+      );
       await userRefreshTokenRepository.revokeAllActiveForUser(tokenRecord.userId);
       throw createConfiguredError('INVALID_REFRESH_TOKEN');
     }
 
     const user = await userRepository.findById(payload.userId);
     if (!user) {
-      console.log("#################### refreshAdminSession: User not found for userId:", payload.userId);
+      console.log(
+        '#################### refreshAdminSession: User not found for userId:',
+        payload.userId
+      );
       await userRefreshTokenRepository.revokeAllActiveForUser(payload.userId);
       throw createConfiguredError('INVALID_REFRESH_TOKEN');
     }
@@ -350,10 +433,27 @@ export class AuthService {
       throw createConfiguredError('ADMIN_PORTAL_ACCESS_DENIED');
     }
 
-    const resolvedDeviceId = await this.resolveUserDeviceId(user.hostId, user.id, tokenRecord.deviceId);
-    const rotatedTokens = await this.createUserSessionTokens({ hostId: user.hostId, userId: user.id, tokenFamily: payload.tokenFamily, deviceType: 'WEB', deviceId: resolvedDeviceId });
-    await userRefreshTokenRepository.revokeTokenById(tokenRecord.id, rotatedTokens.refreshTokenHash);
-    const permissionsByModule = await this.getPermissionsByModuleForUser(user.hostId, user.roleId, user.id);
+    const resolvedDeviceId = await this.resolveUserDeviceId(
+      user.hostId,
+      user.id,
+      tokenRecord.deviceId
+    );
+    const rotatedTokens = await this.createUserSessionTokens({
+      hostId: user.hostId,
+      userId: user.id,
+      tokenFamily: payload.tokenFamily,
+      deviceType: 'WEB',
+      deviceId: resolvedDeviceId,
+    });
+    await userRefreshTokenRepository.revokeTokenById(
+      tokenRecord.id,
+      rotatedTokens.refreshTokenHash
+    );
+    const permissionsByModule = await this.getPermissionsByModuleForUser(
+      user.hostId,
+      user.roleId,
+      user.id
+    );
 
     return {
       user: user.toJSON(),
@@ -397,24 +497,46 @@ export class AuthService {
     const tokenRecord = await userRefreshTokenRepository.findByTokenHash(tokenHash);
 
     if (!tokenRecord) {
-      console.log("#################### refreshAppSession: Token record not found for hash:", tokenHash);
+      console.log(
+        '#################### refreshAppSession: Token record not found for hash:',
+        tokenHash
+      );
       throw createConfiguredError('INVALID_REFRESH_TOKEN');
     }
 
     if (tokenRecord.isRevoked === 1) {
-      console.log("#################### refreshAppSession: Token record is revoked for userId:", tokenRecord.userId);
+      console.log(
+        '#################### refreshAppSession: Token record is revoked for userId:',
+        tokenRecord.userId
+      );
       await userRefreshTokenRepository.revokeAllActiveForUser(tokenRecord.userId);
       throw createConfiguredError('REFRESH_TOKEN_REUSE_DETECTED');
     }
 
     if (tokenRecord.expiresAt <= now) {
-      console.log("#################### refreshAppSession: Token record is expired for userId:", tokenRecord.userId, "expiresAt:", tokenRecord.expiresAt, "now:", now);
+      console.log(
+        '#################### refreshAppSession: Token record is expired for userId:',
+        tokenRecord.userId,
+        'expiresAt:',
+        tokenRecord.expiresAt,
+        'now:',
+        now
+      );
       await userRefreshTokenRepository.revokeTokenById(tokenRecord.id);
       throw createConfiguredError('REFRESH_TOKEN_EXPIRED');
     }
 
     if (tokenRecord.userId !== payload.userId || tokenRecord.tokenFamily !== payload.tokenFamily) {
-      console.log("#################### refreshAppSession: Token record userId or tokenFamily mismatch. Expected userId:", payload.userId, "tokenFamily:", payload.tokenFamily, "but got userId:", tokenRecord.userId, "tokenFamily:", tokenRecord.tokenFamily);
+      console.log(
+        '#################### refreshAppSession: Token record userId or tokenFamily mismatch. Expected userId:',
+        payload.userId,
+        'tokenFamily:',
+        payload.tokenFamily,
+        'but got userId:',
+        tokenRecord.userId,
+        'tokenFamily:',
+        tokenRecord.tokenFamily
+      );
       await userRefreshTokenRepository.revokeAllActiveForUser(tokenRecord.userId);
       throw createConfiguredError('INVALID_REFRESH_TOKEN');
     }
@@ -422,7 +544,10 @@ export class AuthService {
     let user = await userRepository.findById(payload.userId);
     user = (user?.get ? user.get({ plain: true }) : user) as unknown as LoginUser;
     if (!user) {
-      console.log("#################### refreshAppSession: User not found for userId:", payload.userId);
+      console.log(
+        '#################### refreshAppSession: User not found for userId:',
+        payload.userId
+      );
       await userRefreshTokenRepository.revokeAllActiveForUser(payload.userId);
       throw createConfiguredError('INVALID_REFRESH_TOKEN');
     }
@@ -432,30 +557,47 @@ export class AuthService {
       throw createConfiguredError('ACCOUNT_INACTIVE');
     }
 
-    const isAllowedAppLogin = await isAppLoginRole(user.hostId, user.roleId);
-    if (!isAllowedAppLogin) {
+    //const isAllowedAppLogin = await isAppLoginRole(user.hostId, user.roleId);
+    if (!user.isFieldAppUser) {
       await userRefreshTokenRepository.revokeAllActiveForUser(payload.userId);
       throw createConfiguredError('APP_LOGIN_ACCESS_DENIED');
     }
 
-    const resolvedDeviceId = await this.resolveUserDeviceId(user.hostId, user.id, tokenRecord.deviceId);
-    const rotatedTokens = await this.createUserSessionTokens({ hostId: user.hostId, userId: user.id, tokenFamily: payload.tokenFamily, deviceType: 'ANDROID', deviceId: resolvedDeviceId });
-    await userRefreshTokenRepository.revokeTokenById(tokenRecord.id, rotatedTokens.refreshTokenHash);
-    const permissionsByModule = await this.getPermissionsByModuleForUser(user.hostId, user.roleId, user.id);
-    
+    const resolvedDeviceId = await this.resolveUserDeviceId(
+      user.hostId,
+      user.id,
+      tokenRecord.deviceId
+    );
+    const rotatedTokens = await this.createUserSessionTokens({
+      hostId: user.hostId,
+      userId: user.id,
+      tokenFamily: payload.tokenFamily,
+      deviceType: 'ANDROID',
+      deviceId: resolvedDeviceId,
+    });
+    await userRefreshTokenRepository.revokeTokenById(
+      tokenRecord.id,
+      rotatedTokens.refreshTokenHash
+    );
+    const permissionsByModule = await this.getPermissionsByModuleForUser(
+      user.hostId,
+      user.roleId,
+      user.id
+    );
+
     // Fetch user settings separately since they're in a different table
     const userSettings = await UserSettings.findAll({
       where: { userId: user.id, isDeleted: 0 },
       attributes: ['settingName', 'settingValue', 'isEnabled'],
       raw: true,
     });
-    
+
     // Attach settings array to user object
     (user as any).settings = userSettings || [];
 
     // Attach active attendance locations (used for geo-fencing on attendance marking)
     (user as any).attendanceLocations = await userRepository.getAttendanceLocationsForUser(user.id);
-    
+
     // Format user data with settings, datetime, and storage fields
     const formattedUser = await this.formatUserWithSettings(user);
 
@@ -487,22 +629,34 @@ export class AuthService {
     return user;
   }
 
-  private generateAccessToken(userId: number, deviceType: 'WEB' | 'ANDROID' | 'IOS' = 'WEB'): string {
+  private generateAccessToken(
+    userId: number,
+    deviceType: 'WEB' | 'ANDROID' | 'IOS' = 'WEB'
+  ): string {
     const secret = getJwtSecret();
     const expiresIn = getJwtExpiresIn(deviceType);
 
     return jwt.sign({ userId, tokenType: 'access' }, secret, { expiresIn });
   }
 
-  private async createUserSessionTokens(payload:{hostId: number, userId: number, tokenFamily?: string, deviceType?: 'WEB' | 'ANDROID' | 'IOS', deviceId: string, deviceName?: string | null, appVersion?: string | null, lastUsedAt?: number | null }): Promise<AdminSessionTokens> {
+  private async createUserSessionTokens(payload: {
+    hostId: number;
+    userId: number;
+    tokenFamily?: string;
+    deviceType?: 'WEB' | 'ANDROID' | 'IOS';
+    deviceId: string;
+    deviceName?: string | null;
+    appVersion?: string | null;
+    lastUsedAt?: number | null;
+  }): Promise<AdminSessionTokens> {
     const refreshSecret = getJwtRefreshSecret();
     const refreshExpiresIn = getJwtRefreshExpiresIn(payload.deviceType);
     const { hostId, userId, tokenFamily } = payload;
     const finalTokenFamily = tokenFamily || crypto.randomBytes(16).toString('hex');
-    
+
     // Revoke any existing refresh token for this device before creating a new one
     await userRefreshTokenRepository.revokeTokenByDevice(hostId, userId, payload.deviceId);
-    
+
     const refreshToken = jwt.sign(
       {
         hostId,
@@ -543,7 +697,11 @@ export class AuthService {
     };
   }
 
-  private async resolveUserDeviceId(hostId: number, userId: number, preferredDeviceId?: string | null): Promise<string> {
+  private async resolveUserDeviceId(
+    hostId: number,
+    userId: number,
+    preferredDeviceId?: string | null
+  ): Promise<string> {
     const trimmedPreferredDeviceId = preferredDeviceId?.trim();
     if (trimmedPreferredDeviceId) {
       return trimmedPreferredDeviceId;
@@ -554,7 +712,12 @@ export class AuthService {
       return persistedDeviceId;
     }
 
-    throw createConfiguredError('INVALID_DEVICE_DETAILS', 'Device ID is required for app session', 400, 'VALIDATION_ERROR');
+    throw createConfiguredError(
+      'INVALID_DEVICE_DETAILS',
+      'Device ID is required for app session',
+      400,
+      'VALIDATION_ERROR'
+    );
   }
 
   private verifyRefreshToken(token: string): RefreshTokenPayload {
@@ -682,7 +845,12 @@ export class AuthService {
 
   async getUsersByFilter(filter: any): Promise<any> {
     if (!filter || typeof filter !== 'object') {
-      throw createConfiguredError('INVALID_FILTER', 'Filter must be a valid object', 400, 'VALIDATION_ERROR');
+      throw createConfiguredError(
+        'INVALID_FILTER',
+        'Filter must be a valid object',
+        400,
+        'VALIDATION_ERROR'
+      );
     }
     const users = await userRepository.getUsersByFilter(filter);
     return {
@@ -690,7 +858,27 @@ export class AuthService {
     };
   }
 
-  async saveOtpForUser(payload: { hostId: number, userId: number; identifierType: string; identifierValue: string; otpCode: string; expiresAt: number; purpose: string; messageId?: string; maxAttempts: number; requestIp: string; createdAt: number; otpDeliveries: Array<{ deliveryChannel: string; destination: string; messageId?: string; provider?: string; status?: string | null; failedReason?: string | null }> }): Promise<void> {
+  async saveOtpForUser(payload: {
+    hostId: number;
+    userId: number;
+    identifierType: string;
+    identifierValue: string;
+    otpCode: string;
+    expiresAt: number;
+    purpose: string;
+    messageId?: string;
+    maxAttempts: number;
+    requestIp: string;
+    createdAt: number;
+    otpDeliveries: Array<{
+      deliveryChannel: string;
+      destination: string;
+      messageId?: string;
+      provider?: string;
+      status?: string | null;
+      failedReason?: string | null;
+    }>;
+  }): Promise<void> {
     const { userId } = payload;
     const user = await userRepository.findById(userId);
     if (!user) {
@@ -699,25 +887,35 @@ export class AuthService {
     return await userRepository.saveOtpForUser(payload);
   }
 
-  async getUserByIdentifier(payload: { identifier: string, deviceId?: string }): Promise<any> {
+  async getUserByIdentifier(payload: { identifier: string; deviceId?: string }): Promise<any> {
     let { identifier, deviceId } = payload;
     identifier = identifier?.trim(); // Trim whitespace from the identifier
-    
+
     // Validate the identifier exists and is not empty
     if (!identifier) {
-      throw createConfiguredError('INVALID_IDENTIFIER', 'Please enter email or mobile number.', 400, 'VALIDATION_ERROR');
+      throw createConfiguredError(
+        'INVALID_IDENTIFIER',
+        'Please enter email or mobile number.',
+        400,
+        'VALIDATION_ERROR'
+      );
     }
-    
+
     // Determine if the identifier is an email or mobile number
     const parseIdentifierResult = CommonUtil.parseIdentifier(identifier);
     if (!parseIdentifierResult.type) {
-      throw createConfiguredError('INVALID_IDENTIFIER', 'Invalid value. Must be a valid email or phone number.', 400, 'VALIDATION_ERROR');
+      throw createConfiguredError(
+        'INVALID_IDENTIFIER',
+        'Invalid value. Must be a valid email or phone number.',
+        400,
+        'VALIDATION_ERROR'
+      );
     }
 
     let whereClause: Record<string, any> = {
       accountStatus: 'ACTIVE',
       deviceId: deviceId || null, // Include deviceId in the filter if provided
-      isDeleted: 0
+      isDeleted: 0,
     };
 
     if (parseIdentifierResult.type === 'EMAIL') {
@@ -731,11 +929,21 @@ export class AuthService {
     const users = getUsersResult.users || [];
 
     if (!users || users.length === 0) {
-      throw createConfiguredError('USER_NOT_FOUND', 'You are not registered. Please contact your administrator.', 404, 'NOT_FOUND');
+      throw createConfiguredError(
+        'USER_NOT_FOUND',
+        'You are not registered. Please contact your administrator.',
+        404,
+        'NOT_FOUND'
+      );
     }
 
-    if(users.length > 1) {
-      throw createConfiguredError('MULTIPLE_USERS_FOUND', 'Multiple users found with the same identifier. Please contact your administrator.', 400, 'VALIDATION_ERROR');
+    if (users.length > 1) {
+      throw createConfiguredError(
+        'MULTIPLE_USERS_FOUND',
+        'Multiple users found with the same identifier. Please contact your administrator.',
+        400,
+        'VALIDATION_ERROR'
+      );
     }
 
     const user = users[0];

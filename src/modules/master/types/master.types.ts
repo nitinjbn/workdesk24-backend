@@ -56,19 +56,21 @@ export interface GetUsersPayload extends ReportPaginationParams, ReportSortParam
 }
 
 export interface GetUsersFilter {
-  id?: number,
-  userId?: number,
-  employeeId?: string,
-  name?: string,
-  email?: string,
-  mobile?: number,
-  accountStatus?: 'ACTIVE' | 'INACTIVE',
-  roleCode?: string[],
-  searchKey?: string,
+  id?: number;
+  userId?: number;
+  employeeId?: string;
+  name?: string;
+  email?: string;
+  mobile?: number;
+  accountStatus?: 'ACTIVE' | 'INACTIVE';
+  roleCode?: string[];
+  searchKey?: string;
   joiningDate?: {
     from?: number;
     to?: number;
-  }
+  };
+  isFieldAppUser?: number;
+  isAdminUser?: number;
 }
 
 export interface GetRolesPayload {
@@ -85,8 +87,6 @@ export interface GetRolesPayload {
   sortOrder: ReportSortDirection;
 }
 
-
-
 export interface CreatedAtRangeFilter {
   from?: number | string;
   to?: number | string;
@@ -96,7 +96,6 @@ export interface CreatedAtRangeFilter {
   lte?: number | string;
   eq?: number | string;
 }
-
 
 export interface UserScopedReportFilter {
   userId?: number | string;
@@ -114,7 +113,7 @@ export interface UserScopedReportPayload extends ReportPaginationParams, ReportS
 export interface GetRoleDetailsByIdPayload {
   hostId: number;
   roleId: number;
-} 
+}
 
 export interface GetRoleDetailsByCodePayload {
   hostId: number;
@@ -156,7 +155,7 @@ export interface GetProductsPayload {
   sort?: {
     by?: string;
     order?: string;
-  }
+  };
   sortBy?: string;
   sortOrder?: string;
 }
@@ -179,7 +178,7 @@ export interface GetCustomersPayload {
   sort?: {
     by?: string;
     order?: string;
-  }
+  };
   sortBy?: string;
   sortOrder?: string;
 }
@@ -187,7 +186,7 @@ export interface GetCustomersPayload {
 export interface GetProductDetailsByIdPayload {
   hostId: number;
   productId: number;
-} 
+}
 
 export interface GetProductMediaDetailsByIdPayload {
   hostId: number;
@@ -197,7 +196,7 @@ export interface GetProductMediaDetailsByIdPayload {
     mediaId?: number;
     mediaType?: string;
     isEnabled?: boolean;
-  }
+  };
 }
 
 export interface GetProductAttributesDetailsByIdPayload {
@@ -208,14 +207,15 @@ export interface GetProductAttributesDetailsByIdPayload {
     attributeId?: number;
     attributeType?: string;
     isEnabled?: boolean;
-  }
+  };
 }
 
 export interface SaveProductMediaPayload {
   hostId: number;
   productId: number;
   mediaUrl: string;
-  mediaType: "IMAGE" | "VIDEO" | "PDF" | "DOCUMENT" | "BROCHURE" | "CERTIFICATE" | "LABEL" | "MANUAL";
+  mediaType:
+    'IMAGE' | 'VIDEO' | 'PDF' | 'DOCUMENT' | 'BROCHURE' | 'CERTIFICATE' | 'LABEL' | 'MANUAL';
   publicId?: string;
   fileName?: string;
   fileSizeInBytes?: number;
@@ -230,7 +230,8 @@ export interface SaveCustomerMediaPayload {
   hostId: number;
   customerId: number;
   mediaUrl: string;
-  mediaType: "IMAGE" | "VIDEO" | "PDF" | "DOCUMENT" | "BROCHURE" | "CERTIFICATE" | "LABEL" | "MANUAL";
+  mediaType:
+    'IMAGE' | 'VIDEO' | 'PDF' | 'DOCUMENT' | 'BROCHURE' | 'CERTIFICATE' | 'LABEL' | 'MANUAL';
   publicId?: string;
   fileName?: string;
   fileSizeInBytes?: number;

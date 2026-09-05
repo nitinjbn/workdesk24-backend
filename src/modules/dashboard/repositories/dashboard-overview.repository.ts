@@ -1,7 +1,12 @@
 import { Op, QueryTypes } from 'sequelize';
 import moment from 'moment-timezone';
 import db from '../../../models';
-import type { DashboardResolvedDateRange, DashboardResolvedFilters, DashboardTrendGranularity, DashboardTrendPoint } from '../types/dashboard.types';
+import type {
+  DashboardResolvedDateRange,
+  DashboardResolvedFilters,
+  DashboardTrendGranularity,
+  DashboardTrendPoint,
+} from '../types/dashboard.types';
 
 interface DashboardAggregateScope {
   hostId: number;
@@ -69,10 +74,14 @@ interface LeaveTrendRow {
 }
 
 export class DashboardOverviewRepository {
-  public async resolveScopedEmployeeIds(hostId: number, filters: DashboardResolvedFilters): Promise<number[] | undefined> {
+  public async resolveScopedEmployeeIds(
+    hostId: number,
+    filters: DashboardResolvedFilters
+  ): Promise<number[] | undefined> {
     const where: Record<string, unknown> = {
       hostId,
       isDeleted: 0,
+      isFieldAppUser: 1,
       accountStatus: 'ACTIVE',
     };
 
@@ -94,11 +103,21 @@ export class DashboardOverviewRepository {
       raw: true,
     });
 
-    return users.map((user: any) => Number(user.id)).filter((userId) => Number.isInteger(userId) && userId > 0);
+    return users
+      .map((user: any) => Number(user.id))
+      .filter((userId) => Number.isInteger(userId) && userId > 0);
   }
 
   public async getKpiCounts(scope: DashboardAggregateScope): Promise<DashboardKpiCounts> {
-    const [totalEmployees, presentToday, onLeaveToday, totalVisits, orderCounts, paymentCounts, pendingDayovers] = await Promise.all([
+    const [
+      totalEmployees,
+      presentToday,
+      onLeaveToday,
+      totalVisits,
+      orderCounts,
+      paymentCounts,
+      pendingDayovers,
+    ] = await Promise.all([
       this.getTotalEmployees(scope.hostId, scope.filters.employeeIds),
       this.getPresentCount(scope.hostId, scope.range, scope.filters.employeeIds),
       this.getOnLeaveCount(scope.hostId, scope.range, scope.filters.employeeIds),
@@ -130,7 +149,11 @@ export class DashboardOverviewRepository {
     });
   }
 
-  public async getPresentCount(hostId: number, range: DashboardResolvedDateRange, employeeIds?: number[]): Promise<number> {
+  public async getPresentCount(
+    hostId: number,
+    range: DashboardResolvedDateRange,
+    employeeIds?: number[]
+  ): Promise<number> {
     return db.Attendance.count({
       distinct: true,
       col: 'userId',
@@ -144,7 +167,11 @@ export class DashboardOverviewRepository {
     });
   }
 
-  public async getOnLeaveCount(hostId: number, range: DashboardResolvedDateRange, employeeIds?: number[]): Promise<number> {
+  public async getOnLeaveCount(
+    hostId: number,
+    range: DashboardResolvedDateRange,
+    employeeIds?: number[]
+  ): Promise<number> {
     return db.LeaveRequestDay.count({
       distinct: true,
       col: 'userId',
@@ -153,17 +180,19 @@ export class DashboardOverviewRepository {
         leaveDate: { [Op.between]: [range.startDate, range.endDate] },
         ...(employeeIds !== undefined ? { userId: { [Op.in]: employeeIds } } : {}),
       },
-      include: [{
-        model: db.LeaveRequest,
-        as: 'leaveRequest',
-        required: true,
-        attributes: [],
-        where: {
-          hostId,
-          status: 'APPROVED',
-          isDeleted: 0,
+      include: [
+        {
+          model: db.LeaveRequest,
+          as: 'leaveRequest',
+          required: true,
+          attributes: [],
+          where: {
+            hostId,
+            status: 'APPROVED',
+            isDeleted: 0,
+          },
         },
-      }],
+      ],
     });
   }
 
@@ -211,16 +240,24 @@ export class DashboardOverviewRepository {
   }
 
   public async getFeedbackCounts(scope: DashboardAggregateScope): Promise<DashboardFeedbackCounts> {
-    const totalFeedback = await db.Feedback.count({ where: this.buildTimestampWhere(scope, 'feedbackTime') });
+    const totalFeedback = await db.Feedback.count({
+      where: this.buildTimestampWhere(scope, 'feedbackTime'),
+    });
     return { totalFeedback };
   }
 
   public async getImageCounts(scope: DashboardAggregateScope): Promise<DashboardImageCounts> {
-    const totalUploaded = await db.Image.count({ where: this.buildTimestampWhere(scope, 'capturedAt') });
+    const totalUploaded = await db.Image.count({
+      where: this.buildTimestampWhere(scope, 'capturedAt'),
+    });
     return { totalUploaded };
   }
 
-  public async getDayoverCounts(scope: DashboardAggregateScope, totalEmployees: number, onLeaveToday: number): Promise<DashboardDayoverCounts> {
+  public async getDayoverCounts(
+    scope: DashboardAggregateScope,
+    totalEmployees: number,
+    onLeaveToday: number
+  ): Promise<DashboardDayoverCounts> {
     const [completed, pending] = await Promise.all([
       this.getCompletedDayovers(scope.hostId, scope.range, scope.filters.employeeIds),
       this.getPendingDayovers(scope.hostId, scope.range, scope.filters.employeeIds),
@@ -234,10 +271,9 @@ export class DashboardOverviewRepository {
   }
 
   public async getSummaryTrend(scope: DashboardAggregateScope): Promise<DashboardTrendPoint[]> {
-    const dateExpression = scope.granularity === 'month'
-      ? "FROM_UNIXTIME(reportDate, '%Y-%m-01')"
-      : 'reportDate';
-    const rows = await db.sequelize.query(
+    const dateExpression =
+      scope.granularity === 'month' ? "FROM_UNIXTIME(reportDate, '%Y-%m-01')" : 'reportDate';
+    const rows = (await db.sequelize.query(
       `SELECT ${dateExpression} AS bucketDate,
         COUNT(DISTINCT CASE WHEN attendanceStatus = 'Present' THEN userId END) AS present,
         COALESCE(SUM(totalVisits), 0) AS totalVisits,
@@ -262,8 +298,8 @@ export class DashboardOverviewRepository {
           employeeIds: scope.filters.employeeIds,
         },
         type: QueryTypes.SELECT,
-      },
-    ) as SummaryTrendRow[];
+      }
+    )) as SummaryTrendRow[];
 
     return rows.map((row) => ({
       date: this.formatTrendDate(row.bucketDate, scope.granularity, scope.range.timezone),
@@ -279,10 +315,9 @@ export class DashboardOverviewRepository {
   }
 
   public async getLeaveTrend(scope: DashboardAggregateScope): Promise<Map<string, number>> {
-    const dateExpression = scope.granularity === 'month'
-      ? "DATE_FORMAT(lrd.leaveDate, '%Y-%m')"
-      : 'lrd.leaveDate';
-    const rows = await db.sequelize.query(
+    const dateExpression =
+      scope.granularity === 'month' ? "DATE_FORMAT(lrd.leaveDate, '%Y-%m')" : 'lrd.leaveDate';
+    const rows = (await db.sequelize.query(
       `SELECT ${dateExpression} AS leaveDate, COUNT(DISTINCT lrd.userId) AS onLeave
       FROM wd_leave_request_days lrd
       INNER JOIN wd_leave_requests lr ON lr.id = lrd.leaveRequestId
@@ -301,13 +336,17 @@ export class DashboardOverviewRepository {
           employeeIds: scope.filters.employeeIds,
         },
         type: QueryTypes.SELECT,
-      },
-    ) as LeaveTrendRow[];
+      }
+    )) as LeaveTrendRow[];
 
     return new Map(rows.map((row) => [row.leaveDate, this.toNumber(row.onLeave)]));
   }
 
-  private async getCompletedDayovers(hostId: number, range: DashboardResolvedDateRange, employeeIds?: number[]): Promise<number> {
+  private async getCompletedDayovers(
+    hostId: number,
+    range: DashboardResolvedDateRange,
+    employeeIds?: number[]
+  ): Promise<number> {
     return db.Attendance.count({
       distinct: true,
       col: 'userId',
@@ -321,7 +360,11 @@ export class DashboardOverviewRepository {
     });
   }
 
-  private async getPendingDayovers(hostId: number, range: DashboardResolvedDateRange, employeeIds?: number[]): Promise<number> {
+  private async getPendingDayovers(
+    hostId: number,
+    range: DashboardResolvedDateRange,
+    employeeIds?: number[]
+  ): Promise<number> {
     return db.Attendance.count({
       distinct: true,
       col: 'userId',
@@ -336,12 +379,17 @@ export class DashboardOverviewRepository {
     });
   }
 
-  private buildTimestampWhere(scope: DashboardAggregateScope, timestampField: string): Record<string, unknown> {
+  private buildTimestampWhere(
+    scope: DashboardAggregateScope,
+    timestampField: string
+  ): Record<string, unknown> {
     return {
       hostId: scope.hostId,
       isDeleted: 0,
       [timestampField]: { [Op.between]: [scope.range.startUnix, scope.range.endUnix] },
-      ...(scope.filters.employeeIds !== undefined ? { userId: { [Op.in]: scope.filters.employeeIds } } : {}),
+      ...(scope.filters.employeeIds !== undefined
+        ? { userId: { [Op.in]: scope.filters.employeeIds } }
+        : {}),
     };
   }
 
@@ -350,7 +398,9 @@ export class DashboardOverviewRepository {
       return '';
     }
 
-    return employeeIds.length ? `AND ${columnName} IN (:employeeIds)` : `AND ${columnName} IN (NULL)`;
+    return employeeIds.length
+      ? `AND ${columnName} IN (:employeeIds)`
+      : `AND ${columnName} IN (NULL)`;
   }
 
   private toNumber(value: unknown): number {
@@ -358,7 +408,11 @@ export class DashboardOverviewRepository {
     return Number.isFinite(numberValue) ? numberValue : 0;
   }
 
-  private formatTrendDate(value: number | string, granularity: DashboardTrendGranularity, timezone: string): string {
+  private formatTrendDate(
+    value: number | string,
+    granularity: DashboardTrendGranularity,
+    timezone: string
+  ): string {
     if (granularity === 'month') {
       return String(value).slice(0, 7);
     }
