@@ -21,6 +21,14 @@ import { DateTimeFormatUtil } from '../../../shared/utils/date-time-format.util'
 
 type UserInstance = typeof User.prototype;
 
+const ROLE_NAME_SUBQUERY = `(
+  SELECT r.roleName
+  FROM wd_roles AS r
+  WHERE r.id = User.roleId
+    AND r.isDeleted = 0
+  LIMIT 1
+)`;
+
 export interface GetUsersQuery {
   hostId: number;
   page?: number;
@@ -173,7 +181,7 @@ export class usersRepository {
         ],
         include: [
           [db.Sequelize.col('User.id'), 'userId'],
-          [db.Sequelize.col('roles.roleName'), 'role'],
+          [db.Sequelize.literal(ROLE_NAME_SUBQUERY), 'role'],
           [db.Sequelize.col('designations.name'), 'designation'],
         ],
       },
@@ -304,7 +312,7 @@ export class usersRepository {
         exclude: ['id', 'roleId', 'password', 'reportingManagerId', 'isDeleted', 'deletedAt'],
         include: [
           [db.Sequelize.col('User.id'), 'userId'],
-          [db.Sequelize.col('roles.roleName'), 'role'],
+          [db.Sequelize.literal(ROLE_NAME_SUBQUERY), 'role'],
           [db.Sequelize.col('designations.name'), 'designation'],
         ],
       },

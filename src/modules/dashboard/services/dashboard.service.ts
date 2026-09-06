@@ -5,7 +5,9 @@ import reportService from '../../reporting/services/report.service';
 import { cache, buildTenantCacheKey, type CacheServiceContract } from '../../../shared/cache';
 import { createConfiguredError } from '../../../shared/utils/error.util';
 import { getHostDateTimeSettings } from '../../../shared/utils/host-settings.util';
-import dashboardOverviewRepository, { DashboardOverviewRepository } from '../repositories/dashboard-overview.repository';
+import dashboardOverviewRepository, {
+  DashboardOverviewRepository,
+} from '../repositories/dashboard-overview.repository';
 import dashboardCacheInvalidationService from './dashboard-cache-invalidation.service';
 import type {
   DashboardDateFilter,
@@ -67,7 +69,7 @@ export class DashboardService {
     private readonly performanceRepository: DashboardPerformanceReader = performanceInsightRepository,
     private readonly reportingService: DashboardReportReader = reportService,
     private readonly cacheVersionReader: DashboardVersionReader = dashboardCacheInvalidationService,
-    private readonly dateTimeSettingsReader: DashboardDateTimeSettingsReader = getHostDateTimeSettings,
+    private readonly dateTimeSettingsReader: DashboardDateTimeSettingsReader = getHostDateTimeSettings
   ) {}
 
   public async getOverview(context: DashboardOverviewContext): Promise<DashboardOverviewResponse> {
@@ -77,13 +79,16 @@ export class DashboardService {
       resolved.cacheKey,
       () => this.buildOverview(context.hostId, resolved),
       resolved.ttlSeconds,
-      { lockTtlSeconds: 10, waitTimeoutMs: 2000, retryDelayMs: 100 },
+      { lockTtlSeconds: 10, waitTimeoutMs: 2000, retryDelayMs: 100 }
     );
 
     return this.withCacheMetadata(result.value, result.hit);
   }
 
-  private async buildOverview(hostId: number, resolved: ResolvedDashboardRequest): Promise<DashboardOverviewResponse> {
+  private async buildOverview(
+    hostId: number,
+    resolved: ResolvedDashboardRequest
+  ): Promise<DashboardOverviewResponse> {
     const scope = {
       hostId,
       range: resolved.range,
@@ -91,8 +96,19 @@ export class DashboardService {
       filters: resolved.filters,
       granularity: resolved.granularity,
     };
-    
-    const [kpis, visitCounts, orderCounts, paymentCounts, feedbackCounts, imageCounts, summaryTrendRows, leaveTrend, performance, activity] = await Promise.all([
+
+    const [
+      kpis,
+      visitCounts,
+      orderCounts,
+      paymentCounts,
+      feedbackCounts,
+      imageCounts,
+      summaryTrendRows,
+      leaveTrend,
+      performance,
+      activity,
+    ] = await Promise.all([
       this.repository.getKpiCounts(scope),
       this.repository.getVisitCounts(scope),
       this.repository.getOrderCounts(scope),
@@ -106,9 +122,18 @@ export class DashboardService {
     ]);
     const totalEmployees = kpis.totalEmployees;
     const attendancePercentage = this.calculatePercentage(kpis.presentToday, totalEmployees);
-    const dayover = await this.repository.getDayoverCounts(scope, totalEmployees, kpis.onLeaveToday);
+    const dayover = await this.repository.getDayoverCounts(
+      scope,
+      totalEmployees,
+      kpis.onLeaveToday
+    );
     const trendRows = this.fillTrendRows(summaryTrendRows, resolved);
-    const attendanceTrend = this.buildAttendanceTrend(trendRows, leaveTrend, totalEmployees, resolved);
+    const attendanceTrend = this.buildAttendanceTrend(
+      trendRows,
+      leaveTrend,
+      totalEmployees,
+      resolved
+    );
 
     return {
       meta: {
@@ -203,24 +228,40 @@ export class DashboardService {
     };
   }
 
-  private async resolveRequest(context: DashboardOverviewContext): Promise<ResolvedDashboardRequest> {
+  private async resolveRequest(
+    context: DashboardOverviewContext
+  ): Promise<ResolvedDashboardRequest> {
     const settings = await this.dateTimeSettingsReader(context.hostId);
     const timezone = moment.tz.zone(settings.timeZone) ? settings.timeZone : 'Asia/Kolkata';
     const range = this.resolveDateRange(context.request, timezone);
     const todayRange = this.resolvePresetRange('today', timezone);
     const inputFilters = this.normalizeFilters(context.request.filter);
-    const scopedEmployeeIds = await this.repository.resolveScopedEmployeeIds(context.hostId, inputFilters);
+    const scopedEmployeeIds = await this.repository.resolveScopedEmployeeIds(
+      context.hostId,
+      inputFilters
+    );
     const filters: DashboardResolvedFilters = {
       ...inputFilters,
       employeeIds: scopedEmployeeIds === undefined ? undefined : scopedEmployeeIds,
     };
     const granularity = context.request.options?.trendGranularity || this.defaultGranularity(range);
-    const ttlSeconds = this.isTodayRange(range, todayRange) ? dashboardConfig.overviewTodayTtl : dashboardConfig.overviewRangeTtl;
+    const ttlSeconds = this.isTodayRange(range, todayRange)
+      ? dashboardConfig.overviewTodayTtl
+      : dashboardConfig.overviewRangeTtl;
     const topPerformersLimit = context.request.options?.topPerformersLimit || 5;
     const activityLimit = context.request.options?.activityLimit || 10;
     const includeActivity = context.request.options?.includeActivity !== false;
     const cacheVersion = await this.cacheVersionReader.getOverviewVersion(context.hostId);
-    const cacheKey = this.buildCacheKey(context.hostId, range, filters, granularity, topPerformersLimit, activityLimit, includeActivity, cacheVersion);
+    const cacheKey = this.buildCacheKey(
+      context.hostId,
+      range,
+      filters,
+      granularity,
+      topPerformersLimit,
+      activityLimit,
+      includeActivity,
+      cacheVersion
+    );
 
     return {
       range,
@@ -236,7 +277,10 @@ export class DashboardService {
     };
   }
 
-  private async getPerformance(hostId: number, resolved: ResolvedDashboardRequest): Promise<DashboardOverviewResponse['performance']> {
+  private async getPerformance(
+    hostId: number,
+    resolved: ResolvedDashboardRequest
+  ): Promise<DashboardOverviewResponse['performance']> {
     if (resolved.filters.employeeIds !== undefined && resolved.filters.employeeIds.length === 0) {
       return {
         overall: [],
@@ -263,7 +307,10 @@ export class DashboardService {
     return { overall, byVisits, byOrders, byPayments };
   }
 
-  private async getActivity(hostId: number, resolved: ResolvedDashboardRequest): Promise<DashboardOverviewResponse['activity']> {
+  private async getActivity(
+    hostId: number,
+    resolved: ResolvedDashboardRequest
+  ): Promise<DashboardOverviewResponse['activity']> {
     if (resolved.filters.employeeIds !== undefined && resolved.filters.employeeIds.length === 0) {
       return {
         items: [],
@@ -279,7 +326,9 @@ export class DashboardService {
           from: resolved.range.startUnix,
           to: resolved.range.endUnix,
         },
-        ...(resolved.filters.employeeIds?.length === 1 ? { userId: resolved.filters.employeeIds[0] } : {}),
+        ...(resolved.filters.employeeIds?.length === 1
+          ? { userId: resolved.filters.employeeIds[0] }
+          : {}),
       },
     });
 
@@ -296,10 +345,7 @@ export class DashboardService {
       ...(filter?.userIds || []),
       ...(filter?.userId ? [filter.userId] : []),
     ]);
-    const teamIds = this.uniqueNumbers([
-      ...(filter?.teams?.ids || []),
-      ...(filter?.teamIds || []),
-    ]);
+    const teamIds = this.uniqueNumbers([...(filter?.teams?.ids || []), ...(filter?.teamIds || [])]);
 
     return {
       ...(employeeIds.length ? { employeeIds } : {}),
@@ -307,27 +353,51 @@ export class DashboardService {
     };
   }
 
-  private resolveDateRange(request: DashboardOverviewRequest, timezone: string): DashboardResolvedDateRange {
+  private resolveDateRange(
+    request: DashboardOverviewRequest,
+    timezone: string
+  ): DashboardResolvedDateRange {
     const createdAt = request.filter?.createdAt;
     if (createdAt?.from && createdAt?.to) {
       if (createdAt.from > createdAt.to) {
-        throw createConfiguredError('VALIDATION_ERROR', 'createdAt.from cannot be greater than createdAt.to', 400, 'VALIDATION_ERROR');
+        throw createConfiguredError(
+          'VALIDATION_ERROR',
+          'createdAt.from cannot be greater than createdAt.to',
+          400,
+          'VALIDATION_ERROR'
+        );
       }
 
-      return this.createRange(moment.unix(createdAt.from).tz(timezone), moment.unix(createdAt.to).tz(timezone), timezone, 'unix_range');
+      return this.createRange(
+        moment.unix(createdAt.from).tz(timezone),
+        moment.unix(createdAt.to).tz(timezone),
+        timezone,
+        'unix_range'
+      );
     }
 
-    const dateFilter = request.filter?.date || { type: 'preset', value: 'today' } as DashboardDateFilter;
+    const dateFilter =
+      request.filter?.date || ({ type: 'preset', value: 'today' } as DashboardDateFilter);
     if (dateFilter.type === 'custom') {
       const start = moment.tz(dateFilter.startDate, 'YYYY-MM-DD', true, timezone).startOf('day');
       const end = moment.tz(dateFilter.endDate, 'YYYY-MM-DD', true, timezone).endOf('day');
       if (!start.isValid() || !end.isValid()) {
-        throw createConfiguredError('VALIDATION_ERROR', 'Invalid custom date range', 400, 'VALIDATION_ERROR');
+        throw createConfiguredError(
+          'VALIDATION_ERROR',
+          'Invalid custom date range',
+          400,
+          'VALIDATION_ERROR'
+        );
       }
 
       const rangeDays = end.diff(start, 'days') + 1;
       if (rangeDays > MAX_CUSTOM_RANGE_DAYS) {
-        throw createConfiguredError('VALIDATION_ERROR', `Custom date range cannot exceed ${MAX_CUSTOM_RANGE_DAYS} days`, 400, 'VALIDATION_ERROR');
+        throw createConfiguredError(
+          'VALIDATION_ERROR',
+          `Custom date range cannot exceed ${MAX_CUSTOM_RANGE_DAYS} days`,
+          400,
+          'VALIDATION_ERROR'
+        );
       }
 
       return this.createRange(start, end, timezone, 'custom');
@@ -336,7 +406,10 @@ export class DashboardService {
     return this.resolvePresetRange(dateFilter.value || 'today', timezone);
   }
 
-  private resolvePresetRange(preset: NonNullable<DashboardDateFilter['value']>, timezone: string): DashboardResolvedDateRange {
+  private resolvePresetRange(
+    preset: NonNullable<DashboardDateFilter['value']>,
+    timezone: string
+  ): DashboardResolvedDateRange {
     const now = moment().tz(timezone);
     let start = now.clone();
     let end = now.clone();
@@ -371,7 +444,12 @@ export class DashboardService {
     return this.createRange(start, end, timezone, preset);
   }
 
-  private createRange(start: moment.Moment, end: moment.Moment, timezone: string, preset: DashboardResolvedDateRange['preset']): DashboardResolvedDateRange {
+  private createRange(
+    start: moment.Moment,
+    end: moment.Moment,
+    timezone: string,
+    preset: DashboardResolvedDateRange['preset']
+  ): DashboardResolvedDateRange {
     return {
       preset,
       startDate: start.format('YYYY-MM-DD'),
@@ -388,7 +466,7 @@ export class DashboardService {
     trendRows: DashboardTrendPoint[],
     leaveTrend: Map<string, number>,
     totalEmployees: number,
-    resolved: ResolvedDashboardRequest,
+    resolved: ResolvedDashboardRequest
   ): DashboardTrendPoint[] {
     return trendRows.map((row) => {
       const onLeave = leaveTrend.get(row.date) || 0;
@@ -405,7 +483,10 @@ export class DashboardService {
     });
   }
 
-  private fillTrendRows(rows: DashboardTrendPoint[], resolved: ResolvedDashboardRequest): DashboardTrendPoint[] {
+  private fillTrendRows(
+    rows: DashboardTrendPoint[],
+    resolved: ResolvedDashboardRequest
+  ): DashboardTrendPoint[] {
     const byDate = new Map(rows.map((row) => [row.date, row]));
     const buckets = this.buildTrendBuckets(resolved.range, resolved.granularity);
 
@@ -422,7 +503,10 @@ export class DashboardService {
     }));
   }
 
-  private buildTrendBuckets(range: DashboardResolvedDateRange, granularity: DashboardTrendGranularity): string[] {
+  private buildTrendBuckets(
+    range: DashboardResolvedDateRange,
+    granularity: DashboardTrendGranularity
+  ): string[] {
     const buckets: string[] = [];
     const unit = granularity === 'month' ? 'month' : 'day';
     const format = granularity === 'month' ? 'YYYY-MM' : 'YYYY-MM-DD';
@@ -445,7 +529,7 @@ export class DashboardService {
     topPerformersLimit: number,
     activityLimit: number,
     includeActivity: boolean,
-    cacheVersion: number,
+    cacheVersion: number
   ): string {
     return buildTenantCacheKey({
       version: 'v1',
@@ -453,7 +537,12 @@ export class DashboardService {
       resource: 'overview',
       hostId,
       date: `${range.startDate}_${range.endDate}`,
-      scope: [granularity, `cache-${cacheVersion}`, `performers-${topPerformersLimit}`, `activity-${includeActivity ? activityLimit : 'off'}`],
+      scope: [
+        granularity,
+        `cache-${cacheVersion}`,
+        `performers-${topPerformersLimit}`,
+        `activity-${includeActivity ? activityLimit : 'off'}`,
+      ],
       identifier: [
         `employees-${this.formatKeyList(filters.employeeIds)}`,
         `teams-${this.formatKeyList(filters.teamIds)}`,
@@ -466,7 +555,10 @@ export class DashboardService {
     return days > 62 ? 'month' : 'day';
   }
 
-  private isTodayRange(range: DashboardResolvedDateRange, todayRange: DashboardResolvedDateRange): boolean {
+  private isTodayRange(
+    range: DashboardResolvedDateRange,
+    todayRange: DashboardResolvedDateRange
+  ): boolean {
     return range.startDate === todayRange.startDate && range.endDate === todayRange.endDate;
   }
 
@@ -483,14 +575,19 @@ export class DashboardService {
   }
 
   private uniqueNumbers(values: number[]): number[] {
-    return Array.from(new Set(values.filter((value) => Number.isInteger(value) && value > 0))).sort((a, b) => a - b);
+    return Array.from(new Set(values.filter((value) => Number.isInteger(value) && value > 0))).sort(
+      (a, b) => a - b
+    );
   }
 
   private formatKeyList(values?: number[]): string {
     return values?.length ? values.join('.') : 'all';
   }
 
-  private withCacheMetadata(response: DashboardOverviewResponse, hit: boolean): DashboardOverviewResponse {
+  private withCacheMetadata(
+    response: DashboardOverviewResponse,
+    hit: boolean
+  ): DashboardOverviewResponse {
     return {
       ...response,
       meta: {
