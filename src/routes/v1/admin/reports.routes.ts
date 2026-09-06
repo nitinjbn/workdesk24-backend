@@ -4,7 +4,10 @@ import reportController from '../../../modules/reporting/controllers/report.cont
 const router = Router();
 
 router.post('/reports/getGPSHistory', reportController.getAdminGpsHistory.bind(reportController));
-router.post('/reports/getGPSHistory/journey', reportController.getAdminGpsHistoryJourney.bind(reportController));
+router.post(
+  '/reports/getGPSHistory/journey',
+  reportController.getAdminGpsHistoryJourney.bind(reportController)
+);
 
 router.post('/reports/getAttendance', reportController.getAdminAttendance.bind(reportController));
 router.post('/reports/getVisits', reportController.getVisits.bind(reportController));
@@ -15,5 +18,6 @@ router.post('/reports/getImages', reportController.getImages.bind(reportControll
 
 router.post('/reports/getAllActivities', reportController.getAllActivities.bind(reportController));
 router.post('/reports/getLastLocations', reportController.getLastLocations.bind(reportController));
+router.post('/reports/getActivityTrend', reportController.getActivityTrend.bind(reportController));
 
 export default router;

@@ -21,7 +21,11 @@ import {
   GetOrdersReportPayload,
   GetPaymentsReportPayload,
   GetFeedbacksReportPayload,
-  GetImagesReportPayload
+  GetImagesReportPayload,
+  ActivityTrendFilter,
+  ActivityTrendPoint,
+  ActivityTrendReportPayload,
+  ActivityTrendSummaryRow,
 } from '../types/report.types';
 import { GpsHistory, Attendance, User } from '../../../models/schemas';
 import baseReportHelper from '../helpers/base-report.helper';
@@ -37,6 +41,7 @@ import imagesReportRepository from '../repositories/images-report.repository';
 import activityLogsReportRepository from '../repositories/activity-logs-report.repository';
 import { resolveActivityEnrichment } from '../helpers/activity-log.helper';
 import moment from 'moment-timezone';
+import activityTrendReportRepository from '../repositories/activity-trend-report.repository';
 
 type GpsHistoryInstance = typeof GpsHistory.prototype;
 type AttendanceInstance = typeof Attendance.prototype;
@@ -231,14 +236,19 @@ export class ReportService {
     };
   }
 
-  private resolveEffectiveUserId(filter: UserScopedReportFilter, scope: ReportScope): number | undefined {
+  private resolveEffectiveUserId(
+    filter: UserScopedReportFilter,
+    scope: ReportScope
+  ): number | undefined {
     const scopedUserId = baseReportHelper.parseNumber(scope.requestUserId);
     if (scopedUserId !== null) {
       return scopedUserId;
     }
 
     const nestedUser = (filter.User ?? filter.user) as Record<string, unknown> | undefined;
-    const nestedUserId = baseReportHelper.parseNumber(nestedUser?.id as number | string | undefined);
+    const nestedUserId = baseReportHelper.parseNumber(
+      nestedUser?.id as number | string | undefined
+    );
     if (nestedUserId !== null) {
       return nestedUserId;
     }
@@ -406,9 +416,15 @@ export class ReportService {
     };
   }
 
-  async getAllActivitiesReport(
-    payload: { hostId: number; filter?: Record<string, any>; page?: number; limit?: number; sort?: { by?: string; order?: "ASC" | "DESC" }; sortBy?: string; sortOrder?: "ASC" | "DESC" },
-  ): Promise<{ activities: any[]; pagination: any }> {
+  async getAllActivitiesReport(payload: {
+    hostId: number;
+    filter?: Record<string, any>;
+    page?: number;
+    limit?: number;
+    sort?: { by?: string; order?: 'ASC' | 'DESC' };
+    sortBy?: string;
+    sortOrder?: 'ASC' | 'DESC';
+  }): Promise<{ activities: any[]; pagination: any }> {
     const { hostId, filter, page, limit, sort, sortBy, sortOrder } = payload;
 
     const report = await activityLogsReportRepository.getAllActivitiesReport({
@@ -441,16 +457,23 @@ export class ReportService {
     };
   }
 
-  async getLastLocationsReport(
-    payload: { hostId: number; filter?: Record<string, any>; },
-  ): Promise<{ lastLocations: any[]; }> {
+  async getLastLocationsReport(payload: {
+    hostId: number;
+    filter?: Record<string, any>;
+  }): Promise<{ lastLocations: any[] }> {
     const { hostId, filter } = payload;
 
     const dateTimeSettings = await getHostDateTimeSettings(hostId);
 
     // Calculate the start and end of the current day in the host's timezone
-    const startOfDay = moment().tz(dateTimeSettings.timeZone || CONFIG.REPORTING.TIMEZONE).startOf('day').unix();
-    const endOfDay = moment().tz(dateTimeSettings.timeZone || CONFIG.REPORTING.TIMEZONE).endOf('day').unix();
+    const startOfDay = moment()
+      .tz(dateTimeSettings.timeZone || CONFIG.REPORTING.TIMEZONE)
+      .startOf('day')
+      .unix();
+    const endOfDay = moment()
+      .tz(dateTimeSettings.timeZone || CONFIG.REPORTING.TIMEZONE)
+      .endOf('day')
+      .unix();
 
     const report = await gpsHistoryReportRepository.getLastLocationsReport({
       hostId,
@@ -468,8 +491,103 @@ export class ReportService {
     );
 
     return {
-      lastLocations: formatDateTimeFieldsBySettings(plainData, dateTimeSettings)
+      lastLocations: formatDateTimeFieldsBySettings(plainData, dateTimeSettings),
     };
+  }
+
+  async getActivityTrendReport(
+    payload: ActivityTrendReportPayload
+  ): Promise<{ activityTrend: ActivityTrendPoint[] }> {
+    const hostId = this.resolveRequiredHostId(payload.hostId);
+    const dateTimeSettings = await getHostDateTimeSettings(hostId);
+    const timeZone = dateTimeSettings.timeZone || CONFIG.REPORTING.TIMEZONE;
+    const { fromDateUnix, tillDateUnix } = this.resolveActivityTrendRange(
+      payload.filter?.activityTrend,
+      timeZone
+    );
+
+    const rows = await activityTrendReportRepository.getActivityTrendReport({
+      hostId,
+      fromDateUnix,
+      tillDateUnix,
+    });
+
+    return {
+      activityTrend: this.buildActivityTrendSeries(rows, fromDateUnix, tillDateUnix, timeZone),
+    };
+  }
+
+  private resolveActivityTrendRange(
+    filter: ActivityTrendFilter | undefined,
+    timeZone: string
+  ): { fromDateUnix: number; tillDateUnix: number } {
+    const tillDate = filter?.tillDate
+      ? moment.tz(filter.tillDate, 'YYYY-MM-DD', true, timeZone)
+      : moment.tz(timeZone);
+    const fromDate = filter?.fromDate
+      ? moment.tz(filter.fromDate, 'YYYY-MM-DD', true, timeZone)
+      : tillDate.clone().subtract(6, 'days');
+
+    if (!fromDate.isValid() || !tillDate.isValid()) {
+      throw createConfiguredError(
+        'VALIDATION_ERROR',
+        'filter.activityTrend.fromDate and filter.activityTrend.tillDate must be valid YYYY-MM-DD dates',
+        400,
+        'VALIDATION_ERROR'
+      );
+    }
+
+    if (fromDate.isAfter(tillDate, 'day')) {
+      throw createConfiguredError(
+        'VALIDATION_ERROR',
+        'filter.activityTrend.fromDate must be less than or equal to filter.activityTrend.tillDate',
+        400,
+        'VALIDATION_ERROR'
+      );
+    }
+
+    return {
+      fromDateUnix: fromDate.clone().startOf('day').unix(),
+      tillDateUnix: tillDate.clone().endOf('day').unix(),
+    };
+  }
+
+  private buildActivityTrendSeries(
+    rows: ActivityTrendSummaryRow[],
+    fromDateUnix: number,
+    tillDateUnix: number,
+    timeZone: string
+  ): ActivityTrendPoint[] {
+    const rowsByDay = new Map<string, ActivityTrendSummaryRow>();
+    rows.forEach((row) => {
+      const reportDate = Number(row.reportDate);
+      if (Number.isFinite(reportDate) && reportDate > 0) {
+        rowsByDay.set(moment.unix(reportDate).tz(timeZone).format('YYYY-MM-DD'), row);
+      }
+    });
+
+    const activityTrend: ActivityTrendPoint[] = [];
+    const cursor = moment.unix(fromDateUnix).tz(timeZone).startOf('day');
+    const end = moment.unix(tillDateUnix).tz(timeZone).endOf('day');
+
+    while (cursor.isSameOrBefore(end)) {
+      const row = rowsByDay.get(cursor.format('YYYY-MM-DD'));
+      activityTrend.push({
+        day: cursor.format('D MMM'),
+        attendance: this.toTrendCount(row?.attendance),
+        visits: this.toTrendCount(row?.visits),
+        orders: this.toTrendCount(row?.orders),
+        payments: this.toTrendCount(row?.payments),
+      });
+      cursor.add(1, 'day');
+    }
+
+    return activityTrend;
+  }
+
+  private toTrendCount(value: unknown): number {
+    const numericValue = Number(value ?? 0);
+    return Number.isFinite(numericValue) ? numericValue : 0;
   }
 }
 

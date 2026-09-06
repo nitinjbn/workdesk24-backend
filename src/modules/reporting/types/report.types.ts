@@ -39,6 +39,35 @@ export type SingleRecordResponse<T, K extends string = 'data'> = {
 export type GpsHistoryReportResponse<T> = ReportResponse<T, 'gpsHistory'>;
 export type AttendanceReportResponse<T> = ReportResponse<T, 'attendance'>;
 
+export interface ActivityTrendFilter {
+  fromDate?: string;
+  tillDate?: string;
+}
+
+export interface ActivityTrendReportPayload {
+  hostId?: number | string;
+  filter?: {
+    activityTrend?: ActivityTrendFilter;
+    [key: string]: unknown;
+  };
+}
+
+export interface ActivityTrendPoint {
+  day: string;
+  attendance: number;
+  visits: number;
+  orders: number;
+  payments: number;
+}
+
+export interface ActivityTrendSummaryRow {
+  reportDate: number | string;
+  attendance: number | string;
+  visits: number | string;
+  orders: number | string;
+  payments: number | string;
+}
+
 export interface CreatedAtRangeFilter {
   from?: number | string;
   to?: number | string;
@@ -93,7 +122,7 @@ export interface AdminGpsHistoryJourneyFilter {
   createdAt: {
     from: number;
     to: number;
-  }
+  };
 }
 
 export interface AdminGpsHistoryJourneyPayload {

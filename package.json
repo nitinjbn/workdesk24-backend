@@ -25,6 +25,7 @@
     "test:leave:concurrency": "node --test tests/leave/leave-concurrency-idempotency.integration.test.js",
     "test:cache": "node --test tests/cache/cache.service.unit.test.js",
     "test:dashboard": "node --test tests/dashboard/dashboard-overview.unit.test.js tests/dashboard/dashboard-overview.repository.unit.test.js",
+    "test:reporting": "node --test tests/reporting/activity-trend-report.unit.test.js",
     "manualRun": "nodemon dist/server.production.js"
   },
   "keywords": [

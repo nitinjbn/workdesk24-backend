@@ -10,7 +10,11 @@ import {
 } from '../types/report.types';
 
 export class ReportController {
-  async getAdminGpsHistoryJourney(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  async getAdminGpsHistoryJourney(
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
       const result = await reportService.getAdminGpsHistoryJourneyReport(
         req.body as AdminGpsHistoryJourneyPayload,
@@ -49,7 +53,8 @@ export class ReportController {
       req,
       res,
       next,
-      (payload, scope) => reportService.getGpsHistoryReport(payload as GpsHistoryReportPayload, scope),
+      (payload, scope) =>
+        reportService.getGpsHistoryReport(payload as GpsHistoryReportPayload, scope),
       'GPS history report retrieved successfully',
       true
     );
@@ -60,7 +65,8 @@ export class ReportController {
       req,
       res,
       next,
-      (payload, scope) => reportService.getAttendanceReport(payload as AttendanceReportPayload, scope),
+      (payload, scope) =>
+        reportService.getAttendanceReport(payload as AttendanceReportPayload, scope),
       'Attendance report retrieved successfully'
     );
   }
@@ -70,7 +76,8 @@ export class ReportController {
       req,
       res,
       next,
-      (payload, scope) => reportService.getAttendanceReport(payload as AttendanceReportPayload, scope),
+      (payload, scope) =>
+        reportService.getAttendanceReport(payload as AttendanceReportPayload, scope),
       'Attendance report retrieved successfully',
       true
     );
@@ -80,7 +87,10 @@ export class ReportController {
     req: AuthRequest,
     res: Response,
     next: NextFunction,
-    handler: (payload: Record<string, unknown>, scope: { hostId: number; requestUserId?: number }) => Promise<unknown>,
+    handler: (
+      payload: Record<string, unknown>,
+      scope: { hostId: number; requestUserId?: number }
+    ) => Promise<unknown>,
     successMessage: string,
     restrictToSelf = false
   ): Promise<void> {
@@ -196,6 +206,19 @@ export class ReportController {
       res.json({
         success: true,
         message: 'Last locations report retrieved successfully',
+        data: result,
+      } as ApiResponse);
+    } catch (error) {
+      next(error);
+    }
+  }
+  async getActivityTrend(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const payload = req.body;
+      const result = await reportService.getActivityTrendReport(payload);
+      res.json({
+        success: true,
+        message: 'Activity trend report retrieved successfully',
         data: result,
       } as ApiResponse);
     } catch (error) {
