@@ -1,9 +1,15 @@
 import { Model, DataTypes, Sequelize, Optional } from 'sequelize';
 import { UserAttendanceLocationAttributes } from '../../types';
 
-interface UserAttendanceLocationCreationAttributes extends Optional<UserAttendanceLocationAttributes, 'id' | 'userId' | 'attendanceLocationId' | 'isEnabled' | 'createdAt' | 'updatedAt' > {}
+interface UserAttendanceLocationCreationAttributes extends Optional<
+  UserAttendanceLocationAttributes,
+  'id' | 'userId' | 'attendanceLocationId' | 'isEnabled' | 'createdAt' | 'updatedAt'
+> {}
 
-class UserAttendanceLocation extends Model<UserAttendanceLocationAttributes, UserAttendanceLocationCreationAttributes> implements UserAttendanceLocationAttributes {
+class UserAttendanceLocation
+  extends Model<UserAttendanceLocationAttributes, UserAttendanceLocationCreationAttributes>
+  implements UserAttendanceLocationAttributes
+{
   public id!: number;
   public userId!: number;
   public attendanceLocationId!: number;
@@ -35,11 +41,11 @@ export function initUserAttendanceLocation(sequelize: Sequelize): typeof UserAtt
       },
       userId: {
         type: DataTypes.BIGINT,
-        allowNull: false
+        allowNull: false,
       },
       attendanceLocationId: {
         type: DataTypes.BIGINT,
-        allowNull: false
+        allowNull: false,
       },
       isEnabled: {
         type: DataTypes.TINYINT,
@@ -69,15 +75,7 @@ export function initUserAttendanceLocation(sequelize: Sequelize): typeof UserAtt
       sequelize,
       tableName: 'wd_user_attendance_locations',
       timestamps: false,
-      indexes: [
-        { fields: ['userId'] },
-        { fields: ['attendanceLocationId'] },
-        { 
-          unique: true, 
-          name: 'uk_user_attendance_location', 
-          fields: [ 'userId', 'attendanceLocationId', 'isDeleted']
-        },
-      ],
+      indexes: [{ fields: ['userId'] }, { fields: ['attendanceLocationId'] }],
     }
   );
 

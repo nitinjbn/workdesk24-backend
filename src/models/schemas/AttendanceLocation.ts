@@ -1,9 +1,22 @@
 import { Model, DataTypes, Sequelize, Optional } from 'sequelize';
 import { AttendanceLocationAttributes } from '../../types';
 
-interface AttendanceLocationCreationAttributes extends Optional<AttendanceLocationAttributes, 'id' | 'hostId' | 'locationName' | 'latitude' | 'longitude' | 'radiusMeters' | 'createdAt' | 'updatedAt' > {}
+interface AttendanceLocationCreationAttributes extends Optional<
+  AttendanceLocationAttributes,
+  | 'id'
+  | 'hostId'
+  | 'locationName'
+  | 'latitude'
+  | 'longitude'
+  | 'radiusMeters'
+  | 'createdAt'
+  | 'updatedAt'
+> {}
 
-class AttendanceLocation extends Model<AttendanceLocationAttributes, AttendanceLocationCreationAttributes> implements AttendanceLocationAttributes {
+class AttendanceLocation
+  extends Model<AttendanceLocationAttributes, AttendanceLocationCreationAttributes>
+  implements AttendanceLocationAttributes
+{
   public id!: number;
   public hostId!: number;
   public locationName: string;
@@ -21,6 +34,10 @@ class AttendanceLocation extends Model<AttendanceLocationAttributes, AttendanceL
       foreignKey: 'hostId',
       as: 'host',
     });
+    AttendanceLocation.hasMany(models.UserAttendanceLocation, {
+      foreignKey: 'attendanceLocationId',
+      as: 'siteUsers',
+    });
   }
 }
 
@@ -34,7 +51,7 @@ export function initAttendanceLocation(sequelize: Sequelize): typeof AttendanceL
       },
       hostId: {
         type: DataTypes.BIGINT,
-        allowNull: false
+        allowNull: false,
       },
       locationName: {
         type: DataTypes.STRING(100),
@@ -50,7 +67,7 @@ export function initAttendanceLocation(sequelize: Sequelize): typeof AttendanceL
       },
       radiusMeters: {
         type: DataTypes.INTEGER,
-        allowNull: false
+        allowNull: false,
       },
       isEnabled: {
         type: DataTypes.TINYINT,
@@ -80,9 +97,7 @@ export function initAttendanceLocation(sequelize: Sequelize): typeof AttendanceL
       sequelize,
       tableName: 'wd_attendance_locations',
       timestamps: false,
-      indexes: [
-        { fields: ['hostId'] }
-      ],
+      indexes: [{ fields: ['hostId'] }],
     }
   );
 
