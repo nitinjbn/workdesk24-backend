@@ -246,9 +246,14 @@ export class LeaveAppService {
         dayName: plain?.leaveDate ? getDayNameFromDateString(plain.leaveDate) : null,
       };
     });
-    const approvalPlain = approvals.map((item: any) =>
-      item && typeof item.toJSON === 'function' ? item.toJSON() : item
-    );
+    const approvalPlain = approvals.map((item: any) => {
+      const approval = item && typeof item.toJSON === 'function' ? item.toJSON() : item;
+
+      return {
+        ...approval,
+        comment: approval.comment ?? '',
+      };
+    });
 
     const dateTimeSettings = await getHostDateTimeSettings(hostId);
 
