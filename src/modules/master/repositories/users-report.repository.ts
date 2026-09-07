@@ -6,8 +6,8 @@ import db, {
   Designation,
   UserDevice,
   HolidayCalendar,
-  UserAttendanceLocation,
-  AttendanceLocation,
+  UserAttendanceSite,
+  AttendanceSite,
 } from '../../../models';
 import {
   CommonReportSortBy,
@@ -22,24 +22,24 @@ import { DateTimeFormatUtil } from '../../../shared/utils/date-time-format.util'
 
 type UserInstance = typeof User.prototype;
 
-function normalizeUserAttendanceLocations(userData: any): void {
-  if (!Array.isArray(userData.userAttendanceLocations)) {
+function normalizeUserAttendanceSites(userData: any): void {
+  if (!Array.isArray(userData.userAttendanceSites)) {
     return;
   }
 
-  userData.attendanceSites = userData.userAttendanceLocations.map((userAttendanceLocation: any) => {
-    const attendanceLocation = userAttendanceLocation.attendanceLocation;
+  userData.attendanceSites = userData.userAttendanceSites.map((userAttendanceSite: any) => {
+    const attendanceSite = userAttendanceSite.attendanceSite;
 
     return {
-      attendanceLocationId: userAttendanceLocation.attendanceLocationId,
-      latitude: attendanceLocation?.latitude ?? null,
-      longitude: attendanceLocation?.longitude ?? null,
-      radiusMeters: attendanceLocation?.radiusMeters ?? null,
-      locationName: attendanceLocation?.locationName ?? null,
+      attendanceSiteId: userAttendanceSite.attendanceSiteId,
+      latitude: attendanceSite?.latitude ?? null,
+      longitude: attendanceSite?.longitude ?? null,
+      radiusMeters: attendanceSite?.radiusMeters ?? null,
+      siteName: attendanceSite?.siteName ?? null,
     };
   });
 
-  delete userData.userAttendanceLocations;
+  delete userData.userAttendanceSites;
 }
 
 function normalizeAttendanceSiteIds(value: unknown): number[] {
@@ -267,20 +267,20 @@ export class usersRepository {
           required: false,
         },
         {
-          model: UserAttendanceLocation,
-          as: 'userAttendanceLocations',
+          model: UserAttendanceSite,
+          as: 'userAttendanceSites',
           required: false,
-          attributes: ['attendanceLocationId'],
+          attributes: ['attendanceSiteId'],
           where: {
             isDeleted: 0,
             isEnabled: 1,
           },
           include: [
             {
-              model: AttendanceLocation,
-              as: 'attendanceLocation',
+              model: AttendanceSite,
+              as: 'attendanceSite',
               required: false,
-              attributes: ['latitude', 'longitude', 'radiusMeters', 'locationName'],
+              attributes: ['latitude', 'longitude', 'radiusMeters', 'siteName'],
               where: {
                 isDeleted: 0,
                 isEnabled: 1,
@@ -321,7 +321,7 @@ export class usersRepository {
         }
         jsonRow.holidayCalendarName = jsonRow.holidayCalendar?.name || null;
         delete jsonRow.holidayCalendar;
-        normalizeUserAttendanceLocations(jsonRow);
+        normalizeUserAttendanceSites(jsonRow);
         return jsonRow;
       });
 
@@ -350,7 +350,7 @@ export class usersRepository {
         }
         jsonRow.holidayCalendarName = jsonRow.holidayCalendar?.name || null;
         delete jsonRow.holidayCalendar;
-        normalizeUserAttendanceLocations(jsonRow);
+        normalizeUserAttendanceSites(jsonRow);
         return jsonRow;
       });
       return {
@@ -424,20 +424,20 @@ export class usersRepository {
           required: false,
         },
         {
-          model: UserAttendanceLocation,
-          as: 'userAttendanceLocations',
+          model: UserAttendanceSite,
+          as: 'userAttendanceSites',
           required: false,
-          attributes: ['attendanceLocationId'],
+          attributes: ['attendanceSiteId'],
           where: {
             isDeleted: 0,
             isEnabled: 1,
           },
           include: [
             {
-              model: AttendanceLocation,
-              as: 'attendanceLocation',
+              model: AttendanceSite,
+              as: 'attendanceSite',
               required: false,
-              attributes: ['latitude', 'longitude', 'radiusMeters', 'locationName'],
+              attributes: ['latitude', 'longitude', 'radiusMeters', 'siteName'],
               where: {
                 isDeleted: 0,
                 isEnabled: 1,
@@ -475,7 +475,7 @@ export class usersRepository {
     jsonData.holidayCalendarName = jsonData.holidayCalendar?.name || null;
     delete jsonData.holidayCalendar;
 
-    normalizeUserAttendanceLocations(jsonData);
+    normalizeUserAttendanceSites(jsonData);
 
     return jsonData;
   }
@@ -761,7 +761,7 @@ export class usersRepository {
     const locationIds = [...new Set(normalizeAttendanceSiteIds(payload.attendanceSites))];
 
     await db.sequelize.transaction(async (transaction: any) => {
-      const existingLocations = await UserAttendanceLocation.findAll({
+      const existingLocations = await UserAttendanceSite.findAll({
         where: { userId },
         order: [
           ['isDeleted', 'ASC'],
@@ -772,15 +772,15 @@ export class usersRepository {
 
       const existingByLocationId = new Map<number, any>();
       existingLocations.forEach((location) => {
-        if (!existingByLocationId.has(location.attendanceLocationId)) {
-          existingByLocationId.set(location.attendanceLocationId, location);
+        if (!existingByLocationId.has(location.attendanceSiteId)) {
+          existingByLocationId.set(location.attendanceSiteId, location);
         }
       });
 
       const requestedLocationIds = new Set(locationIds);
 
       for (const location of existingLocations) {
-        if (!requestedLocationIds.has(location.attendanceLocationId) && location.isDeleted === 0) {
+        if (!requestedLocationIds.has(location.attendanceSiteId) && location.isDeleted === 0) {
           await location.update(
             {
               isDeleted: 1,
@@ -792,7 +792,7 @@ export class usersRepository {
         }
       }
 
-      const newAttendanceLocations: Array<Record<string, number | null>> = [];
+      const newAttendanceSites: Array<Record<string, number | null>> = [];
       for (const locationId of locationIds) {
         const existingLocation = existingByLocationId.get(locationId);
 
@@ -806,9 +806,9 @@ export class usersRepository {
             { transaction }
           );
         } else {
-          newAttendanceLocations.push({
+          newAttendanceSites.push({
             userId,
-            attendanceLocationId: locationId,
+            attendanceSiteId: locationId,
             isDeleted: 0,
             deletedAt: null,
             createdAt: updatedAt,
@@ -817,8 +817,8 @@ export class usersRepository {
         }
       }
 
-      if (newAttendanceLocations.length > 0) {
-        await UserAttendanceLocation.bulkCreate(newAttendanceLocations, { transaction });
+      if (newAttendanceSites.length > 0) {
+        await UserAttendanceSite.bulkCreate(newAttendanceSites, { transaction });
       }
     });
 
@@ -931,10 +931,10 @@ export class usersRepository {
       attendanceSiteIds
     );
 
-    const createdRecords = await UserAttendanceLocation.bulkCreate(
+    const createdRecords = await UserAttendanceSite.bulkCreate(
       attendanceSiteIds.map((attendanceSiteId) => ({
         userId,
-        attendanceLocationId: attendanceSiteId,
+        attendanceSiteId: attendanceSiteId,
         createdAt,
       }))
     );

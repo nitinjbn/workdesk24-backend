@@ -7,7 +7,7 @@ class GeoFencingValidator {
     }
   }
 
-  static validateAttendanceLocationPayload(
+  static validateAttendanceSitePayload(
     type: 'CREATE' | 'GET_LIST' | 'GET_BY_ID' | 'UPDATE' | 'DELETE',
     payload: any
   ): void {
@@ -17,23 +17,23 @@ class GeoFencingValidator {
         'latitude',
         'longitude',
         'radiusMeters',
-        'locationName',
+        'siteName',
         'isEnabled',
         'siteUsers',
       ],
       GET_LIST: ['hostId'],
-      GET_BY_ID: ['hostId', 'attendanceLocationId'],
+      GET_BY_ID: ['hostId', 'attendanceSiteId'],
       UPDATE: [
         'hostId',
-        'attendanceLocationId',
-        'locationName',
+        'attendanceSiteId',
+        'siteName',
         'latitude',
         'longitude',
         'radiusMeters',
         'isEnabled',
         'siteUsers',
       ],
-      DELETE: ['hostId', 'attendanceLocationId'],
+      DELETE: ['hostId', 'attendanceSiteId'],
     };
 
     const fields = requiredFields[type];

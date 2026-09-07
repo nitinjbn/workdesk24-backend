@@ -172,9 +172,9 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
       as: 'leavePolicy',
     });
 
-    User.hasMany(models.UserAttendanceLocation, {
+    User.hasMany(models.UserAttendanceSite, {
       foreignKey: 'userId',
-      as: 'userAttendanceLocations',
+      as: 'userAttendanceSites',
     });
   }
 }

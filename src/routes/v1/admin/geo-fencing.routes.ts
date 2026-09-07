@@ -4,26 +4,26 @@ import geoFencingController from '../../../modules/geo-fencing/controllers/geo-f
 const router = Router();
 
 router.post(
-  '/geo-fencing/createAttendanceLocation',
-  geoFencingController.createAttendanceLocation.bind(geoFencingController)
+  '/geo-fencing/createAttendanceSite',
+  geoFencingController.createAttendanceSite.bind(geoFencingController)
 );
 router.post(
-  '/geo-fencing/getAttendanceLocations',
-  geoFencingController.getAttendanceLocations.bind(geoFencingController)
+  '/geo-fencing/getAttendanceSites',
+  geoFencingController.getAttendanceSites.bind(geoFencingController)
 );
 router.post(
-  '/geo-fencing/updateAttendanceLocation',
-  geoFencingController.updateAttendanceLocation.bind(geoFencingController)
-);
-
-router.post(
-  '/geo-fencing/getAttendanceLocationById',
-  geoFencingController.getAttendanceLocationById.bind(geoFencingController)
+  '/geo-fencing/updateAttendanceSite',
+  geoFencingController.updateAttendanceSite.bind(geoFencingController)
 );
 
 router.post(
-  '/geo-fencing/deleteAttendanceLocation',
-  geoFencingController.deleteAttendanceLocation.bind(geoFencingController)
+  '/geo-fencing/getAttendanceSiteById',
+  geoFencingController.getAttendanceSiteById.bind(geoFencingController)
+);
+
+router.post(
+  '/geo-fencing/deleteAttendanceSite',
+  geoFencingController.deleteAttendanceSite.bind(geoFencingController)
 );
 
 export default router;

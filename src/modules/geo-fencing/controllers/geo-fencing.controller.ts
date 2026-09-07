@@ -5,20 +5,20 @@ import { AuthRequest } from '../../../shared/types/auth.types';
 import GeoFencingValidator from '../helpers/geo-fencing.validator';
 
 export class GeoFencingController {
-  async getAttendanceLocations(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  async getAttendanceSites(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       // Validate the payload before proceeding
-      GeoFencingValidator.validateAttendanceLocationPayload('GET_LIST', req.body);
+      GeoFencingValidator.validateAttendanceSitePayload('GET_LIST', req.body);
 
       const { hostId, filter, page, limit, sorting } = req.body;
 
-      const result = await geoFencingService.getAttendanceLocations(
+      const result = await geoFencingService.getAttendanceSites(
         { hostId, filter, page, limit, sorting },
         { hostId: req.user!.hostId }
       );
       res.json({
         success: true,
-        message: 'Attendance locations retrieved successfully',
+        message: 'Attendance sites retrieved successfully',
         data: result,
       } as ApiResponse);
     } catch (error) {
@@ -26,30 +26,26 @@ export class GeoFencingController {
     }
   }
 
-  async createAttendanceLocation(
-    req: AuthRequest,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+  async createAttendanceSite(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       // Validate the payload before proceeding
-      GeoFencingValidator.validateAttendanceLocationPayload('CREATE', req.body);
+      GeoFencingValidator.validateAttendanceSitePayload('CREATE', req.body);
 
-      const { hostId, latitude, longitude, radiusMeters, locationName, isEnabled, siteUsers } =
+      const { hostId, latitude, longitude, radiusMeters, siteName, isEnabled, siteUsers } =
         req.body;
 
-      const result = await geoFencingService.createAttendanceLocation({
+      const result = await geoFencingService.createAttendanceSite({
         hostId,
         latitude,
         longitude,
         radiusMeters,
-        locationName,
+        siteName,
         isEnabled,
         siteUsers,
       });
       res.json({
         success: true,
-        message: 'Attendance location created successfully',
+        message: 'Attendance site created successfully',
         data: result,
       } as ApiResponse);
     } catch (error) {
@@ -57,39 +53,35 @@ export class GeoFencingController {
     }
   }
 
-  async updateAttendanceLocation(
-    req: AuthRequest,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+  async updateAttendanceSite(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       // Validate the payload before proceeding
-      GeoFencingValidator.validateAttendanceLocationPayload('UPDATE', req.body);
+      GeoFencingValidator.validateAttendanceSitePayload('UPDATE', req.body);
 
       const {
         hostId,
-        attendanceLocationId,
+        attendanceSiteId,
         latitude,
         longitude,
         radiusMeters,
-        locationName,
+        siteName,
         isEnabled,
         siteUsers,
       } = req.body;
 
-      const result = await geoFencingService.updateAttendanceLocation({
+      const result = await geoFencingService.updateAttendanceSite({
         hostId,
-        attendanceLocationId,
+        attendanceSiteId,
         latitude,
         longitude,
         radiusMeters,
-        locationName,
+        siteName,
         isEnabled,
         siteUsers,
       });
       res.json({
         success: true,
-        message: 'Attendance location updated successfully',
+        message: 'Attendance site updated successfully',
         data: result,
       } as ApiResponse);
     } catch (error) {
@@ -97,24 +89,20 @@ export class GeoFencingController {
     }
   }
 
-  async getAttendanceLocationById(
-    req: AuthRequest,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+  async getAttendanceSiteById(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       // Validate the payload before proceeding
-      GeoFencingValidator.validateAttendanceLocationPayload('GET_BY_ID', req.body);
+      GeoFencingValidator.validateAttendanceSitePayload('GET_BY_ID', req.body);
 
-      const { hostId, attendanceLocationId } = req.body;
-      const result = await geoFencingService.getAttendanceLocationById({
+      const { hostId, attendanceSiteId } = req.body;
+      const result = await geoFencingService.getAttendanceSiteById({
         hostId,
-        attendanceLocationId,
+        attendanceSiteId,
         includeSiteUsers: true,
       });
       res.json({
         success: true,
-        message: 'Attendance location retrieved successfully',
+        message: 'Attendance site retrieved successfully',
         data: result,
       } as ApiResponse);
     } catch (error) {
@@ -122,23 +110,19 @@ export class GeoFencingController {
     }
   }
 
-  async deleteAttendanceLocation(
-    req: AuthRequest,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+  async deleteAttendanceSite(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       // Validate the payload before proceeding
-      GeoFencingValidator.validateAttendanceLocationPayload('DELETE', req.body);
+      GeoFencingValidator.validateAttendanceSitePayload('DELETE', req.body);
 
-      const { hostId, attendanceLocationId } = req.body;
-      const result = await geoFencingService.deleteAttendanceLocation({
+      const { hostId, attendanceSiteId } = req.body;
+      const result = await geoFencingService.deleteAttendanceSite({
         hostId,
-        attendanceLocationId,
+        attendanceSiteId,
       });
       res.json({
         success: true,
-        message: 'Attendance location deleted successfully',
+        message: 'Attendance site deleted successfully',
         data: result,
       } as ApiResponse);
     } catch (error) {

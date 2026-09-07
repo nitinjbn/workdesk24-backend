@@ -21,7 +21,11 @@ import { initCustomer } from './schemas/Customer';
 import { initUserRefreshToken } from './schemas/UserRefreshToken';
 import { initDesignation } from './schemas/Designation';
 import config, { logger } from '../config/database';
-import { DatabaseConnectionManager, type ConnectionMetrics, type HealthCheckResult } from '../shared/database/connection-manager';
+import {
+  DatabaseConnectionManager,
+  type ConnectionMetrics,
+  type HealthCheckResult,
+} from '../shared/database/connection-manager';
 import { initCustomerMedia } from './schemas/CustomerMedia';
 import { initCustomerType } from './schemas/CustomerType';
 import { initCustomerAttribute } from './schemas/CustomerAttributes';
@@ -52,8 +56,8 @@ import { initLeaveBalance } from './schemas/LeaveBalance';
 import { initLeaveBalanceTransaction } from './schemas/LeaveBalanceTransaction';
 import { initHoliday } from './schemas/Holiday';
 import { initHolidayCalendar } from './schemas/HolidayCalendar';
-import { initAttendanceLocation } from './schemas/AttendanceLocation';
-import { initUserAttendanceLocation } from './schemas/UserAttendanceLocation';
+import { initAttendanceSite } from './schemas/AttendanceSite';
+import { initUserAttendanceSite } from './schemas/UserAttendanceSite';
 
 dotenv.config();
 
@@ -161,8 +165,8 @@ const LeaveBalance = initLeaveBalance(sequelize);
 const LeaveBalanceTransaction = initLeaveBalanceTransaction(sequelize);
 const Holiday = initHoliday(sequelize);
 const HolidayCalendar = initHolidayCalendar(sequelize);
-const AttendanceLocation = initAttendanceLocation(sequelize);
-const UserAttendanceLocation = initUserAttendanceLocation(sequelize);
+const AttendanceSite = initAttendanceSite(sequelize);
+const UserAttendanceSite = initUserAttendanceSite(sequelize);
 
 // Store models in an object
 const db: any = {
@@ -219,8 +223,8 @@ const db: any = {
   Holiday,
   HolidayCalendar,
   connectionManager,
-  AttendanceLocation,
-  UserAttendanceLocation,
+  AttendanceSite,
+  UserAttendanceSite,
 };
 
 // Setup associations
@@ -323,8 +327,8 @@ export {
   LeaveBalanceTransaction,
   Holiday,
   HolidayCalendar,
-  AttendanceLocation,
-  UserAttendanceLocation,
+  AttendanceSite,
+  UserAttendanceSite,
 };
 
 export default db;

@@ -6,46 +6,45 @@ import { formatDateTimeFieldsBySettings } from '../../../shared/utils/date-time-
 import { DateTimeFormatUtil } from '../../../shared/utils/date-time-format.util';
 
 export class GeoFencingService {
-  async createAttendanceLocation(payload: {
+  async createAttendanceSite(payload: {
     hostId: number;
     latitude: number;
     longitude: number;
     radiusMeters: number;
-    locationName: string;
+    siteName: string;
     isEnabled: boolean;
     siteUsers: number[];
   }): Promise<any> {
-    const { hostId, latitude, longitude, radiusMeters, locationName, isEnabled, siteUsers } =
-      payload;
-    const trimmedLocationName = locationName.trim();
+    const { hostId, latitude, longitude, radiusMeters, siteName, isEnabled, siteUsers } = payload;
+    const trimmedSiteName = siteName.trim();
 
-    const isDuplicate = await geoFencingRepository.checkAttendanceLocationNameExists(
+    const isDuplicate = await geoFencingRepository.checkAttendanceSiteNameExists(
       hostId,
-      trimmedLocationName
+      trimmedSiteName
     );
 
     if (isDuplicate) {
       throw createConfiguredError(
-        'DUPLICATE_ATTENDANCE_LOCATION_NAME',
-        'An attendance location with this name already exists',
+        'DUPLICATE_ATTENDANCE_SITE_NAME',
+        'An attendance site with this name already exists',
         400
       );
     }
 
-    const createdLocation = await geoFencingRepository.createAttendanceLocation({
+    const createdLocation = await geoFencingRepository.createAttendanceSite({
       hostId,
       latitude,
       longitude,
       radiusMeters,
-      locationName: trimmedLocationName,
+      siteName: trimmedSiteName,
       isEnabled,
       siteUsers,
     });
 
-    return { attendanceLocation: createdLocation };
+    return { attendanceSite: createdLocation };
   }
 
-  async getAttendanceLocations(
+  async getAttendanceSites(
     payload: {
       hostId: number;
       filter?: Record<string, unknown>;
@@ -54,11 +53,11 @@ export class GeoFencingService {
       sorting?: CommonReportSorting;
     },
     scope: ReportScope
-  ): Promise<{ attendanceLocations: any[]; pagination?: any }> {
+  ): Promise<{ attendanceSites: any[]; pagination?: any }> {
     const { hostId, filter, page, limit } = payload;
     const sorting = this.normalizeCommonSorting(payload);
 
-    const report = await geoFencingRepository.getAttendanceLocations({
+    const report = await geoFencingRepository.getAttendanceSites({
       hostId,
       page,
       limit,
@@ -73,40 +72,37 @@ export class GeoFencingService {
     );
 
     return {
-      attendanceLocations: formatDateTimeFieldsBySettings(plainData, dateTimeSettings),
+      attendanceSites: formatDateTimeFieldsBySettings(plainData, dateTimeSettings),
       pagination: report.pagination,
     };
   }
 
-  async getAttendanceLocationById(payload: {
+  async getAttendanceSiteById(payload: {
     hostId: number;
-    attendanceLocationId: number;
+    attendanceSiteId: number;
     includeSiteUsers?: boolean;
   }): Promise<any> {
-    const { hostId, attendanceLocationId, includeSiteUsers } = payload;
-    const attendanceLocationDetails = await geoFencingRepository.getAttendanceLocationById({
+    const { hostId, attendanceSiteId, includeSiteUsers } = payload;
+    const attendanceSiteDetails = await geoFencingRepository.getAttendanceSiteById({
       hostId,
-      attendanceLocationId,
+      attendanceSiteId,
       includeSiteUsers,
     });
     if (
-      !attendanceLocationDetails ||
-      !Object(attendanceLocationDetails.data) ||
-      Object.keys(attendanceLocationDetails.data).length === 0
+      !attendanceSiteDetails ||
+      !Object(attendanceSiteDetails.data) ||
+      Object.keys(attendanceSiteDetails.data).length === 0
     ) {
-      throw createConfiguredError(
-        'ATTENDANCE_LOCATION_NOT_FOUND',
-        'Attendance location not found.'
-      );
+      throw createConfiguredError('ATTENDANCE_SITE_NOT_FOUND', 'Attendance site not found.');
     }
 
     const dateTimeSettings = await getHostDateTimeSettings(hostId);
     const plainData =
-      attendanceLocationDetails?.data && typeof attendanceLocationDetails.data.toJSON === 'function'
-        ? attendanceLocationDetails.data.toJSON()
-        : attendanceLocationDetails?.data;
+      attendanceSiteDetails?.data && typeof attendanceSiteDetails.data.toJSON === 'function'
+        ? attendanceSiteDetails.data.toJSON()
+        : attendanceSiteDetails?.data;
     return {
-      attendanceLocation: formatDateTimeFieldsBySettings(plainData as any, dateTimeSettings),
+      attendanceSite: formatDateTimeFieldsBySettings(plainData as any, dateTimeSettings),
     };
   }
 
@@ -123,11 +119,11 @@ export class GeoFencingService {
     };
   }
 
-  async updateAttendanceLocation(payload: any): Promise<any> {
+  async updateAttendanceSite(payload: any): Promise<any> {
     const {
       hostId,
-      attendanceLocationId,
-      locationName,
+      attendanceSiteId,
+      siteName,
       latitude,
       longitude,
       radiusMeters,
@@ -135,25 +131,22 @@ export class GeoFencingService {
       siteUsers,
     } = payload;
 
-    const attendanceLocationDetails = await geoFencingRepository.getAttendanceLocationById({
+    const attendanceSiteDetails = await geoFencingRepository.getAttendanceSiteById({
       hostId,
-      attendanceLocationId,
+      attendanceSiteId,
     });
     if (
-      !attendanceLocationDetails ||
-      !Object(attendanceLocationDetails.data) ||
-      Object.keys(attendanceLocationDetails.data).length === 0
+      !attendanceSiteDetails ||
+      !Object(attendanceSiteDetails.data) ||
+      Object.keys(attendanceSiteDetails.data).length === 0
     ) {
-      throw createConfiguredError(
-        'ATTENDANCE_LOCATION_NOT_FOUND',
-        'Attendance location not found.'
-      );
+      throw createConfiguredError('ATTENDANCE_SITE_NOT_FOUND', 'Attendance site not found.');
     }
 
     const currentUnixTime = DateTimeFormatUtil.getCurrentUnixTime();
 
     let updateObj: any = {
-      locationName,
+      siteName,
       latitude,
       longitude,
       radiusMeters,
@@ -162,35 +155,35 @@ export class GeoFencingService {
       updatedAt: currentUnixTime,
     };
 
-    const updateAttendanceLocationResult = await geoFencingRepository.updateAttendanceLocation({
+    const updateAttendanceSiteResult = await geoFencingRepository.updateAttendanceSite({
       updatePayload: updateObj,
-      where: { hostId, id: attendanceLocationId },
+      where: { hostId, id: attendanceSiteId },
       siteUsers,
     });
 
-    if (!updateAttendanceLocationResult) {
-      throw new Error('Failed to update attendance location');
+    if (!updateAttendanceSiteResult) {
+      throw new Error('Failed to update attendance site');
     }
 
     return {};
   }
 
-  async deleteAttendanceLocation(payload: any): Promise<any> {
-    const { hostId, attendanceLocationId } = payload;
-    const deleteResult = await geoFencingRepository.updateAttendanceLocation({
+  async deleteAttendanceSite(payload: any): Promise<any> {
+    const { hostId, attendanceSiteId } = payload;
+    const deleteResult = await geoFencingRepository.updateAttendanceSite({
       updatePayload: {
         isDeleted: 1,
         deletedAt: DateTimeFormatUtil.getCurrentUnixTime(),
       },
       where: {
         hostId,
-        id: attendanceLocationId,
+        id: attendanceSiteId,
       },
       siteUsers: [], // No site users should be associated with a deleted attendance location
     });
 
     if (!deleteResult) {
-      throw new Error('Failed to delete attendance location');
+      throw new Error('Failed to delete attendance site');
     }
 
     return {};

@@ -2,7 +2,7 @@ import { BaseRepository } from '../../../shared/repositories/base.repository';
 import User from '../../../models/schemas/User';
 import UserDevice from '../../../models/schemas/UserDevices';
 import { WhereOptions } from 'sequelize';
-import { UserOTP, UserAttendanceLocation, AttendanceLocation } from '../../../models';
+import { UserOTP, UserAttendanceSite, AttendanceSite } from '../../../models';
 import { DateTimeFormatUtil } from '../../../shared/utils/date-time-format.util';
 import UserOTPDeliveries from '../../../models/schemas/UserOTPDeliveries';
 
@@ -17,7 +17,8 @@ export class UserRepository extends BaseRepository<typeof User.prototype> {
     return this.model.create({
       ...data,
       role: (data as any).role || 'user',
-      accountStatus: (data as any).accountStatus !== undefined ? (data as any).accountStatus : 'ACTIVE',
+      accountStatus:
+        (data as any).accountStatus !== undefined ? (data as any).accountStatus : 'ACTIVE',
       lastLoginAt: (data as any).lastLoginAt || null,
       createdAt: now,
       updatedAt: now,
@@ -42,15 +43,19 @@ export class UserRepository extends BaseRepository<typeof User.prototype> {
     });
   }
 
-  async getAttendanceLocationsForUser(userId: number): Promise<Array<{ locationName: string; latitude: number; longitude: number }>> {
-    const assignments = await UserAttendanceLocation.findAll({
+  async getAttendanceSitesForUser(
+    userId: number
+  ): Promise<
+    Array<{ locationName: string; latitude: number; longitude: number; radiusMeters: number }>
+  > {
+    const assignments = await UserAttendanceSite.findAll({
       where: { userId, isDeleted: 0, isEnabled: 1 },
       include: [
         {
-          model: AttendanceLocation,
-          as: 'attendanceLocation',
+          model: AttendanceSite,
+          as: 'attendanceSite',
           where: { isDeleted: 0, isEnabled: 1 },
-          attributes: ['locationName', 'latitude', 'longitude', 'radiusMeters'],
+          attributes: ['siteName', 'latitude', 'longitude', 'radiusMeters'],
           required: true,
         },
       ],
@@ -59,22 +64,22 @@ export class UserRepository extends BaseRepository<typeof User.prototype> {
     });
 
     return assignments.map((assignment: any) => ({
-      locationName: assignment.attendanceLocation.locationName,
-      latitude: assignment.attendanceLocation.latitude,
-      longitude: assignment.attendanceLocation.longitude,
-      radiusMeters: assignment.attendanceLocation.radiusMeters,
+      locationName: assignment.attendanceSite.siteName,
+      latitude: assignment.attendanceSite.latitude,
+      longitude: assignment.attendanceSite.longitude,
+      radiusMeters: assignment.attendanceSite.radiusMeters,
     }));
   }
 
   async getUsersByFilter(filter: any): Promise<any> {
-    if(!filter) {
+    if (!filter) {
       throw new Error('Filter is required');
     }
     const { deviceId, ...where } = filter;
     // const where:any = {deviceId, ...filter}; // Remove this line as it's redundant
-    
+
     // Ensure that isDeleted is always checked to be 0 unless explicitly provided in the filter
-    if(!Object.prototype.hasOwnProperty.call(where, 'isDeleted')) {
+    if (!Object.prototype.hasOwnProperty.call(where, 'isDeleted')) {
       where.isDeleted = 0;
     }
     const users = await User.findAll({
@@ -90,11 +95,44 @@ export class UserRepository extends BaseRepository<typeof User.prototype> {
         },
       ],
     });
-    return users?.map(user => user.get({ plain: true })) || [];
+    return users?.map((user) => user.get({ plain: true })) || [];
   }
 
-  async saveOtpForUser(payload: { hostId: number, userId: number; identifierType: string; identifierValue: string; otpCode: string; expiresAt: number; purpose: string; messageId?: string; maxAttempts: number; requestIp: string; createdAt: number; otpDeliveries: Array<{ deliveryChannel: string; destination: string; messageId?: string; provider?: string; status?: string | null; failedReason?: string | null, sentAt?: number | null }> }): Promise<any> {
-    const { hostId, userId, identifierType, identifierValue, otpCode, expiresAt, purpose, maxAttempts, requestIp, createdAt, otpDeliveries } = payload;
+  async saveOtpForUser(payload: {
+    hostId: number;
+    userId: number;
+    identifierType: string;
+    identifierValue: string;
+    otpCode: string;
+    expiresAt: number;
+    purpose: string;
+    messageId?: string;
+    maxAttempts: number;
+    requestIp: string;
+    createdAt: number;
+    otpDeliveries: Array<{
+      deliveryChannel: string;
+      destination: string;
+      messageId?: string;
+      provider?: string;
+      status?: string | null;
+      failedReason?: string | null;
+      sentAt?: number | null;
+    }>;
+  }): Promise<any> {
+    const {
+      hostId,
+      userId,
+      identifierType,
+      identifierValue,
+      otpCode,
+      expiresAt,
+      purpose,
+      maxAttempts,
+      requestIp,
+      createdAt,
+      otpDeliveries,
+    } = payload;
     const createdOtpResult = await UserOTP.create({
       hostId,
       userId,
@@ -105,12 +143,12 @@ export class UserRepository extends BaseRepository<typeof User.prototype> {
       purpose,
       maxAttempts,
       requestIp,
-      createdAt
+      createdAt,
     });
 
     // Save OTP deliveries if provided
     if (otpDeliveries && otpDeliveries.length > 0) {
-      const otpDeliveryRecords = otpDeliveries.map(delivery => ({
+      const otpDeliveryRecords = otpDeliveries.map((delivery) => ({
         hostId,
         userId,
         otpId: createdOtpResult.id,
@@ -121,7 +159,7 @@ export class UserRepository extends BaseRepository<typeof User.prototype> {
         status: delivery.status || 'PENDING',
         failureReason: delivery.failedReason || null,
         sentAt: delivery.sentAt || null,
-        createdAt
+        createdAt,
       }));
       await UserOTPDeliveries.bulkCreate(otpDeliveryRecords);
     }
@@ -140,7 +178,7 @@ export class UserRepository extends BaseRepository<typeof User.prototype> {
       where: {
         hostId,
         userId,
-        purpose
+        purpose,
       },
       order: [
         ['createdAt', 'DESC'],
@@ -197,7 +235,7 @@ export class UserRepository extends BaseRepository<typeof User.prototype> {
   }): Promise<UserDevice> {
     const { hostId, userId, deviceId, ...deviceData } = payload;
 
-    if(!deviceData.createdAt) {
+    if (!deviceData.createdAt) {
       deviceData.createdAt = DateTimeFormatUtil.getCurrentUnixTime();
     }
 

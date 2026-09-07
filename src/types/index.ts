@@ -72,7 +72,7 @@ export interface GpsHistoryAttributes {
   batteryPercentage?: number;
   isCharging?: number;
   createdAt?: number;
-  updatedAt?: number | null;  
+  updatedAt?: number | null;
   syncedAt?: number;
   isDeleted?: number;
   deletedAt?: number | null;
@@ -109,7 +109,7 @@ export interface GpsHistoryAttributes {
   batteryPercentage?: number;
   isCharging?: number;
   createdAt?: number;
-  updatedAt?: number | null;  
+  updatedAt?: number | null;
   syncedAt?: number;
   isDeleted?: number;
   deletedAt?: number | null;
@@ -477,7 +477,8 @@ export interface ProductMediaAttributes {
   hostId: number;
   productId: number;
   mediaUrl: string;
-  mediaType: 'IMAGE' | 'VIDEO' | 'PDF' | 'DOCUMENT' | 'BROCHURE' | 'CERTIFICATE' | 'LABEL' | 'MANUAL';
+  mediaType:
+    'IMAGE' | 'VIDEO' | 'PDF' | 'DOCUMENT' | 'BROCHURE' | 'CERTIFICATE' | 'LABEL' | 'MANUAL';
   thumbnailUrl?: string;
   publicId?: string;
   fileName?: string;
@@ -651,7 +652,8 @@ export interface CustomerMediaAttributes {
   hostId: number;
   customerId: number;
   mediaUrl: string;
-  mediaType: 'IMAGE' | 'VIDEO' | 'PDF' | 'DOCUMENT' | 'BROCHURE' | 'CERTIFICATE' | 'LABEL' | 'MANUAL';
+  mediaType:
+    'IMAGE' | 'VIDEO' | 'PDF' | 'DOCUMENT' | 'BROCHURE' | 'CERTIFICATE' | 'LABEL' | 'MANUAL';
   thumbnailUrl?: string;
   publicId?: string;
   fileName?: string;
@@ -820,10 +822,10 @@ export interface UserDailySummaryAttributes {
   deletedAt?: number | null;
 }
 
-export interface AttendanceLocationAttributes {
+export interface AttendanceSiteAttributes {
   id: number;
   hostId: number;
-  locationName: string;
+  siteName: string;
   latitude?: number;
   longitude?: number;
   radiusMeters?: number;
@@ -834,10 +836,10 @@ export interface AttendanceLocationAttributes {
   isDeleted: number;
 }
 
-export interface UserAttendanceLocationAttributes {
+export interface UserAttendanceSiteAttributes {
   id: number;
   userId: number;
-  attendanceLocationId: number;
+  attendanceSiteId: number;
   isEnabled: number;
   createdAt: number;
   updatedAt?: number;

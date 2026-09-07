@@ -1,11 +1,11 @@
 import { FindAndCountOptions, Op, Transaction } from 'sequelize';
-import db, { AttendanceLocation, sequelize, UserAttendanceLocation } from '../../../models';
+import db, { AttendanceSite, sequelize, UserAttendanceSite } from '../../../models';
 import { ReportResponse } from '../types/geo-fencing.types';
 import baseReportHelper from '../helpers/base-report.helper';
 import { DateTimeFormatUtil } from '../../../shared/utils/date-time-format.util';
 
 export class geoFencingRepository {
-  async getAttendanceLocations(params: {
+  async getAttendanceSites(params: {
     page?: number;
     limit?: number;
     filter?: Record<string, unknown>;
@@ -28,12 +28,12 @@ export class geoFencingRepository {
       isDeleted: 0,
     };
     if (filter) {
-      if (filter.id || filter.attendanceLocationId) {
-        where.id = filter.attendanceLocationId || filter.id;
+      if (filter.id || filter.attendanceSiteId) {
+        where.id = filter.attendanceSiteId || filter.id;
       }
-      if (filter.locationName) {
-        where.locationName = {
-          [Op.like]: `%${(filter.locationName as string).trim()}%`,
+      if (filter.siteName) {
+        where.siteName = {
+          [Op.like]: `%${(filter.siteName as string).trim()}%`,
         };
       }
       if (filter.latitude) {
@@ -52,7 +52,7 @@ export class geoFencingRepository {
     const query: FindAndCountOptions<any> = {
       attributes: [
         'id',
-        'locationName',
+        'siteName',
         'latitude',
         'longitude',
         'radiusMeters',
@@ -69,29 +69,29 @@ export class geoFencingRepository {
       query.limit = limit;
       query.offset = offset;
 
-      const { rows, count } = await AttendanceLocation.findAndCountAll(query);
+      const { rows, count } = await AttendanceSite.findAndCountAll(query);
 
       return {
         data: rows,
         pagination: baseReportHelper.buildPagination(count, page, limit),
       };
     } else {
-      const rows = await AttendanceLocation.findAll(query);
+      const rows = await AttendanceSite.findAll(query);
       return {
         data: rows,
       };
     }
   }
 
-  async getAttendanceLocationById(params: {
+  async getAttendanceSiteById(params: {
     hostId: number;
-    attendanceLocationId: number;
+    attendanceSiteId: number;
     includeSiteUsers?: boolean;
   }): Promise<any> {
-    const { hostId, attendanceLocationId, includeSiteUsers } = params;
+    const { hostId, attendanceSiteId, includeSiteUsers } = params;
 
     const where: any = {
-      id: attendanceLocationId,
+      id: attendanceSiteId,
       hostId,
       isDeleted: 0,
     };
@@ -99,7 +99,7 @@ export class geoFencingRepository {
     const query: FindAndCountOptions<any> = {
       attributes: [
         'id',
-        'locationName',
+        'siteName',
         'latitude',
         'longitude',
         'radiusMeters',
@@ -115,7 +115,7 @@ export class geoFencingRepository {
       query.include = [
         {
           attributes: ['userId', 'createdAt', 'updatedAt'],
-          model: UserAttendanceLocation,
+          model: UserAttendanceSite,
           as: 'siteUsers',
           where: { isDeleted: 0 },
           required: false,
@@ -123,25 +123,24 @@ export class geoFencingRepository {
       ];
     }
 
-    const attendanceLocationDetails = await AttendanceLocation.findOne(query);
+    const attendanceSiteDetails = await AttendanceSite.findOne(query);
     return {
-      data: attendanceLocationDetails?.toJSON() || {},
+      data: attendanceSiteDetails?.toJSON() || {},
     };
   }
 
-  async createAttendanceLocation(params: any): Promise<any> {
-    const { hostId, latitude, longitude, radiusMeters, locationName, isEnabled, siteUsers } =
-      params;
+  async createAttendanceSite(params: any): Promise<any> {
+    const { hostId, latitude, longitude, radiusMeters, siteName, isEnabled, siteUsers } = params;
 
     const transaction = await sequelize.transaction();
     try {
-      const newLocation = await AttendanceLocation.create(
+      const newLocation = await AttendanceSite.create(
         {
           hostId,
           latitude,
           longitude,
           radiusMeters,
-          locationName,
+          siteName,
           isEnabled,
           createdAt: DateTimeFormatUtil.getCurrentUnixTime(),
         },
@@ -149,8 +148,8 @@ export class geoFencingRepository {
       );
 
       if (siteUsers && siteUsers.length > 0) {
-        await this.assignSiteUsersToAttendanceLocation({
-          attendanceLocationId: newLocation.id,
+        await this.assignSiteUsersToAttendanceSite({
+          attendanceSiteId: newLocation.id,
           siteUsers,
           transaction,
         });
@@ -168,11 +167,11 @@ export class geoFencingRepository {
     }
   }
 
-  async checkAttendanceLocationNameExists(hostId: number, locationName: string): Promise<boolean> {
-    const count = await AttendanceLocation.count({
+  async checkAttendanceSiteNameExists(hostId: number, siteName: string): Promise<boolean> {
+    const count = await AttendanceSite.count({
       where: {
         hostId,
-        locationName: locationName.trim(),
+        siteName: siteName.trim(),
         isDeleted: 0,
       },
     });
@@ -180,19 +179,19 @@ export class geoFencingRepository {
     return count > 0;
   }
 
-  async updateAttendanceLocation(params: any): Promise<any> {
+  async updateAttendanceSite(params: any): Promise<any> {
     const { updatePayload, where, siteUsers } = params;
     const transaction = await sequelize.transaction();
 
     try {
-      const updateResult = await AttendanceLocation.update(updatePayload, {
+      const updateResult = await AttendanceSite.update(updatePayload, {
         where,
         transaction,
       });
 
       // Assign/delete site users to the attendance location
-      await this.assignSiteUsersToAttendanceLocation({
-        attendanceLocationId: where.id,
+      await this.assignSiteUsersToAttendanceSite({
+        attendanceSiteId: where.id,
         siteUsers,
         transaction,
       });
@@ -209,12 +208,12 @@ export class geoFencingRepository {
     }
   }
 
-  async assignSiteUsersToAttendanceLocation(params: {
-    attendanceLocationId: number;
+  async assignSiteUsersToAttendanceSite(params: {
+    attendanceSiteId: number;
     siteUsers: number[];
     transaction?: Transaction;
   }): Promise<any> {
-    const { attendanceLocationId, siteUsers } = params;
+    const { attendanceSiteId, siteUsers } = params;
 
     const transaction: Transaction = params.transaction || (await sequelize.transaction());
 
@@ -225,9 +224,9 @@ export class geoFencingRepository {
       const uniqueSiteUsers = [...new Set(siteUsers)];
 
       // Get all existing mappings, including soft-deleted ones
-      const existingRecords = await UserAttendanceLocation.findAll({
+      const existingRecords = await UserAttendanceSite.findAll({
         where: {
-          attendanceLocationId,
+          attendanceSiteId,
           isDeleted: 0,
         },
         transaction,
@@ -274,10 +273,10 @@ export class geoFencingRepository {
       const newUserIds = uniqueSiteUsers.filter((userId) => !existingUserIds.has(Number(userId)));
 
       if (newUserIds.length > 0) {
-        await UserAttendanceLocation.bulkCreate(
+        await UserAttendanceSite.bulkCreate(
           newUserIds.map((userId) => ({
             userId,
-            attendanceLocationId,
+            attendanceSiteId,
             isEnabled: 1,
             isDeleted: 0,
             deletedAt: null,
@@ -289,7 +288,7 @@ export class geoFencingRepository {
 
       //await transaction.commit();
       return {
-        attendanceLocationId,
+        attendanceSiteId,
         siteUsers: uniqueSiteUsers,
       };
     } catch (error) {
