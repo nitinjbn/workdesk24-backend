@@ -2,83 +2,85 @@ import { EmailUtil } from './email.util';
 import { PhoneUtil } from './phone.util';
 import crypto from 'crypto';
 export class CommonUtil {
-    static convertSettingsToArray(settings: Record<string, any>): Array<{ settingName: string; settingValue: string }> {
-        if (!settings || typeof settings !== 'object') {
-            return [];
+  static convertSettingsToArray(
+    settings: Record<string, any>
+  ): Array<{ settingName: string; settingValue: string }> {
+    if (!settings || typeof settings !== 'object') {
+      return [];
+    }
+    return Object.entries(settings).map(([settingName, settingValue]) => ({
+      settingName,
+      settingValue:
+        typeof settingValue === 'object' ? JSON.stringify(settingValue) : String(settingValue),
+    }));
+  }
+
+  static convertSettingsToObject(
+    settingsArray: Array<{ settingName: string; settingValue: any }>
+  ): Record<string, any> {
+    if (!Array.isArray(settingsArray)) {
+      return {};
+    }
+    return settingsArray.reduce((result, { settingName, settingValue }) => {
+      let value: any = settingValue;
+
+      // Try to parse JSON (arrays/objects)
+      try {
+        value = JSON.parse(settingValue);
+      } catch (_) {
+        // Convert primitive values
+        if (settingValue === 'true') {
+          value = true;
+        } else if (settingValue === 'false') {
+          value = false;
+        } else if (!isNaN(settingValue) && settingValue.trim() !== '') {
+          value = Number(settingValue);
         }
-        return Object.entries(settings).map(([settingName, settingValue]) => ({
-            settingName,
-            settingValue:
-            typeof settingValue === 'object'
-            ? JSON.stringify(settingValue)
-            : String(settingValue)
-        }));
+      }
+
+      result[settingName] = value;
+      return result;
+    }, {});
+  }
+
+  static parseJsonField(value: string, defaultValue: any = {}): any {
+    if (!value) return defaultValue;
+    try {
+      return JSON.parse(value);
+    } catch {
+      return defaultValue;
+    }
+  }
+
+  static parseIdentifier(identifier: string): any {
+    const value = identifier.trim();
+
+    // Email
+    const parseEmailResult = EmailUtil.parseEmail(value);
+    if (parseEmailResult.isValid) {
+      return {
+        type: 'EMAIL',
+        email: parseEmailResult.email,
+      };
     }
 
-    static convertSettingsToObject(settingsArray: Array<{ settingName: string; settingValue: any }>): Record<string, any> {
-        if (!Array.isArray(settingsArray)) {
-            return {};
-        }
-        return settingsArray.reduce((result, { settingName, settingValue }) => {
-            let value:any = settingValue;
-
-            // Try to parse JSON (arrays/objects)
-            try {
-                value = JSON.parse(settingValue);
-            } catch (_) {
-                // Convert primitive values
-                if (settingValue === 'true') {
-                    value = true;
-                } else if (settingValue === 'false') {
-                    value = false;
-                } else if (!isNaN(settingValue) && settingValue.trim() !== '') {
-                    value = Number(settingValue);
-                }
-            }
-
-            result[settingName] = value;
-            return result;
-        }, {});
+    // Mobile
+    const parseMobileResult = PhoneUtil.parseMobileNumber(value);
+    if (parseMobileResult.isValid) {
+      return {
+        type: 'MOBILE',
+        mobile: parseMobileResult.mobile,
+      };
     }
 
-    static parseJsonField(value: string, defaultValue: any = {}): any {
-        if (!value) return defaultValue;
-        try {
-            return JSON.parse(value);
-        } catch {
-            return defaultValue;
-        }
-    }
+    return {
+      type: null,
+      email: null,
+      mobile: null,
+    };
+  }
 
-    static parseIdentifier(identifier: string): any {
-        const value = identifier.trim();
-
-        // Email
-        const parseEmailResult = EmailUtil.parseEmail(value);
-        if (parseEmailResult.isValid) {
-            return {
-                type: 'EMAIL',
-                email: parseEmailResult.email
-            };
-        }
-
-        // Mobile
-        const parseMobileResult = PhoneUtil.parseMobileNumber(value);
-        if (parseMobileResult.isValid) {
-            return {
-                type: 'MOBILE',
-                mobile: parseMobileResult.mobile
-            };
-        }
-
-        return {
-            type: null,
-            email: null,
-            mobile: null
-        };
-    }
-
-    /**
+  /**
    * Generate a cryptographically secure numeric OTP.
    *
    * @param length OTP length (default: 6)
@@ -90,97 +92,94 @@ export class CommonUtil {
     }
 
     const min = 10 ** (length - 1);
-    const max = (10 ** length) - 1;
+    const max = 10 ** length - 1;
 
     return crypto.randomInt(min, max + 1).toString();
   }
 
-    static maskEmail(email: string): string {
-        const [localPart = '', domainPart = ''] = email.split('@');
-        const maskedLocalPart =
-            localPart.length <= 2
-                ? `${localPart.charAt(0) || '*'}*`
-                : `${localPart.slice(0, 2)}***`;
+  static maskEmail(email: string): string {
+    const [localPart = '', domainPart = ''] = email.split('@');
+    const maskedLocalPart =
+      localPart.length <= 2 ? `${localPart.charAt(0) || '*'}*` : `${localPart.slice(0, 2)}***`;
 
-        const domainSegments = domainPart.split('.');
-        const domainName = domainSegments.shift() || '';
-        const tld = domainSegments.join('.');
-        const maskedDomainName =
-            domainName.length <= 2
-                ? `${domainName.charAt(0) || '*'}*`
-                : `${domainName.slice(0, 2)}***`;
+    const domainSegments = domainPart.split('.');
+    const domainName = domainSegments.shift() || '';
+    const tld = domainSegments.join('.');
+    const maskedDomainName =
+      domainName.length <= 2 ? `${domainName.charAt(0) || '*'}*` : `${domainName.slice(0, 2)}***`;
 
-        return `${maskedLocalPart}@${maskedDomainName}${tld ? `.${tld}` : ''}`;
+    return `${maskedLocalPart}@${maskedDomainName}${tld ? `.${tld}` : ''}`;
+  }
+
+  static maskMobile(mobile: string): string {
+    const digits = mobile.replace(/\D/g, '');
+    if (digits.length <= 4) {
+      return `****${digits}`;
     }
 
-    static maskMobile(mobile: string): string {
-        const digits = mobile.replace(/\D/g, '');
-        if (digits.length <= 4) {
-            return `****${digits}`;
-        }
+    const maskedMiddle = '*'.repeat(Math.max(2, digits.length - 4));
+    return `${digits.slice(0, 2)}${maskedMiddle}${digits.slice(-2)}`;
+  }
 
-        const maskedMiddle = '*'.repeat(Math.max(2, digits.length - 4));
-        return `${digits.slice(0, 2)}${maskedMiddle}${digits.slice(-2)}`;
+  static buildOtpDeliveryMessage(params: {
+    email?: string;
+    mobile?: string;
+    emailOtpStatus: boolean;
+    smsOtpStatus: boolean;
+  }): string {
+    const { email, mobile, emailOtpStatus, smsOtpStatus } = params;
+    const channels: string[] = [];
+
+    if (emailOtpStatus && email) {
+      channels.push(`email ${CommonUtil.maskEmail(email)}`);
     }
 
-    static buildOtpDeliveryMessage(params: {
-        email?: string;
-        mobile?: string;
-        emailOtpStatus: boolean;
-        smsOtpStatus: boolean;
-    }): string {
-        const { email, mobile, emailOtpStatus, smsOtpStatus } = params;
-        const channels: string[] = [];
-
-        if (emailOtpStatus && email) {
-            channels.push(`email ${CommonUtil.maskEmail(email)}`);
-        }
-
-        if (smsOtpStatus && mobile) {
-            channels.push(`mobile ${CommonUtil.maskMobile(mobile)}`);
-        }
-
-        if (!channels.length) {
-            return 'OTP sent successfully.';
-        }
-
-        if (channels.length === 1) {
-            return `OTP sent to ${channels[0]}.`;
-        }
-
-        return `OTP sent to ${channels.slice(0, -1).join(', ')} and ${channels[channels.length - 1]}.`;
+    if (smsOtpStatus && mobile) {
+      channels.push(`mobile ${CommonUtil.maskMobile(mobile)}`);
     }
 
-    /**
-     * Formats bytes into a human-readable size.
-     *
-     * Default uses decimal (1000), which matches Android/iPhone storage display.
-     * Pass base = 1024 for file sizes.
-     *
-     * Examples:
-     * formatBytes(111969009664)         => "111.97 GB"
-     * formatBytes(5242880)              => "5.24 MB"
-     * formatBytes(1536, 2, 1024)        => "1.5 KB"
-     */
-    static formatBytes(payload: {bytes: number, decimals?: number; base?: number;}): string {
-        const { bytes, decimals = 2, base = 1000 } = payload;
-        if (!Number.isFinite(bytes) || bytes <= 0) {
-            return '0 Bytes';
-        }
-
-        const units = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB'];
-
-        const unitIndex = Math.min(
-            Math.floor(Math.log(bytes) / Math.log(base)),
-            units.length - 1
-        );
-
-        const value = bytes / Math.pow(base, unitIndex);
-
-        return `${parseFloat(value.toFixed(decimals))} ${units[unitIndex]}`;
+    if (!channels.length) {
+      return 'OTP sent successfully.';
     }
 
-    static generateUUID(): string {
-        return crypto.randomUUID();
+    if (channels.length === 1) {
+      return `OTP sent to ${channels[0]}.`;
     }
+
+    return `OTP sent to ${channels.slice(0, -1).join(', ')} and ${channels[channels.length - 1]}.`;
+  }
+
+  /**
+   * Formats bytes into a human-readable size.
+   *
+   * Default uses decimal (1000), which matches Android/iPhone storage display.
+   * Pass base = 1024 for file sizes.
+   *
+   * Examples:
+   * formatBytes(111969009664)         => "111.97 GB"
+   * formatBytes(5242880)              => "5.24 MB"
+   * formatBytes(1536, 2, 1024)        => "1.5 KB"
+   */
+  static formatBytes(payload: { bytes: number; decimals?: number; base?: number }): string {
+    const { bytes, decimals = 2, base = 1000 } = payload;
+    if (!Number.isFinite(bytes) || bytes <= 0) {
+      return '0 Bytes';
+    }
+
+    const units = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB'];
+
+    const unitIndex = Math.min(Math.floor(Math.log(bytes) / Math.log(base)), units.length - 1);
+
+    const value = bytes / Math.pow(base, unitIndex);
+
+    return `${parseFloat(value.toFixed(decimals))} ${units[unitIndex]}`;
+  }
+
+  static generateUUID(): string {
+    return crypto.randomUUID();
+  }
+
+  static toTitleCase(value: string): string {
+    return value.toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase());
+  }
 }

@@ -1,11 +1,15 @@
 import { sequelize } from '../../../models';
 import { createConfiguredError } from '../../../shared/utils/error.util';
 import { getHostDateTimeSettings } from '../../../shared/utils/host-settings.util';
-import { formatDateTimeFieldsBySettings, getDayNameFromDateString } from '../../../shared/utils/date-time-format.util';
+import {
+  formatDateTimeFieldsBySettings,
+  getDayNameFromDateString,
+} from '../../../shared/utils/date-time-format.util';
 import leaveBalanceService from './leave-balance.service';
 import leaveCalculationService from './leave-calculation.service';
 import leavePolicyService from './leave-policy.service';
 import leaveRequestAppRepository from '../repositories/leave-request-app.repository';
+import { CommonUtil } from '../../../shared/utils/common.util';
 
 export class LeaveAppService {
   async getLeaveSummary(payload: { hostId: number; userId: number }): Promise<any> {
@@ -96,7 +100,11 @@ export class LeaveAppService {
     };
   }
 
-  async getHolidays(payload: { hostId: number; userId: number; leaveYearId?: number }): Promise<any> {
+  async getHolidays(payload: {
+    hostId: number;
+    userId: number;
+    leaveYearId?: number;
+  }): Promise<any> {
     const { hostId, userId, leaveYearId } = payload;
 
     const resolved = await leaveRequestAppRepository.resolveEffectiveHolidayCalendarForUser({
@@ -205,10 +213,18 @@ export class LeaveAppService {
     };
   }
 
-  async getLeaveRequestById(payload: { hostId: number; userId: number; leaveRequestId: number }): Promise<any> {
+  async getLeaveRequestById(payload: {
+    hostId: number;
+    userId: number;
+    leaveRequestId: number;
+  }): Promise<any> {
     const { hostId, userId, leaveRequestId } = payload;
 
-    const request = await leaveRequestAppRepository.getLeaveRequestById(hostId, userId, leaveRequestId);
+    const request = await leaveRequestAppRepository.getLeaveRequestById(
+      hostId,
+      userId,
+      leaveRequestId
+    );
     if (!request) {
       throw createConfiguredError('LEAVE_REQUEST_NOT_FOUND', 'Leave request not found', 404);
     }
@@ -218,11 +234,15 @@ export class LeaveAppService {
       leaveRequestAppRepository.getLeaveRequestApprovals(hostId, leaveRequestId),
     ]);
 
-    const requestPlain = request && typeof request.toJSON === 'function' ? request.toJSON() : request;
+    const requestPlain =
+      request && typeof request.toJSON === 'function' ? request.toJSON() : request;
     const dayPlain = days.map((item: any) => {
       const plain = item && typeof item.toJSON === 'function' ? item.toJSON() : item;
       return {
         ...plain,
+        durationType: plain?.durationType
+          ? CommonUtil.toTitleCase(plain.durationType.replace('_', ' '))
+          : '',
         dayName: plain?.leaveDate ? getDayNameFromDateString(plain.leaveDate) : null,
       };
     });
@@ -281,7 +301,11 @@ export class LeaveAppService {
   private mapLeaveRequestDaysFromInput(payload: {
     days: Array<{ leaveDate: string; durationType: 'FULL_DAY' | 'FIRST_HALF' | 'SECOND_HALF' }>;
     dayBreakdown: Array<{ date: string; durationDays: number; excludedByHoliday: boolean }>;
-  }): Array<{ leaveDate: string; durationType: 'FULL_DAY' | 'FIRST_HALF' | 'SECOND_HALF'; durationDays: number }> {
+  }): Array<{
+    leaveDate: string;
+    durationType: 'FULL_DAY' | 'FIRST_HALF' | 'SECOND_HALF';
+    durationDays: number;
+  }> {
     const breakdownMap = new Map<string, { durationDays: number; excludedByHoliday: boolean }>();
     payload.dayBreakdown.forEach((item) => {
       breakdownMap.set(item.date, {
@@ -302,7 +326,15 @@ export class LeaveAppService {
           durationDays: day.durationType === 'FULL_DAY' ? 1 : 0.5,
         };
       })
-      .filter((item): item is { leaveDate: string; durationType: 'FULL_DAY' | 'FIRST_HALF' | 'SECOND_HALF'; durationDays: number } => !!item);
+      .filter(
+        (
+          item
+        ): item is {
+          leaveDate: string;
+          durationType: 'FULL_DAY' | 'FIRST_HALF' | 'SECOND_HALF';
+          durationDays: number;
+        } => !!item
+      );
   }
 
   async createLeaveRequest(payload: {
@@ -315,7 +347,8 @@ export class LeaveAppService {
     requestLocalId?: string;
     days: Array<{ leaveDate: string; durationType: 'FULL_DAY' | 'FIRST_HALF' | 'SECOND_HALF' }>;
   }): Promise<any> {
-    const { hostId, userId, leaveTypeId, fromDate, tillDate, reason, requestLocalId, days } = payload;
+    const { hostId, userId, leaveTypeId, fromDate, tillDate, reason, requestLocalId, days } =
+      payload;
 
     if (!leaveTypeId || !fromDate || !tillDate || !Array.isArray(days) || days.length === 0) {
       throw createConfiguredError(
@@ -329,7 +362,11 @@ export class LeaveAppService {
     const transaction = await sequelize.transaction();
 
     try {
-      const lockedUser = await leaveRequestAppRepository.lockUserForLeaveOps(hostId, userId, transaction);
+      const lockedUser = await leaveRequestAppRepository.lockUserForLeaveOps(
+        hostId,
+        userId,
+        transaction
+      );
       if (!lockedUser) {
         throw createConfiguredError('USER_NOT_FOUND', 'User not found', 404);
       }
@@ -456,7 +493,11 @@ export class LeaveAppService {
       const message = String(error?.message || '').toLowerCase();
       if (message.includes('uk_leave_request_host_user_local_id')) {
         const existing = normalizedRequestLocalId
-          ? await leaveRequestAppRepository.getLeaveRequestByLocalId(hostId, userId, normalizedRequestLocalId)
+          ? await leaveRequestAppRepository.getLeaveRequestByLocalId(
+              hostId,
+              userId,
+              normalizedRequestLocalId
+            )
           : null;
         if (existing) {
           return this.getLeaveRequestById({
@@ -471,7 +512,7 @@ export class LeaveAppService {
     }
   }
 
-private async resolveLeaveYearForRequest(payload: {
+  private async resolveLeaveYearForRequest(payload: {
     hostId: number;
     userId: number;
     leaveYearId?: number;
@@ -485,7 +526,10 @@ private async resolveLeaveYearForRequest(payload: {
     }
 
     const dateForResolution = fromDate || tillDate || new Date().toISOString().slice(0, 10);
-    const resolvedYear = await leaveRequestAppRepository.resolveLeaveYearForDate(hostId, dateForResolution);
+    const resolvedYear = await leaveRequestAppRepository.resolveLeaveYearForDate(
+      hostId,
+      dateForResolution
+    );
 
     if (!resolvedYear) {
       throw createConfiguredError(
@@ -517,7 +561,8 @@ private async resolveLeaveYearForRequest(payload: {
     requestLocalId?: string;
     days: Array<{ leaveDate: string; durationType: 'FULL_DAY' | 'FIRST_HALF' | 'SECOND_HALF' }>;
   }): Promise<any> {
-    const { hostId, userId, leaveYearId, fromDate, tillDate, reason, requestLocalId, days } = payload;
+    const { hostId, userId, leaveYearId, fromDate, tillDate, reason, requestLocalId, days } =
+      payload;
 
     if (!fromDate || !tillDate || !Array.isArray(days) || days.length === 0) {
       throw createConfiguredError(
@@ -539,7 +584,11 @@ private async resolveLeaveYearForRequest(payload: {
     const transaction = await sequelize.transaction();
 
     try {
-      const lockedUser = await leaveRequestAppRepository.lockUserForLeaveOps(hostId, userId, transaction);
+      const lockedUser = await leaveRequestAppRepository.lockUserForLeaveOps(
+        hostId,
+        userId,
+        transaction
+      );
       if (!lockedUser) {
         throw createConfiguredError('USER_NOT_FOUND', 'User not found', 404);
       }
@@ -578,7 +627,6 @@ private async resolveLeaveYearForRequest(payload: {
           409
         );
       }
-
 
       const now = Math.floor(Date.now() / 1000);
 
@@ -621,7 +669,6 @@ private async resolveLeaveYearForRequest(payload: {
         transaction,
       });
 
-
       await transaction.commit();
 
       return this.getLeaveRequestById({
@@ -635,7 +682,11 @@ private async resolveLeaveYearForRequest(payload: {
       const message = String(error?.message || '').toLowerCase();
       if (message.includes('uk_leave_request_host_user_local_id')) {
         const existing = normalizedRequestLocalId
-          ? await leaveRequestAppRepository.getLeaveRequestByLocalId(hostId, userId, normalizedRequestLocalId)
+          ? await leaveRequestAppRepository.getLeaveRequestByLocalId(
+              hostId,
+              userId,
+              normalizedRequestLocalId
+            )
           : null;
         if (existing) {
           return this.getLeaveRequestById({
@@ -671,7 +722,11 @@ private async resolveLeaveYearForRequest(payload: {
         throw createConfiguredError('LEAVE_REQUEST_NOT_FOUND', 'Leave request not found', 404);
       }
 
-      const lockedUser = await leaveRequestAppRepository.lockUserForLeaveOps(hostId, userId, transaction);
+      const lockedUser = await leaveRequestAppRepository.lockUserForLeaveOps(
+        hostId,
+        userId,
+        transaction
+      );
       if (!lockedUser) {
         throw createConfiguredError('USER_NOT_FOUND', 'User not found', 404);
       }
@@ -792,7 +847,11 @@ private async resolveLeaveYearForRequest(payload: {
         throw createConfiguredError('LEAVE_REQUEST_NOT_FOUND', 'Leave request not found', 404);
       }
 
-      const lockedUser = await leaveRequestAppRepository.lockUserForLeaveOps(hostId, userId, transaction);
+      const lockedUser = await leaveRequestAppRepository.lockUserForLeaveOps(
+        hostId,
+        userId,
+        transaction
+      );
       if (!lockedUser) {
         throw createConfiguredError('USER_NOT_FOUND', 'User not found', 404);
       }
@@ -881,7 +940,11 @@ private async resolveLeaveYearForRequest(payload: {
         throw createConfiguredError('LEAVE_REQUEST_NOT_FOUND', 'Leave request not found', 404);
       }
 
-      const lockedUser = await leaveRequestAppRepository.lockUserForLeaveOps(hostId, userId, transaction);
+      const lockedUser = await leaveRequestAppRepository.lockUserForLeaveOps(
+        hostId,
+        userId,
+        transaction
+      );
       if (!lockedUser) {
         throw createConfiguredError('USER_NOT_FOUND', 'User not found', 404);
       }
@@ -970,7 +1033,11 @@ private async resolveLeaveYearForRequest(payload: {
         throw createConfiguredError('LEAVE_REQUEST_NOT_FOUND', 'Leave request not found', 404);
       }
 
-      const lockedUser = await leaveRequestAppRepository.lockUserForLeaveOps(hostId, userId, transaction);
+      const lockedUser = await leaveRequestAppRepository.lockUserForLeaveOps(
+        hostId,
+        userId,
+        transaction
+      );
       if (!lockedUser) {
         throw createConfiguredError('USER_NOT_FOUND', 'User not found', 404);
       }
