@@ -256,7 +256,7 @@ export class UserService {
       timezone,
       holidayCalendarId,
       leavePolicyId,
-      attendanceLocations,
+      attendanceSites,
     } = payload;
 
     let settings = payload.settings;
@@ -315,10 +315,10 @@ export class UserService {
       createdAt: currentUnixTime,
     });
 
-    if (attendanceLocations && attendanceLocations.length > 0) {
-      await usersRepository.createUserAttendanceLocations({
+    if (attendanceSites && attendanceSites.length > 0) {
+      await usersRepository.createUserAttendanceSites({
         userId: createAppUserResult.id,
-        attendanceLocations,
+        attendanceSites: attendanceSites,
         createdAt: currentUnixTime,
       });
     }
@@ -389,7 +389,7 @@ export class UserService {
       timezone,
       holidayCalendarId,
       leavePolicyId,
-      attendanceLocations,
+      attendanceSites,
     } = payload;
 
     let settings = payload.settings;
@@ -472,9 +472,9 @@ export class UserService {
     });
 
     // Update attendance locations
-    await usersRepository.updateUserAttendanceLocations({
+    await usersRepository.updateUserAttendanceSites({
       userId: updateAppUserResult.id,
-      attendanceLocations,
+      attendanceSites,
       updatedAt: currentUnixTime,
     });
 

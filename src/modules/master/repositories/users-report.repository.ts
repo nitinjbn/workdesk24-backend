@@ -7,6 +7,7 @@ import db, {
   UserDevice,
   HolidayCalendar,
   UserAttendanceLocation,
+  AttendanceLocation,
 } from '../../../models';
 import {
   CommonReportSortBy,
@@ -20,6 +21,42 @@ import { buildCommonReportOrder } from './user-scoped-report.helper';
 import { DateTimeFormatUtil } from '../../../shared/utils/date-time-format.util';
 
 type UserInstance = typeof User.prototype;
+
+function normalizeUserAttendanceLocations(userData: any): void {
+  if (!Array.isArray(userData.userAttendanceLocations)) {
+    return;
+  }
+
+  userData.attendanceSites = userData.userAttendanceLocations.map((userAttendanceLocation: any) => {
+    const attendanceLocation = userAttendanceLocation.attendanceLocation;
+
+    return {
+      attendanceLocationId: userAttendanceLocation.attendanceLocationId,
+      latitude: attendanceLocation?.latitude ?? null,
+      longitude: attendanceLocation?.longitude ?? null,
+      radiusMeters: attendanceLocation?.radiusMeters ?? null,
+      locationName: attendanceLocation?.locationName ?? null,
+    };
+  });
+
+  delete userData.userAttendanceLocations;
+}
+
+function normalizeAttendanceSiteIds(value: unknown): number[] {
+  if (Array.isArray(value)) {
+    return value.map(Number).filter(Number.isInteger);
+  }
+
+  if (typeof value === 'string') {
+    try {
+      return normalizeAttendanceSiteIds(JSON.parse(value));
+    } catch {
+      return [];
+    }
+  }
+
+  return [];
+}
 
 const ROLE_NAME_SUBQUERY = `(
   SELECT r.roleName
@@ -229,6 +266,28 @@ export class usersRepository {
           as: 'holidayCalendar',
           required: false,
         },
+        {
+          model: UserAttendanceLocation,
+          as: 'userAttendanceLocations',
+          required: false,
+          attributes: ['attendanceLocationId'],
+          where: {
+            isDeleted: 0,
+            isEnabled: 1,
+          },
+          include: [
+            {
+              model: AttendanceLocation,
+              as: 'attendanceLocation',
+              required: false,
+              attributes: ['latitude', 'longitude', 'radiusMeters', 'locationName'],
+              where: {
+                isDeleted: 0,
+                isEnabled: 1,
+              },
+            },
+          ],
+        },
       ],
       order,
       raw: false,
@@ -262,6 +321,7 @@ export class usersRepository {
         }
         jsonRow.holidayCalendarName = jsonRow.holidayCalendar?.name || null;
         delete jsonRow.holidayCalendar;
+        normalizeUserAttendanceLocations(jsonRow);
         return jsonRow;
       });
 
@@ -290,6 +350,7 @@ export class usersRepository {
         }
         jsonRow.holidayCalendarName = jsonRow.holidayCalendar?.name || null;
         delete jsonRow.holidayCalendar;
+        normalizeUserAttendanceLocations(jsonRow);
         return jsonRow;
       });
       return {
@@ -362,6 +423,28 @@ export class usersRepository {
           as: 'device',
           required: false,
         },
+        {
+          model: UserAttendanceLocation,
+          as: 'userAttendanceLocations',
+          required: false,
+          attributes: ['attendanceLocationId'],
+          where: {
+            isDeleted: 0,
+            isEnabled: 1,
+          },
+          include: [
+            {
+              model: AttendanceLocation,
+              as: 'attendanceLocation',
+              required: false,
+              attributes: ['latitude', 'longitude', 'radiusMeters', 'locationName'],
+              where: {
+                isDeleted: 0,
+                isEnabled: 1,
+              },
+            },
+          ],
+        },
       ],
       subQuery: false,
       raw: false,
@@ -391,6 +474,9 @@ export class usersRepository {
     }
     jsonData.holidayCalendarName = jsonData.holidayCalendar?.name || null;
     delete jsonData.holidayCalendar;
+
+    normalizeUserAttendanceLocations(jsonData);
+
     return jsonData;
   }
 
@@ -665,14 +751,14 @@ export class usersRepository {
     }
   }
 
-  async updateUserAttendanceLocations(payload: {
+  async updateUserAttendanceSites(payload: {
     userId: number;
-    attendanceLocations: number[];
+    attendanceSites: number[] | string;
     updatedAt?: number;
   }): Promise<any> {
     const { userId } = payload;
     const updatedAt = payload.updatedAt ?? DateTimeFormatUtil.getCurrentUnixTime();
-    const locationIds = [...new Set(payload.attendanceLocations || [])];
+    const locationIds = [...new Set(normalizeAttendanceSiteIds(payload.attendanceSites))];
 
     await db.sequelize.transaction(async (transaction: any) => {
       const existingLocations = await UserAttendanceLocation.findAll({
@@ -738,7 +824,7 @@ export class usersRepository {
 
     return {
       userId,
-      attendanceLocations: locationIds,
+      attendanceSites: locationIds,
       updatedAt,
     };
   }
@@ -828,20 +914,27 @@ export class usersRepository {
     }
   }
 
-  async createUserAttendanceLocations(payload: {
+  async createUserAttendanceSites(payload: {
     userId: number;
-    attendanceLocations: number[];
+    attendanceSites: number[] | string;
     createdAt: number;
   }): Promise<any> {
-    const { userId, attendanceLocations, createdAt } = payload;
-    if (!attendanceLocations || attendanceLocations.length === 0) {
-      throw new Error('No attendance locations provided');
+    const { userId, attendanceSites, createdAt } = payload;
+    const attendanceSiteIds = normalizeAttendanceSiteIds(attendanceSites);
+    if (attendanceSiteIds.length === 0) {
+      throw new Error('No attendance sites provided');
     }
+    console.log(
+      'Creating user attendance sites for userId:',
+      userId,
+      'attendanceSites:',
+      attendanceSiteIds
+    );
 
     const createdRecords = await UserAttendanceLocation.bulkCreate(
-      attendanceLocations.map((attendanceLocationId) => ({
+      attendanceSiteIds.map((attendanceSiteId) => ({
         userId,
-        attendanceLocationId,
+        attendanceLocationId: attendanceSiteId,
         createdAt,
       }))
     );
