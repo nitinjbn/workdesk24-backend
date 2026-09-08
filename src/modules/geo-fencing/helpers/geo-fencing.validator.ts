@@ -12,15 +12,7 @@ class GeoFencingValidator {
     payload: any
   ): void {
     const requiredFields: Record<string, string[]> = {
-      CREATE: [
-        'hostId',
-        'latitude',
-        'longitude',
-        'radiusMeters',
-        'siteName',
-        'isEnabled',
-        'siteUsers',
-      ],
+      CREATE: ['hostId', 'latitude', 'longitude', 'radiusMeters', 'siteName', 'isEnabled'],
       GET_LIST: ['hostId'],
       GET_BY_ID: ['hostId', 'attendanceSiteId'],
       UPDATE: [
@@ -31,7 +23,6 @@ class GeoFencingValidator {
         'longitude',
         'radiusMeters',
         'isEnabled',
-        'siteUsers',
       ],
       DELETE: ['hostId', 'attendanceSiteId'],
     };
