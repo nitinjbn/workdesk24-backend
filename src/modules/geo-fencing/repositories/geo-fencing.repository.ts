@@ -61,6 +61,29 @@ export class geoFencingRepository {
         'updatedAt',
       ],
       where,
+      include: [
+        {
+          attributes: [
+            'userId',
+            'createdAt',
+            'updatedAt',
+            [db.Sequelize.literal('`siteUsers->user`.`name`'), 'name'],
+          ],
+          model: UserAttendanceSite,
+          as: 'siteUsers',
+          where: { isDeleted: 0 },
+          required: false,
+          include: [
+            {
+              attributes: [],
+              model: db.User,
+              as: 'user',
+              where: { isDeleted: 0 },
+              required: false,
+            },
+          ],
+        },
+      ],
       order,
       logging: console.log, // Enable logging for debugging
     };
