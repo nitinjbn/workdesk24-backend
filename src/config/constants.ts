@@ -20,21 +20,14 @@ export const CONFIG = {
     APP: {
       LOGIN: {
         // Roles allowed to login via /api/v1/auth/login
-        ALLOWED_ROLES: [
-          'FIELD_EXECUTIVE'
-        ],
+        ALLOWED_ROLES: ['FIELD_EXECUTIVE'],
       },
     },
     ADMIN_PANEL: {
-        LOGIN: {
-            // Roles allowed to access admin panel
-            ALLOWED_ROLES: [
-                'ADMIN',
-                'SUPER_ADMIN',
-                'TEAM_LEAD',
-                'VIEWER',
-            ],
-        },
+      LOGIN: {
+        // Roles allowed to access admin panel
+        ALLOWED_ROLES: ['ADMIN', 'SUPER_ADMIN', 'TEAM_LEAD', 'VIEWER'],
+      },
     },
   },
   USER: {
@@ -43,11 +36,11 @@ export const CONFIG = {
       ALLOWED_TYPES: ['MOBILE', 'FIXED_LINE_OR_MOBILE'],
     },
     GENDER: {
-      "MALE": "Male",
-      "FEMALE": "Female",
-      "OTHER": "Other",
-      "PREFER_NOT_TO_SAY": "Prefer not to say"
-    }
+      MALE: 'Male',
+      FEMALE: 'Female',
+      OTHER: 'Other',
+      PREFER_NOT_TO_SAY: 'Prefer not to say',
+    },
   },
   WEEKDAY_FLAGS: {
     SUNDAY: 1,
@@ -56,14 +49,14 @@ export const CONFIG = {
     WEDNESDAY: 8,
     THURSDAY: 16,
     FRIDAY: 32,
-    SATURDAY: 64
+    SATURDAY: 64,
   },
   NOTIFICATIONS: {
     CHANNELS: {
       EMAIL: 'EMAIL',
       SMS: 'SMS',
       PUSH: 'PUSH',
-      WHATSAPP: 'WHATSAPP'
+      WHATSAPP: 'WHATSAPP',
     },
     EMAIL: {
       PROVIDER: (process.env.NOTIFICATIONS_EMAIL_PROVIDER || 'SES').toUpperCase(),
@@ -73,16 +66,18 @@ export const CONFIG = {
       SES: {
         REGION: process.env.AWS_SES_REGION || process.env.AWS_REGION || 'ap-south-1',
         ACCESS_KEY_ID: process.env.AWS_SES_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID || '',
-        SECRET_ACCESS_KEY: process.env.AWS_SES_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY || '',
-        SESSION_TOKEN: process.env.AWS_SES_SESSION_TOKEN || process.env.AWS_SESSION_TOKEN || ''
-      }
+        SECRET_ACCESS_KEY:
+          process.env.AWS_SES_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY || '',
+        SESSION_TOKEN: process.env.AWS_SES_SESSION_TOKEN || process.env.AWS_SESSION_TOKEN || '',
+      },
     },
     PUSH: {
       PROVIDER: (process.env.NOTIFICATIONS_PUSH_PROVIDER || 'FIREBASE').toUpperCase(),
       FIREBASE: {
         SERVICE_ACCOUNT_PATH: process.env.FIREBASE_SERVICE_ACCOUNT_PATH || '',
       },
-    }
+    },
+    SALES_TEAM_ADDRESS: process.env.NOTIFICATIONS_EMAIL_SALES_TEAM_ADDRESS || 'nitinjbn@gmail.com',
   },
   OTP: {
     AUTH: {
@@ -112,7 +107,7 @@ export const CONFIG = {
       EXPIRY_MINUTES: 15,
       MAX_ATTEMPTS: 5,
       MAX_RESENDS: 3,
-    }
+    },
   },
-  SKIP_LOGGING_PATH_PATTERNS: ['/background-jobs'] // Paths that should skip API logging, e.g., background job routes
-}
+  SKIP_LOGGING_PATH_PATTERNS: ['/background-jobs'], // Paths that should skip API logging, e.g., background job routes
+};

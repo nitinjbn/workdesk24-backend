@@ -2,32 +2,68 @@ import { Request, Response, NextFunction } from 'express';
 import inquiryService from '../services/inquiry.service';
 import { ApiResponse } from '../../../shared/types/base.types';
 import { AuthRequest } from '../../../shared/types/auth.types';
+import { PhoneUtil } from '../../../shared/utils/phone.util';
+import { EmailUtil } from '../../../shared/utils/email.util';
+import inquiryNotificationService from '../../../modules/notifications/NotificationFacade';
 
 export class InquiryController {
   async createInquiry(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { name, email, phone, subject, message } = req.body;
+      const { name, email, countryIsoCode = 'IN', mobile, subject, message, source } = req.body;
+      const ipAddress = req.ip || '0.0.0.0';
+      const userAgent = req.get('user-agent') ?? '';
 
-      if (!name || !email || !subject || !message) {
+      const validationResult = PhoneUtil.validate(mobile, countryIsoCode);
+      console.log('############# Phone validation result:', validationResult);
+
+      if (!validationResult.success) {
+        throw new Error(validationResult.message || 'Invalid mobile number');
+      }
+
+      const emailValidationResult = await EmailUtil.validate(email, {
+        checkMx: true,
+        checkDisposable: true,
+      });
+      if (!emailValidationResult.isValid) {
+        throw new Error(emailValidationResult.error || 'Invalid email address');
+      }
+
+      if (!name?.trim() || !email?.trim() || !mobile?.trim() || !message?.trim()) {
         res.status(400).json({
           success: false,
-          message: 'Name, email, subject, and message are required',
+          message: 'Name, email, mobile, and message are required',
         } as ApiResponse);
         return;
       }
 
-      const inquiry = await inquiryService.createInquiry({
+      await inquiryService.createInquiry({
         name,
         email,
-        phone,
+        mobile: validationResult.e164,
+        ipAddress,
+        userAgent,
+        source,
         subject,
         message,
       });
 
+      // Send notification email to sales team
+      const sendEmailResult = await inquiryNotificationService.sendSubmittedInquiryEmailToSalesTeam(
+        {
+          name,
+          email,
+          mobile: validationResult.e164,
+          countryIsoCode,
+          message,
+          source,
+        }
+      );
+      console.log('############# Send email result:', sendEmailResult);
+
       res.status(201).json({
         success: true,
         message: 'Inquiry submitted successfully',
-        data: inquiry,
+        data: {},
       } as ApiResponse);
     } catch (error) {
       next(error);

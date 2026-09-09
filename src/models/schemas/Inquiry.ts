@@ -1,41 +1,45 @@
 import { Model, DataTypes, Sequelize, Optional } from 'sequelize';
 import { InquiryAttributes } from '../../types';
 
-interface InquiryCreationAttributes extends Optional<InquiryAttributes, 'id' | 'phone' | 'ipAddress' | 'userAgent' | 'assignedTo' | 'adminNotes' | 'source' | 'resolvedAt' | 'createdAt' | 'updatedAt' | 'isDeleted' | 'deletedAt'> {}
+interface InquiryCreationAttributes extends Optional<
+  InquiryAttributes,
+  | 'id'
+  | 'mobile'
+  | 'ipAddress'
+  | 'userAgent'
+  | 'superAdminNotes'
+  | 'source'
+  | 'createdAt'
+  | 'updatedAt'
+  | 'isDeleted'
+  | 'deletedAt'
+> {}
 
-class Inquiry extends Model<InquiryAttributes, InquiryCreationAttributes> implements InquiryAttributes {
+class Inquiry
+  extends Model<InquiryAttributes, InquiryCreationAttributes>
+  implements InquiryAttributes
+{
   public id!: number;
   public name!: string;
   public email!: string;
-  public phone?: string;
+  public mobile!: string;
   public subject!: string;
   public message!: string;
-  public status!: 'pending' | 'in_progress' | 'resolved' | 'closed';
-  public priority!: 'low' | 'medium' | 'high' | 'urgent';
-  public ipAddress?: string;
-  public userAgent?: string;
-  public assignedTo?: number;
-  public adminNotes?: string;
-  public source?: string;
-  public resolvedAt?: number;
+  public ipAddress!: string;
+  public userAgent!: string;
+  public source!: string;
+  public superAdminNotes!: string;
   public createdAt!: number;
   public updatedAt!: number;
   public isDeleted!: number;
   public deletedAt!: number | null;
-
-  public static associate(models: any): void {
-    Inquiry.belongsTo(models.User, {
-      foreignKey: 'assignedTo',
-      as: 'assignedAdmin',
-    });
-  }
 }
 
 export function initInquiry(sequelize: Sequelize): typeof Inquiry {
   Inquiry.init(
     {
       id: {
-        type: DataTypes.INTEGER,
+        type: DataTypes.BIGINT,
         primaryKey: true,
         autoIncrement: true,
       },
@@ -50,25 +54,17 @@ export function initInquiry(sequelize: Sequelize): typeof Inquiry {
           isEmail: true,
         },
       },
-      phone: {
+      mobile: {
         type: DataTypes.STRING(20),
-        allowNull: true,
+        allowNull: false,
       },
       subject: {
         type: DataTypes.STRING(200),
-        allowNull: false,
+        allowNull: true,
       },
       message: {
         type: DataTypes.TEXT,
         allowNull: false,
-      },
-      status: {
-        type: DataTypes.ENUM('pending', 'in_progress', 'resolved', 'closed'),
-        defaultValue: 'pending',
-      },
-      priority: {
-        type: DataTypes.ENUM('low', 'medium', 'high', 'urgent'),
-        defaultValue: 'medium',
       },
       ipAddress: {
         type: DataTypes.STRING(45),
@@ -78,20 +74,12 @@ export function initInquiry(sequelize: Sequelize): typeof Inquiry {
         type: DataTypes.STRING(500),
         allowNull: true,
       },
-      assignedTo: {
-        type: DataTypes.INTEGER.UNSIGNED,
-        allowNull: true,
-      },
-      adminNotes: {
+      superAdminNotes: {
         type: DataTypes.TEXT,
         allowNull: true,
       },
       source: {
         type: DataTypes.STRING(50),
-        allowNull: true,
-      },
-      resolvedAt: {
-        type: DataTypes.BIGINT,
         allowNull: true,
       },
       createdAt: {

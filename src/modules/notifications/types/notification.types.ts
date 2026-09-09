@@ -20,6 +20,16 @@ export interface OtpEmailPayload {
   expiryMinutes: number;
 }
 
+export interface InquiryEmailPayload {
+  to: string;
+  name: string;
+  email: string;
+  mobile: string;
+  countryIsoCode: string;
+  message: string;
+  source: string;
+}
+
 export interface OtpPushPayload {
   token: string;
   data: Record<string, string>;

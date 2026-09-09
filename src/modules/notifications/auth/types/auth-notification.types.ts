@@ -13,3 +13,12 @@ export interface SendOtpPushNotificationPayload {
   appName?: string;
   expiryMinutes?: number;
 }
+export interface SendSubmittedInquiryEmailToSalesTeamPayload {
+  name: string;
+  email: string;
+  countryIsoCode?: string;
+  mobile: string;
+  subject: string;
+  message: string;
+  source?: string;
+}

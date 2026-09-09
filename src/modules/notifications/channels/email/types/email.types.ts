@@ -32,3 +32,12 @@ export interface OtpEmailTemplateInput {
   purpose: string;
   expiryMinutes: number;
 }
+
+export interface InquiryEmailTemplateInput {
+  name: string;
+  email: string;
+  mobile: string;
+  countryIsoCode: string;
+  message: string;
+  source: string;
+}

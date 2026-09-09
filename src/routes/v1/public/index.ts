@@ -7,7 +7,7 @@ router.use('/inquiries', apiLogRouteContext('public', 'inquiries'));
 router.use('/info', apiLogRouteContext('public', 'info'));
 
 // Inquiry endpoints - RESTful standard
-router.post('/inquiries', inquiryController.createInquiry.bind(inquiryController));
+router.post('/inquiries/submit', inquiryController.createInquiry.bind(inquiryController));
 
 // Info endpoints
 router.post('/info/health', (req, res) => {
