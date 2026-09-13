@@ -11,7 +11,10 @@ export class CustomerController {
   async getCustomerTypes(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     const { hostId, filter, page, limit, sorting } = req.body;
     try {
-      const result = await customerService.getCustomerTypes({ hostId, filter, page, limit, sorting }, { hostId: req.user!.hostId });
+      const result = await customerService.getCustomerTypes(
+        { hostId, filter, page, limit, sorting },
+        { hostId: req.user!.hostId }
+      );
       res.json({
         success: true,
         message: 'Customer types retrieved successfully',
@@ -25,7 +28,10 @@ export class CustomerController {
   async getCustomers(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     const { hostId, filter, page, limit, sorting } = req.body;
     try {
-      const result = await customerService.getCustomers({ hostId, filter, page, limit, sorting }, { hostId: req.user!.hostId });
+      const result = await customerService.getCustomers(
+        { hostId, filter, page, limit, sorting },
+        { hostId: req.user!.hostId }
+      );
       res.json({
         success: true,
         message: 'Customers retrieved successfully',
@@ -39,7 +45,10 @@ export class CustomerController {
   async getCustomerDetails(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     const { hostId, customerId } = req.body;
     try {
-      const result = await customerService.getCustomerDetails({ hostId, customerId }, { hostId: req.user!.hostId });
+      const result = await customerService.getCustomerDetails(
+        { hostId, customerId },
+        { hostId: req.user!.hostId }
+      );
       res.json({
         success: true,
         message: 'Customer details retrieved successfully',
@@ -51,9 +60,55 @@ export class CustomerController {
   }
 
   async createCustomer(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
-    const { hostId, customerCode, customerName, customerTypeId, contactPerson, email, mobile, alternateMobile, gstNumber, panNumber, addressLine1, addressLine2, city, stateName, stateIsoCode, postalCode, countryName, countryIsoCode, remarks, isEnabled, customerMedia = [], customerAttribute = [] } = req.body;
+    const {
+      hostId,
+      customerCode,
+      customerName,
+      customerTypeId,
+      contactPerson,
+      email,
+      mobile,
+      alternateMobile,
+      gstNumber,
+      panNumber,
+      addressLine1,
+      addressLine2,
+      city,
+      stateName,
+      stateIsoCode,
+      postalCode,
+      countryName,
+      countryIsoCode,
+      remarks,
+      isEnabled,
+      customerMedia = [],
+      customerAttribute = [],
+    } = req.body;
     try {
-      const result = await customerService.createCustomer({ hostId, customerCode, customerName, customerTypeId, contactPerson, email, mobile, alternateMobile, gstNumber, panNumber, addressLine1, addressLine2, city, stateName, stateIsoCode, postalCode, countryName, countryIsoCode, remarks, isEnabled, customerMedia, customerAttribute });
+      const result = await customerService.createCustomer({
+        hostId,
+        customerCode,
+        customerName,
+        customerTypeId,
+        contactPerson,
+        email,
+        mobile,
+        alternateMobile,
+        gstNumber,
+        panNumber,
+        addressLine1,
+        addressLine2,
+        city,
+        stateName,
+        stateIsoCode,
+        postalCode,
+        countryName,
+        countryIsoCode,
+        remarks,
+        isEnabled,
+        customerMedia,
+        customerAttribute,
+      });
       res.json({
         success: true,
         message: 'Customer created successfully',
@@ -64,11 +119,58 @@ export class CustomerController {
     }
   }
 
-
   async updateCustomer(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
-    const { hostId, customerId, customerCode, customerName, customerTypeId, contactPerson, email, mobile, alternateMobile, gstNumber, panNumber, addressLine1, addressLine2, city, stateName, stateIsoCode, postalCode, countryName, countryIsoCode, remarks, isEnabled, customerMedia = [], customerAttribute = [] } = req.body;
+    const {
+      hostId,
+      customerId,
+      customerCode,
+      customerName,
+      customerTypeId,
+      contactPerson,
+      email,
+      mobile,
+      alternateMobile,
+      gstNumber,
+      panNumber,
+      addressLine1,
+      addressLine2,
+      city,
+      stateName,
+      stateIsoCode,
+      postalCode,
+      countryName,
+      countryIsoCode,
+      remarks,
+      isEnabled,
+      customerMedia = [],
+      customerAttribute = [],
+    } = req.body;
     try {
-      const result = await customerService.updateCustomer({ hostId, customerId, customerCode, customerName, customerTypeId, contactPerson, email, mobile, alternateMobile, gstNumber, panNumber, addressLine1, addressLine2, city, stateName, stateIsoCode, postalCode, countryName, countryIsoCode, remarks, isEnabled, customerMedia, customerAttribute });
+      const result = await customerService.updateCustomer({
+        hostId,
+        customerId,
+        customerCode,
+        customerName,
+        customerTypeId,
+        contactPerson,
+        email,
+        mobile,
+        alternateMobile,
+        gstNumber,
+        panNumber,
+        addressLine1,
+        addressLine2,
+        city,
+        stateName,
+        stateIsoCode,
+        postalCode,
+        countryName,
+        countryIsoCode,
+        remarks,
+        isEnabled,
+        customerMedia,
+        customerAttribute,
+      });
       res.json({
         success: true,
         message: 'Customer updated successfully',
@@ -167,7 +269,7 @@ export class CustomerController {
 
   async uploadMedia(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { hostId, customerId, mediaType, isPrimary, sortOrder, isEnabled } =  req.body;
+      const { hostId, customerId, mediaType, isPrimary, sortOrder, isEnabled } = req.body;
       const file = req.file as Express.Multer.File | undefined;
 
       if (!file) {
@@ -192,7 +294,7 @@ export class CustomerController {
         mimeType: file.mimetype,
         isPrimary: isPrimary || 0,
         sortOrder: sortOrder || 0,
-        isEnabled: isEnabled || 0
+        isEnabled: isEnabled || 0,
       });
       //console.log('####################### Media saved to database:', saveMedia);
 
@@ -207,7 +309,7 @@ export class CustomerController {
           isPrimary: saveMedia.isPrimary,
           fileName: saveMedia.fileName,
           fileSizeInBytes: saveMedia.fileSizeInBytes,
-          mimeType: saveMedia.mimeType
+          mimeType: saveMedia.mimeType,
         },
       } as ApiResponse);
     } catch (error: any) {
@@ -250,13 +352,11 @@ export class CustomerController {
         message: 'Media deleted successfully',
         data: deleteResult,
       } as ApiResponse);
-
     } catch (error: any) {
       next(error);
     }
   }
 
-  
   async deleteCustomer(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const { hostId, customerId } = req.body;
@@ -266,7 +366,65 @@ export class CustomerController {
         message: 'Customer deleted successfully',
         data: deleteResult,
       } as ApiResponse);
+    } catch (error: any) {
+      next(error);
+    }
+  }
 
+  async addCustomerType(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { hostId, customerType } = req.body;
+
+      if (!hostId || !customerType) {
+        res.status(400).json({
+          success: false,
+          message: 'hostId and customerType are required',
+        } as ApiResponse);
+        return;
+      }
+
+      const result = await customerService.addCustomerType({
+        hostId,
+        customerType,
+      });
+
+      res.json({
+        success: true,
+        message: 'Customer type added successfully',
+        data: {
+          customerTypeId: result.id,
+        },
+      } as ApiResponse);
+    } catch (error: any) {
+      next(error);
+    }
+  }
+
+  async updateCustomerType(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { hostId, customerTypeId, customerType } = req.body;
+
+      if (!hostId || !customerTypeId || !customerType) {
+        res.status(400).json({
+          success: false,
+          message: 'hostId, customerTypeId, and customerType are required',
+        } as ApiResponse);
+        return;
+      }
+
+      const result = await customerService.updateCustomerType({
+        hostId,
+        customerTypeId,
+        customerType,
+      });
+
+      res.json({
+        success: true,
+        message: 'Customer type updated successfully',
+        data: {
+          customerTypeId: result.customerTypeId,
+        },
+      } as ApiResponse);
     } catch (error: any) {
       next(error);
     }

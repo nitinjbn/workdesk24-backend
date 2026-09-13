@@ -602,6 +602,53 @@ export class UserService {
   }): Promise<void> {
     await usersRepository.updateUserDeviceDetails(payload);
   }
+
+  async addDesignation(payload: { hostId: number; designation: string }): Promise<any> {
+    const { hostId, designation } = payload;
+
+    // Check if the designation already exists for the host
+    const existingDesignation = await usersRepository.getDesignations({
+      hostId,
+      filter: { name: designation },
+    });
+    if (existingDesignation && existingDesignation.data && existingDesignation.data.length > 0) {
+      throw createConfiguredError('DUPLICATE_DESIGNATION', 'Designation already exists');
+    }
+
+    const result = await usersRepository.addDesignation({
+      hostId,
+      designation,
+    });
+    return {
+      designation: result,
+    };
+  }
+
+  async updateDesignation(payload: {
+    hostId: number;
+    designationId: number;
+    designation: string;
+  }): Promise<any> {
+    const { hostId, designationId, designation } = payload;
+
+    // Check if the designation already exists for the host
+    const existingDesignation = await usersRepository.getDesignations({
+      hostId,
+      filter: { name: designation, excludeId: designationId },
+    });
+    if (existingDesignation && existingDesignation.data && existingDesignation.data.length > 0) {
+      throw createConfiguredError('DUPLICATE_DESIGNATION', 'Designation already exists');
+    }
+
+    const result = await usersRepository.updateDesignation({
+      hostId,
+      designationId,
+      designation,
+    });
+    return {
+      designation: result,
+    };
+  }
 }
 
 export default new UserService();

@@ -544,6 +544,61 @@ export class UserController {
       next(error);
     }
   }
+
+  async addDesignation(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { hostId, designation } = req.body;
+
+      if (!hostId || !designation) {
+        res.status(400).json({
+          success: false,
+          message: 'hostId and designation are required',
+        } as ApiResponse);
+        return;
+      }
+
+      const result = await userService.addDesignation({
+        hostId,
+        designation,
+      });
+
+      res.json({
+        success: true,
+        message: 'Designation added successfully',
+        data: result.designation,
+      } as ApiResponse);
+    } catch (error: any) {
+      next(error);
+    }
+  }
+
+  async updateDesignation(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { hostId, designationId, designation } = req.body;
+
+      if (!hostId || !designationId || !designation) {
+        res.status(400).json({
+          success: false,
+          message: 'hostId, designationId, and designation are required',
+        } as ApiResponse);
+        return;
+      }
+
+      const result = await userService.updateDesignation({
+        hostId,
+        designationId,
+        designation,
+      });
+
+      res.json({
+        success: true,
+        message: 'Designation updated successfully',
+        data: result.designation,
+      } as ApiResponse);
+    } catch (error: any) {
+      next(error);
+    }
+  }
 }
 
 export default new UserController();

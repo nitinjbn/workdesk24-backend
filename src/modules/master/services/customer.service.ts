@@ -11,7 +11,7 @@ import {
   ProductMediaResponse,
   ProductAttributesResponse,
   SaveProductMediaPayload,
-  SaveCustomerMediaPayload
+  SaveCustomerMediaPayload,
 } from '../types/master.types';
 import { Product } from '../../../models/schemas';
 import baseReportHelper from '../helpers/base-report.helper';
@@ -26,10 +26,15 @@ type ProductInstance = typeof Product.prototype;
 
 export class CustomerService {
   async getCustomerTypes(
-    payload: { hostId: number, filter?: Record<string, unknown>, page?: number, limit?: number, sorting?: CommonReportSorting },
+    payload: {
+      hostId: number;
+      filter?: Record<string, unknown>;
+      page?: number;
+      limit?: number;
+      sorting?: CommonReportSorting;
+    },
     scope: ReportScope
-  ): Promise<{ customerTypes: any[], pagination?: any }> {
-    
+  ): Promise<{ customerTypes: any[]; pagination?: any }> {
     const { hostId, filter, page, limit } = payload;
     const sorting = this.normalizeCommonSorting(payload);
 
@@ -54,10 +59,15 @@ export class CustomerService {
   }
 
   async getCustomers(
-    payload: { hostId: number, filter?: Record<string, unknown>, page?: number, limit?: number, sorting?: CommonReportSorting },
+    payload: {
+      hostId: number;
+      filter?: Record<string, unknown>;
+      page?: number;
+      limit?: number;
+      sorting?: CommonReportSorting;
+    },
     scope: ReportScope
-  ): Promise<{ customers: any[], pagination?: any }> {
-    
+  ): Promise<{ customers: any[]; pagination?: any }> {
     const { hostId, filter, page, limit } = payload;
     const sorting = this.normalizeCommonSorting(payload);
 
@@ -82,23 +92,28 @@ export class CustomerService {
   }
 
   async getCustomerDetails(
-    payload: { hostId: number, customerId: number },
+    payload: { hostId: number; customerId: number },
     scope: ReportScope
   ): Promise<any> {
     let { hostId, customerId } = payload;
 
     const customerDetails = await customerRepository.getCustomerById({
       hostId,
-      customerId
-    });    
-    if (!customerDetails || !Object(customerDetails.data) || Object.keys(customerDetails.data).length === 0) {
-      throw createConfiguredError("CUSTOMER_NOT_FOUND", 'Customer not found.');
+      customerId,
+    });
+    if (
+      !customerDetails ||
+      !Object(customerDetails.data) ||
+      Object.keys(customerDetails.data).length === 0
+    ) {
+      throw createConfiguredError('CUSTOMER_NOT_FOUND', 'Customer not found.');
     }
 
     const dateTimeSettings = await getHostDateTimeSettings(hostId);
-    const plainData = customerDetails?.data && typeof customerDetails.data.toJSON === 'function' 
-      ? customerDetails.data.toJSON() 
-      : customerDetails?.data;
+    const plainData =
+      customerDetails?.data && typeof customerDetails.data.toJSON === 'function'
+        ? customerDetails.data.toJSON()
+        : customerDetails?.data;
     return {
       customer: formatDateTimeFieldsBySettings(plainData as any, dateTimeSettings),
     };
@@ -255,14 +270,17 @@ export class CustomerService {
   }
   */
 
-  private normalizeCommonSorting(payload: GetProductsPayload): { sortBy: string, sortOrder: "ASC" | "DESC" } {
+  private normalizeCommonSorting(payload: GetProductsPayload): {
+    sortBy: string;
+    sortOrder: 'ASC' | 'DESC';
+  } {
     const requestedSortBy = payload.sort?.by || payload.sortBy;
     const requestedSortOrder = payload.sort?.order || payload.sortOrder;
 
     return {
       sortBy: requestedSortBy,
-      sortOrder: requestedSortOrder as "ASC" | "DESC"
-    }
+      sortOrder: requestedSortOrder as 'ASC' | 'DESC',
+    };
 
     // const allowedSortBy: CommonReportSortBy[] = [
     //   'createdAt',
@@ -281,24 +299,35 @@ export class CustomerService {
     // };
   }
 
-  
   async saveCustomerMedia(payload: SaveCustomerMediaPayload): Promise<any> {
     //console.log('############################# saveCustomerMedia payload:', payload);
-    const { hostId, customerId, mediaUrl, mediaType, publicId, fileName, fileSizeInBytes, mimeType, isPrimary, sortOrder, isEnabled  } = payload;
-      const result = await customerRepository.saveCustomerMedia({
-        hostId,
-        customerId,
-        mediaUrl,
-        mediaType,
-        publicId,
-        fileName,
-        fileSizeInBytes,
-        mimeType,
-        isPrimary,
-        sortOrder,
-        isEnabled,
-        createdAt: DateTimeFormatUtil.getCurrentUnixTime()
-      });
+    const {
+      hostId,
+      customerId,
+      mediaUrl,
+      mediaType,
+      publicId,
+      fileName,
+      fileSizeInBytes,
+      mimeType,
+      isPrimary,
+      sortOrder,
+      isEnabled,
+    } = payload;
+    const result = await customerRepository.saveCustomerMedia({
+      hostId,
+      customerId,
+      mediaUrl,
+      mediaType,
+      publicId,
+      fileName,
+      fileSizeInBytes,
+      mimeType,
+      isPrimary,
+      sortOrder,
+      isEnabled,
+      createdAt: DateTimeFormatUtil.getCurrentUnixTime(),
+    });
 
     return result;
   }
@@ -307,7 +336,7 @@ export class CustomerService {
     const requiredFields = ['hostId', 'customerName'];
     for (const field of requiredFields) {
       if (!payload[field]) {
-        throw createConfiguredError("VALIDATION_ERROR", `Missing required field: ${field}`);
+        throw createConfiguredError('VALIDATION_ERROR', `Missing required field: ${field}`);
       }
     }
   }
@@ -340,7 +369,7 @@ export class CustomerService {
       countryIsoCode: otherPayload.countryIsoCode,
       remarks: otherPayload.remarks,
       isEnabled: otherPayload.isEnabled !== undefined ? otherPayload.isEnabled : 1, // Default to enabled if not provided
-      createdAt: currentUnixTime
+      createdAt: currentUnixTime,
     });
 
     if (createCustomerResult?.id) {
@@ -351,12 +380,12 @@ export class CustomerService {
             updatePayload: {
               customerId: createCustomerResult.id,
               isEnabled: media.isEnabled || 1, // Default to enabled if not provided
-              updatedAt: currentUnixTime
+              updatedAt: currentUnixTime,
             },
             where: {
               id: media.mediaId,
-              hostId: otherPayload.hostId
-            }
+              hostId: otherPayload.hostId,
+            },
           });
         }
       }
@@ -367,7 +396,7 @@ export class CustomerService {
           hostId: otherPayload.hostId,
           customerId: createCustomerResult.id,
           attributes: customerAttribute,
-          createdAt: currentUnixTime
+          createdAt: currentUnixTime,
         });
       }
     }
@@ -375,14 +404,13 @@ export class CustomerService {
     return createCustomerResult?.get({ plain: true }) || createCustomerResult;
   }
 
-  
   async updateCustomer(payload: any): Promise<any> {
     const { customerId, customerMedia, customerAttribute, ...otherPayload } = payload;
     const currentUnixTime = DateTimeFormatUtil.getCurrentUnixTime();
 
     // Validate required fields
     if (!customerId) {
-      throw createConfiguredError("VALIDATION_ERROR", 'Missing required field: customerId');
+      throw createConfiguredError('VALIDATION_ERROR', 'Missing required field: customerId');
     }
 
     // Validate other required fields for update
@@ -391,11 +419,11 @@ export class CustomerService {
     // Check if the customer exists before updating
     const existingCustomer = await customerRepository.getCustomerById({
       hostId: otherPayload.hostId,
-      customerId: customerId
+      customerId: customerId,
     });
     //console.log('############################# existingCustomer:', existingCustomer);
     if (!existingCustomer || !existingCustomer.data) {
-      throw createConfiguredError("CUSTOMER_NOT_FOUND", 'Customer not found.');
+      throw createConfiguredError('CUSTOMER_NOT_FOUND', 'Customer not found.');
     }
 
     const updateCustomerResult = await customerRepository.updateCustomer({
@@ -419,30 +447,39 @@ export class CustomerService {
         countryIsoCode: otherPayload.countryIsoCode,
         remarks: otherPayload.remarks,
         isEnabled: otherPayload.isEnabled !== undefined ? otherPayload.isEnabled : 1, // Default to enabled if not provided
-        updatedAt: currentUnixTime
+        updatedAt: currentUnixTime,
       },
       where: {
         id: customerId,
-        hostId: otherPayload.hostId
-      }
+        hostId: otherPayload.hostId,
+      },
     });
 
     // Handle Product Media - Add, Update, Delete
-    if (customerMedia || (existingCustomer.data.customerMedia && existingCustomer.data.customerMedia.length > 0)) {
-      const existingMediaIds = existingCustomer.data.customerMedia?.map((m: any) => Number(m.mediaId)) || [];
+    if (
+      customerMedia ||
+      (existingCustomer.data.customerMedia && existingCustomer.data.customerMedia.length > 0)
+    ) {
+      const existingMediaIds =
+        existingCustomer.data.customerMedia?.map((m: any) => Number(m.mediaId)) || [];
       const payloadMediaIds = customerMedia?.map((m: any) => Number(m.mediaId)) || [];
       //console.log('############################# existingMediaIds:', existingMediaIds);
       //console.log('############################# payloadMediaIds:', payloadMediaIds);
 
       // Media to ADD (in payload but not in existing)
-      const mediaToAdd = customerMedia?.filter((m: any) => !existingMediaIds.includes(Number(m.mediaId))) || [];
-      
+      const mediaToAdd =
+        customerMedia?.filter((m: any) => !existingMediaIds.includes(Number(m.mediaId))) || [];
+
       // Media to UPDATE (in both payload and existing)
-      const mediaToUpdate = customerMedia?.filter((m: any) => existingMediaIds.includes(Number(m.mediaId))) || [];
-            
+      const mediaToUpdate =
+        customerMedia?.filter((m: any) => existingMediaIds.includes(Number(m.mediaId))) || [];
+
       // Media to DELETE (in existing but not in payload)
-      const mediaToDelete = existingCustomer.data.customerMedia?.filter((m: any) => !payloadMediaIds.includes(Number(m.mediaId))) || [];
-      
+      const mediaToDelete =
+        existingCustomer.data.customerMedia?.filter(
+          (m: any) => !payloadMediaIds.includes(Number(m.mediaId))
+        ) || [];
+
       //console.log('############################# mediaToAdd:', mediaToAdd);
       //console.log('############################# mediaToUpdate:', mediaToUpdate);
       //console.log('############################# mediaToDelete:', mediaToDelete);
@@ -455,12 +492,12 @@ export class CustomerService {
             isEnabled: media.isEnabled || 1, // Default to enabled if not provided
             isPrimary: media.isPrimary || 0,
             sortOrder: media.sortOrder || 0,
-            updatedAt: currentUnixTime
+            updatedAt: currentUnixTime,
           },
           where: {
             id: media.mediaId,
-            hostId: otherPayload.hostId
-          }
+            hostId: otherPayload.hostId,
+          },
         });
       }
 
@@ -472,12 +509,12 @@ export class CustomerService {
             isEnabled: media.isEnabled || 1,
             isPrimary: media.isPrimary || 0,
             sortOrder: media.sortOrder || 0,
-            updatedAt: currentUnixTime
+            updatedAt: currentUnixTime,
           },
           where: {
             id: media.mediaId,
-            hostId: otherPayload.hostId
-          }
+            hostId: otherPayload.hostId,
+          },
         });
       }
 
@@ -486,35 +523,46 @@ export class CustomerService {
         await customerRepository.updateCustomerMedia({
           updatePayload: {
             isDeleted: 1,
-            updatedAt: currentUnixTime
+            updatedAt: currentUnixTime,
           },
           where: {
-            id: mediaToDelete.map(m => Number(m.mediaId)),
+            id: mediaToDelete.map((m) => Number(m.mediaId)),
             customerId: customerId,
-            hostId: otherPayload.hostId
-          }
+            hostId: otherPayload.hostId,
+          },
         });
       }
     }
 
     // Handle Product Attributes - Add, Update, Delete
-    if (customerAttribute || (existingCustomer.data.customerAttribute && existingCustomer.data.customerAttribute.length > 0)) {
-      const existingAttributeIds = existingCustomer.data.customerAttribute?.map((a: any) => a.id) || [];
+    if (
+      customerAttribute ||
+      (existingCustomer.data.customerAttribute &&
+        existingCustomer.data.customerAttribute.length > 0)
+    ) {
+      const existingAttributeIds =
+        existingCustomer.data.customerAttribute?.map((a: any) => a.id) || [];
       const payloadAttributeIds = customerAttribute?.map((a: any) => a.attributeId || a.id) || [];
 
       // Attributes to ADD (in payload but not in existing)
-      const attributesToAdd = customerAttribute?.filter((a: any) => !existingAttributeIds.includes(a.attributeId || a.id)) || [];
+      const attributesToAdd =
+        customerAttribute?.filter(
+          (a: any) => !existingAttributeIds.includes(a.attributeId || a.id)
+        ) || [];
       if (attributesToAdd.length > 0) {
         await customerRepository.saveCustomerAttributes({
           hostId: otherPayload.hostId,
           customerId: customerId,
           attributes: attributesToAdd,
-          createdAt: currentUnixTime
+          createdAt: currentUnixTime,
         });
       }
 
       // Attributes to UPDATE (in both payload and existing)
-      const attributesToUpdate = customerAttribute?.filter((a: any) => existingAttributeIds.includes(a.attributeId || a.id)) || [];
+      const attributesToUpdate =
+        customerAttribute?.filter((a: any) =>
+          existingAttributeIds.includes(a.attributeId || a.id)
+        ) || [];
       for (const attr of attributesToUpdate) {
         await customerRepository.updateCustomerAttributes({
           updatePayload: {
@@ -524,28 +572,31 @@ export class CustomerService {
             attributeType: attr.attributeType,
             attributeUomId: attr.attributeUomId,
             isEnabled: attr.isEnabled !== undefined ? attr.isEnabled : 1,
-            updatedAt: currentUnixTime
+            updatedAt: currentUnixTime,
           },
           where: {
             id: attr.attributeId || attr.id,
-            hostId: otherPayload.hostId
-          }
+            hostId: otherPayload.hostId,
+          },
         });
       }
 
       // Attributes to DELETE (in existing but not in payload)
-      const attributesToDelete = existingCustomer.data.customerAttribute?.filter((a: any) => !payloadAttributeIds.includes(a.id)) || [];
+      const attributesToDelete =
+        existingCustomer.data.customerAttribute?.filter(
+          (a: any) => !payloadAttributeIds.includes(a.id)
+        ) || [];
 
-      if(attributesToDelete.length > 0) {
+      if (attributesToDelete.length > 0) {
         await customerRepository.updateCustomerAttributes({
           updatePayload: {
             isDeleted: 1,
-            deletedAt: currentUnixTime
+            deletedAt: currentUnixTime,
           },
           where: {
-            id: attributesToDelete.map(a => a.attributeId || a.id),
-            hostId: otherPayload.hostId
-          }
+            id: attributesToDelete.map((a) => a.attributeId || a.id),
+            hostId: otherPayload.hostId,
+          },
         });
       }
     }
@@ -553,27 +604,27 @@ export class CustomerService {
     return {};
   }
 
-  async deleteCustomerMedia(payload: { hostId: number, mediaId: number }): Promise<any> {
+  async deleteCustomerMedia(payload: { hostId: number; mediaId: number }): Promise<any> {
     const { hostId, mediaId } = payload;
 
     // Fetch the media details to get the publicId for deletion
     const mediaDetails = await customerRepository.getCustomerMediaById({ hostId, mediaId });
     if (!mediaDetails || !mediaDetails.data) {
-      throw createConfiguredError("MEDIA_NOT_FOUND", 'Customer media not found.');
+      throw createConfiguredError('MEDIA_NOT_FOUND', 'Customer media not found.');
     }
 
     // Ensure the media has a publicId for deletion
     const publicId = mediaDetails.data.publicId;
     if (!publicId) {
-      throw createConfiguredError("MEDIA_NOT_FOUND", 'Customer media public ID not found.');
+      throw createConfiguredError('MEDIA_NOT_FOUND', 'Customer media public ID not found.');
     }
 
     // Delete media from storage
     const deleteResult = await deleteMediaFromStorage(publicId);
-    
+
     // Check if the deletion was successful
     if (!deleteResult || deleteResult.result !== 'ok') {
-      throw createConfiguredError("DELETE_FAILED", 'Failed to delete media from storage.');
+      throw createConfiguredError('DELETE_FAILED', 'Failed to delete media from storage.');
     }
 
     // Soft Delete media record from the database
@@ -583,46 +634,46 @@ export class CustomerService {
         publicId: null,
         isEnabled: 0,
         isDeleted: 1,
-        updatedAt: DateTimeFormatUtil.getCurrentUnixTime()
+        updatedAt: DateTimeFormatUtil.getCurrentUnixTime(),
       },
       where: {
         id: mediaId,
-        hostId
-      }
+        hostId,
+      },
     });
-    
+
     // Check if the database update was successful
     if (!deleteMediaInDB) {
-      throw createConfiguredError("DELETE_FAILED", 'Failed to delete customer media.');
+      throw createConfiguredError('DELETE_FAILED', 'Failed to delete customer media.');
     }
     return true;
   }
 
-  async deleteCustomer(payload: { hostId: number, customerId: number }): Promise<any> {
+  async deleteCustomer(payload: { hostId: number; customerId: number }): Promise<any> {
     const { hostId, customerId } = payload;
     const currentUnixTime = DateTimeFormatUtil.getCurrentUnixTime();
 
     // Check if the product exists before deleting
     const existingProduct = await customerRepository.getCustomerById({
       hostId,
-      customerId
+      customerId,
     });
     if (!existingProduct || !existingProduct.data) {
-      throw createConfiguredError("CUSTOMER_NOT_FOUND", 'Customer not found.');
+      throw createConfiguredError('CUSTOMER_NOT_FOUND', 'Customer not found.');
     }
     // Soft delete the product
     const deleteResult = await customerRepository.updateCustomer({
       updatePayload: {
         isDeleted: 1,
-        updatedAt: currentUnixTime
+        updatedAt: currentUnixTime,
       },
       where: {
         id: customerId,
-        hostId
-      }
+        hostId,
+      },
     });
     if (!deleteResult) {
-      throw createConfiguredError("DELETE_FAILED", 'Failed to delete customer.');
+      throw createConfiguredError('DELETE_FAILED', 'Failed to delete customer.');
     }
 
     // Soft delete associated media
@@ -630,27 +681,85 @@ export class CustomerService {
       for (const media of existingProduct.data.customerMedia) {
         await this.deleteCustomerMedia({
           hostId,
-          mediaId: media.mediaId
+          mediaId: media.mediaId,
         });
       }
     }
 
     // Soft delete associated attributes
-    if (existingProduct.data.customerAttribute && existingProduct.data.customerAttribute.length > 0) {
-      const attributeIds = existingProduct.data.customerAttribute.map((a: any) => a.attributeId || a.id);
+    if (
+      existingProduct.data.customerAttribute &&
+      existingProduct.data.customerAttribute.length > 0
+    ) {
+      const attributeIds = existingProduct.data.customerAttribute.map(
+        (a: any) => a.attributeId || a.id
+      );
       await customerRepository.updateCustomerAttributes({
         updatePayload: {
           isDeleted: 1,
-          updatedAt: currentUnixTime
+          updatedAt: currentUnixTime,
         },
         where: {
           id: attributeIds,
-          hostId
-        }
+          hostId,
+        },
       });
     }
 
     return true;
+  }
+
+  async addCustomerType(payload: { hostId: number; customerType: string }): Promise<any> {
+    const { hostId, customerType } = payload;
+
+    // Check if the designation already exists for the host
+    const existingCustomerType = await customerRepository.getCustomerTypes({
+      hostId,
+      filter: { customerTypeName: customerType },
+    });
+    if (existingCustomerType && existingCustomerType.data && existingCustomerType.data.length > 0) {
+      throw createConfiguredError('DUPLICATE_CUSTOMER_TYPE', 'Customer type already exists');
+    }
+
+    const result = await customerRepository.addCustomerType({
+      hostId,
+      customerType,
+    });
+
+    if (!result) {
+      throw createConfiguredError('ADD_FAILED', 'Failed to add customer type.');
+    }
+
+    return result;
+  }
+
+  async updateCustomerType(payload: {
+    hostId: number;
+    customerTypeId: number;
+    customerType: string;
+  }): Promise<any> {
+    const { hostId, customerTypeId, customerType } = payload;
+
+    // Check if the designation already exists for the host
+    const existingCustomerType = await customerRepository.getCustomerTypes({
+      hostId,
+      filter: { customerTypeName: customerType, excludeId: customerTypeId },
+    });
+    if (existingCustomerType && existingCustomerType.data && existingCustomerType.data.length > 0) {
+      throw createConfiguredError('DUPLICATE_CUSTOMER_TYPE', 'Customer type already exists');
+    }
+
+    const result = await customerRepository.updateCustomerType({
+      hostId,
+      customerType,
+      customerTypeId,
+    });
+
+    if (!result) {
+      throw createConfiguredError('UPDATE_FAILED', 'Failed to update customer type.');
+    }
+
+    return result;
   }
 }
 

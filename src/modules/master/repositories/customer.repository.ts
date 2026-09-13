@@ -1,6 +1,29 @@
-import { FindAndCountOptions, Op} from 'sequelize';
-import db, { Product, ProductAttribute, ProductBrand, ProductMedia, ProductCategory, UOM, CustomerType, Customer, CustomerMedia, CustomerAttribute } from '../../../models';
-import { GetCustomersPayload, GetProductDetailsByIdPayload, ReportResponse, SingleRecordResponse, ProductMediaResponse, GetProductMediaDetailsByIdPayload, GetProductAttributesDetailsByIdPayload, SaveProductMediaPayload, SaveProductAttributesPayload, SaveCustomerMediaPayload, SaveCustomerAttributesPayload} from '../types/master.types';
+import { FindAndCountOptions, Op } from 'sequelize';
+import db, {
+  Product,
+  ProductAttribute,
+  ProductBrand,
+  ProductMedia,
+  ProductCategory,
+  UOM,
+  CustomerType,
+  Customer,
+  CustomerMedia,
+  CustomerAttribute,
+} from '../../../models';
+import {
+  GetCustomersPayload,
+  GetProductDetailsByIdPayload,
+  ReportResponse,
+  SingleRecordResponse,
+  ProductMediaResponse,
+  GetProductMediaDetailsByIdPayload,
+  GetProductAttributesDetailsByIdPayload,
+  SaveProductMediaPayload,
+  SaveProductAttributesPayload,
+  SaveCustomerMediaPayload,
+  SaveCustomerAttributesPayload,
+} from '../types/master.types';
 import baseReportHelper from '../helpers/base-report.helper';
 import { buildCommonReportOrder } from './user-scoped-report.helper';
 import { DateTimeFormatUtil } from '../../../shared/utils/date-time-format.util';
@@ -8,44 +31,54 @@ import { DateTimeFormatUtil } from '../../../shared/utils/date-time-format.util'
 //type ProductInstance = typeof Product.prototype;
 
 export class customerRepository {
-  async getCustomerTypes(params: { hostId: number, filter?: Record<string, unknown>, page?: number, limit?: number, sortBy?: string, sortOrder?: 'ASC' | 'DESC' }): Promise<ReportResponse<any>> {
+  async getCustomerTypes(params: {
+    hostId: number;
+    filter?: Record<string, unknown>;
+    page?: number;
+    limit?: number;
+    sortBy?: string;
+    sortOrder?: 'ASC' | 'DESC';
+  }): Promise<ReportResponse<any>> {
     const { page, limit, filter, hostId, sortBy, sortOrder } = params;
     const { offset } = baseReportHelper.normalizePagination({ page, limit });
     // const order = buildCommonReportOrder(sortBy as any, sortOrder, {
     //   createdAt: 'createdAt'
     // });
-    let order=[];
-    if(sortBy && sortOrder) {
-      order = [[sortBy, sortOrder]]
+    let order = [];
+    if (sortBy && sortOrder) {
+      order = [[sortBy, sortOrder]];
     }
-    
-    const where:any = {
+
+    const where: any = {
       hostId,
-      isDeleted:0
-    }
-    if(filter) {
-      if(filter.id || filter.categoryId) {
+      isDeleted: 0,
+    };
+    if (filter) {
+      if (filter.id || filter.categoryId) {
         where.id = filter.categoryId || filter.id;
       }
-      if(filter.customerTypeName) {
+      if (filter.customerTypeName) {
         where.customerTypeName = {
           [Op.like]: `%${(filter.customerTypeName as string).trim()}%`,
-        }
+        };
+      }
+      if (filter.excludeId) {
+        where.id = {
+          [Op.ne]: filter.excludeId,
+        };
       }
     }
     const query: FindAndCountOptions<any> = {
       attributes: {
         exclude: ['id', 'hostId', 'isDeleted', 'deletedAt'],
-        include: [
-          [db.Sequelize.col('CustomerType.id'), 'customerTypeId']
-        ]
+        include: [[db.Sequelize.col('CustomerType.id'), 'customerTypeId']],
       },
       where,
       order,
       logging: console.log, // Enable logging for debugging
     };
 
-    if(page && limit) {
+    if (page && limit) {
       query.limit = limit;
       query.offset = offset;
 
@@ -58,7 +91,7 @@ export class customerRepository {
     } else {
       const rows = await CustomerType.findAll(query);
       return {
-        data: rows
+        data: rows,
       };
     }
   }
@@ -68,17 +101,17 @@ export class customerRepository {
     const { offset } = baseReportHelper.normalizePagination({ page, limit });
     let order: any = [
       ['updatedAt', 'DESC'],
-      ['createdAt', 'DESC']
+      ['createdAt', 'DESC'],
     ];
 
-    if(sortBy && sortOrder) {
-      order = [[sortBy, sortOrder]]
+    if (sortBy && sortOrder) {
+      order = [[sortBy, sortOrder]];
     }
-    const where:any = {
+    const where: any = {
       hostId,
-      isDeleted:0
-    }
-    if(filter) {
+      isDeleted: 0,
+    };
+    if (filter) {
       if (filter.searchKey?.trim()) {
         const searchKey = filter.searchKey.trim();
         where[Op.or] = [
@@ -106,22 +139,22 @@ export class customerRepository {
             mobile: {
               [Op.like]: `%${searchKey}%`,
             },
-          }
+          },
         ];
       }
 
-      if(filter.id || filter.customerId) {
+      if (filter.id || filter.customerId) {
         where.id = filter.customerId || filter.id;
       }
-      if(filter.customerName) {
+      if (filter.customerName) {
         where.customerName = {
           [Op.like]: `%${(filter.customerName as string).trim()}%`,
-        }
+        };
       }
-      if(filter.customerCode) {
+      if (filter.customerCode) {
         where.customerCode = filter.customerCode;
       }
-      if(filter.customerTypeId) {
+      if (filter.customerTypeId) {
         where.customerTypeId = filter.customerTypeId;
       }
     }
@@ -129,55 +162,72 @@ export class customerRepository {
       attributes: {
         include: [
           [db.Sequelize.col('Customer.id'), 'customerId'],
-          [db.Sequelize.col('customerTypeDetails.customerTypeName'), 'customerTypeName']
+          [db.Sequelize.col('customerTypeDetails.customerTypeName'), 'customerTypeName'],
         ],
-        exclude: ['id', 'hostId', 'isDeleted', 'deletedAt']
+        exclude: ['id', 'hostId', 'isDeleted', 'deletedAt'],
       },
       where,
-      include:[
+      include: [
         {
           attributes: [],
           model: CustomerType,
           where: {
-            isDeleted: 0
+            isDeleted: 0,
           },
-          as: "customerTypeDetails",
-          required: false
+          as: 'customerTypeDetails',
+          required: false,
         },
         {
           attributes: {
-            include: [["id", "mediaId"]],
-            exclude: ['id', 'hostId', 'customerId', 'isEnabled', 'isDeleted', 'deletedAt', 'createdAt', 'updatedAt'],
+            include: [['id', 'mediaId']],
+            exclude: [
+              'id',
+              'hostId',
+              'customerId',
+              'isEnabled',
+              'isDeleted',
+              'deletedAt',
+              'createdAt',
+              'updatedAt',
+            ],
           },
           model: CustomerMedia,
           where: {
             isDeleted: 0,
-            isEnabled: 1
+            isEnabled: 1,
           },
-          as: "customerMedia",
+          as: 'customerMedia',
           separate: true,
-          order: [["sortOrder", "ASC"]],
-          required: false
+          order: [['sortOrder', 'ASC']],
+          required: false,
         },
         {
           attributes: {
-            exclude: ['hostId', 'customerId', 'isEnabled', 'isDeleted', 'deletedAt', 'createdAt', 'updatedAt'],
+            exclude: [
+              'hostId',
+              'customerId',
+              'isEnabled',
+              'isDeleted',
+              'deletedAt',
+              'createdAt',
+              'updatedAt',
+            ],
           },
           model: CustomerAttribute,
           where: {
-            isDeleted: 0
+            isDeleted: 0,
           },
-          as: "customerAttribute",
+          as: 'customerAttribute',
           separate: true,
-          order: [["sortOrder", "ASC"]],
-          required: false
-        }
+          order: [['sortOrder', 'ASC']],
+          required: false,
+        },
       ],
       order,
       logging: console.log, // Enable logging for debugging
     };
 
-    if(page && limit) {
+    if (page && limit) {
       query.limit = limit;
       query.offset = offset;
 
@@ -190,79 +240,109 @@ export class customerRepository {
     } else {
       const rows = await Customer.findAll(query);
       return {
-        data: rows
+        data: rows,
       };
     }
   }
 
-  async getCustomerById(params: { hostId: number, customerId: number }): Promise<any> {
+  async getCustomerById(params: { hostId: number; customerId: number }): Promise<any> {
     const { hostId, customerId } = params;
 
-    const where:any = {
+    const where: any = {
       id: customerId,
       hostId,
-      isDeleted:0
-    }
-   
+      isDeleted: 0,
+    };
+
     const query: FindAndCountOptions<any> = {
       attributes: {
         exclude: ['id', 'isEnabled', 'isDeleted', 'deletedAt', 'createdAt', 'updatedAt'],
         include: [
           [db.Sequelize.col('Customer.id'), 'customerId'],
-          [db.Sequelize.col('customerTypeDetails.customerTypeName'), 'customerTypeName']
-        ]
+          [db.Sequelize.col('customerTypeDetails.customerTypeName'), 'customerTypeName'],
+        ],
       },
       where,
-      include:[
+      include: [
         {
-          attributes:[],
+          attributes: [],
           model: CustomerType,
           where: {
-            isDeleted: 0
+            isDeleted: 0,
           },
-          as: "customerTypeDetails",
-          required: false
+          as: 'customerTypeDetails',
+          required: false,
         },
         {
           attributes: {
-            include: [["id", "mediaId"]],
-            exclude: ['id', 'hostId', 'customerId', 'isEnabled', 'isDeleted', 'deletedAt', 'createdAt', 'updatedAt'],
+            include: [['id', 'mediaId']],
+            exclude: [
+              'id',
+              'hostId',
+              'customerId',
+              'isEnabled',
+              'isDeleted',
+              'deletedAt',
+              'createdAt',
+              'updatedAt',
+            ],
           },
           model: CustomerMedia,
           where: {
             isDeleted: 0,
-            isEnabled: 1
+            isEnabled: 1,
           },
-          as: "customerMedia",
+          as: 'customerMedia',
           separate: true,
-          order: [["sortOrder", "ASC"]],
-          required: false
+          order: [['sortOrder', 'ASC']],
+          required: false,
         },
         {
           attributes: {
-            exclude: ['hostId', 'customerId', 'isEnabled', 'isDeleted', 'deletedAt', 'createdAt', 'updatedAt'],
+            exclude: [
+              'hostId',
+              'customerId',
+              'isEnabled',
+              'isDeleted',
+              'deletedAt',
+              'createdAt',
+              'updatedAt',
+            ],
           },
           model: CustomerAttribute,
           where: {
-            isDeleted: 0
+            isDeleted: 0,
           },
-          as: "customerAttribute",
+          as: 'customerAttribute',
           separate: true,
-          order: [["sortOrder", "ASC"]],
-          required: false
-        }
+          order: [['sortOrder', 'ASC']],
+          required: false,
+        },
       ],
       logging: console.log, // Enable logging for debugging
     };
 
     const customerDetails = await Customer.findOne(query);
     return {
-      data: customerDetails?.toJSON() || {}
+      data: customerDetails?.toJSON() || {},
     };
   }
 
   async saveCustomerMedia(params: SaveCustomerMediaPayload): Promise<any> {
-    const { hostId, customerId, mediaUrl, mediaType, publicId, fileName, fileSizeInBytes, mimeType, isPrimary, sortOrder, isEnabled, createdAt } = params;
+    const {
+      hostId,
+      customerId,
+      mediaUrl,
+      mediaType,
+      publicId,
+      fileName,
+      fileSizeInBytes,
+      mimeType,
+      isPrimary,
+      sortOrder,
+      isEnabled,
+      createdAt,
+    } = params;
     const newMedia = await CustomerMedia.create({
       hostId,
       customerId,
@@ -275,23 +355,21 @@ export class customerRepository {
       isPrimary,
       sortOrder,
       isEnabled,
-      createdAt
+      createdAt,
     });
 
     return newMedia;
   }
 
-  
   async updateCustomerMedia(params: any): Promise<any> {
     const { updatePayload, where } = params;
     const updateResult = await CustomerMedia.update(updatePayload, {
-      where
+      where,
     });
 
     return updateResult;
   }
 
-  
   async saveCustomerAttributes(params: SaveCustomerAttributesPayload): Promise<any[]> {
     const { hostId, customerId, attributes, createdAt } = params;
 
@@ -314,10 +392,30 @@ export class customerRepository {
 
     return CustomerAttribute.bulkCreate(rows);
   }
-  
 
   async createCustomer(params: any): Promise<any> {
-    const { hostId, customerCode, customerName, customerTypeId, contactPerson, email, mobile, alternateMobile, gstNumber, panNumber, addressLine1, addressLine2, city, stateName, stateIsoCode, postalCode, countryName, countryIsoCode, remarks, isEnabled } = params;
+    const {
+      hostId,
+      customerCode,
+      customerName,
+      customerTypeId,
+      contactPerson,
+      email,
+      mobile,
+      alternateMobile,
+      gstNumber,
+      panNumber,
+      addressLine1,
+      addressLine2,
+      city,
+      stateName,
+      stateIsoCode,
+      postalCode,
+      countryName,
+      countryIsoCode,
+      remarks,
+      isEnabled,
+    } = params;
     const newCustomer = await Customer.create({
       hostId,
       customerCode,
@@ -339,26 +437,25 @@ export class customerRepository {
       countryIsoCode,
       remarks,
       isEnabled,
-      createdAt: DateTimeFormatUtil.getCurrentUnixTime()
+      createdAt: DateTimeFormatUtil.getCurrentUnixTime(),
     });
 
     return newCustomer;
   }
-  
-  
-  async getCustomerMediaById(params: { hostId: number, mediaId: number }): Promise<any> {
+
+  async getCustomerMediaById(params: { hostId: number; mediaId: number }): Promise<any> {
     const { hostId, mediaId } = params;
 
-    const where:any = {
+    const where: any = {
       id: mediaId,
       hostId,
-      isDeleted:0
-    }
-       
-    const query: FindAndCountOptions<any> = {      
+      isDeleted: 0,
+    };
+
+    const query: FindAndCountOptions<any> = {
       attributes: {
         exclude: ['hostId', 'customerId', 'isDeleted', 'deletedAt'],
-      },         
+      },
       where,
       raw: true,
       logging: console.log, // Enable logging for debugging
@@ -366,14 +463,14 @@ export class customerRepository {
 
     const mediaDetails = await CustomerMedia.findOne(query);
     return {
-      data: mediaDetails
+      data: mediaDetails,
     };
   }
 
   async updateCustomer(params: any): Promise<any> {
     const { updatePayload, where } = params;
     const updateResult = await Customer.update(updatePayload, {
-      where
+      where,
     });
     return updateResult;
   }
@@ -381,9 +478,47 @@ export class customerRepository {
   async updateCustomerAttributes(params: any): Promise<any> {
     const { updatePayload, where } = params;
     const updateResult = await CustomerAttribute.update(updatePayload, {
-      where
+      where,
     });
     return updateResult;
+  }
+
+  async addCustomerType(payload: { hostId: number; customerType: string }): Promise<any> {
+    const { hostId, customerType } = payload;
+    const result = await CustomerType.create({
+      hostId,
+      customerTypeName: customerType,
+      createdAt: DateTimeFormatUtil.getCurrentUnixTime(),
+    });
+    return result.toJSON();
+  }
+
+  async updateCustomerType(payload: {
+    hostId: number;
+    customerTypeId: number;
+    customerType: string;
+  }): Promise<any> {
+    const { hostId, customerTypeId, customerType } = payload;
+    const [updatedCount] = await CustomerType.update(
+      {
+        customerTypeName: customerType,
+        updatedAt: DateTimeFormatUtil.getCurrentUnixTime(),
+      },
+      {
+        where: {
+          id: customerTypeId,
+          hostId,
+        },
+      }
+    );
+
+    if (updatedCount === 0) {
+      throw new Error('Failed to update customer type');
+    }
+
+    return {
+      customerTypeId,
+    };
   }
 }
 

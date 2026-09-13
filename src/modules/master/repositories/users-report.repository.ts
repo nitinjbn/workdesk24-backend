@@ -485,14 +485,11 @@ export class usersRepository {
     page?: number;
     limit?: number;
     filter?: any;
-    sortBy: CommonReportSortBy;
-    sortOrder: ReportSortDirection;
+    sortBy?: CommonReportSortBy;
+    sortOrder?: ReportSortDirection;
   }): Promise<ReportResponse<any>> {
     const { hostId, page, limit, filter = {}, sortBy, sortOrder } = params;
     const { offset } = baseReportHelper.normalizePagination({ page, limit });
-    const order = buildCommonReportOrder(sortBy, sortOrder, {
-      createdAt: 'createdAt',
-    });
     const where: any = {
       hostId,
       isDeleted: 0,
@@ -507,15 +504,24 @@ export class usersRepository {
         [Op.like]: `%${filter.name.trim()}%`,
       };
     }
+    if (filter.excludeId) {
+      where.id = {
+        [Op.ne]: filter.excludeId,
+      };
+    }
     const query: FindAndCountOptions<any> = {
       attributes: {
         exclude: ['isEnabled', 'isDeleted', 'deletedAt', 'createdAt', 'updatedAt'],
       },
       where,
-      order,
       raw: true,
       logging: console.log, // Enable logging for debugging
     };
+    if (sortBy && sortOrder) {
+      query.order = buildCommonReportOrder(sortBy, sortOrder, {
+        createdAt: 'createdAt',
+      });
+    }
 
     if (page && limit) {
       query.limit = limit;
@@ -940,6 +946,44 @@ export class usersRepository {
     );
 
     return createdRecords;
+  }
+
+  async addDesignation(payload: { hostId: number; designation: string }): Promise<any> {
+    const { hostId, designation } = payload;
+    const result = await Designation.create({
+      hostId,
+      name: designation,
+      createdAt: DateTimeFormatUtil.getCurrentUnixTime(),
+    });
+    return result.toJSON();
+  }
+
+  async updateDesignation(payload: {
+    hostId: number;
+    designationId: number;
+    designation: string;
+  }): Promise<any> {
+    const { hostId, designationId, designation } = payload;
+    const [updatedCount] = await Designation.update(
+      {
+        name: designation,
+        updatedAt: DateTimeFormatUtil.getCurrentUnixTime(),
+      },
+      {
+        where: {
+          id: designationId,
+          hostId,
+        },
+      }
+    );
+
+    if (updatedCount === 0) {
+      throw new Error('Failed to update designation');
+    }
+
+    return {
+      designationId,
+    };
   }
 }
 
