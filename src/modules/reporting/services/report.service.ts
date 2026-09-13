@@ -26,6 +26,10 @@ import {
   ActivityTrendPoint,
   ActivityTrendReportPayload,
   ActivityTrendSummaryRow,
+  MonthlyAttendanceReportPayload,
+  MonthlyAttendanceMonthFilter,
+  MonthlyAttendanceEmployee,
+  MonthlyAttendanceReportResponse,
 } from '../types/report.types';
 import { GpsHistory, Attendance, User } from '../../../models/schemas';
 import baseReportHelper from '../helpers/base-report.helper';
@@ -588,6 +592,182 @@ export class ReportService {
   private toTrendCount(value: unknown): number {
     const numericValue = Number(value ?? 0);
     return Number.isFinite(numericValue) ? numericValue : 0;
+  }
+
+  async getMonthlyAttendanceReport(
+    payload: MonthlyAttendanceReportPayload
+  ): Promise<MonthlyAttendanceReportResponse> {
+    const { hostId, filter } = payload;
+    const attendanceTime = filter?.attendanceTime;
+    if (!attendanceTime) {
+      throw createConfiguredError(
+        'VALIDATION_ERROR',
+        'filter.attendanceTime.from and filter.attendanceTime.to are required',
+        400,
+        'VALIDATION_ERROR'
+      );
+    }
+
+    const dateTimeSettings = await getHostDateTimeSettings(hostId);
+    const timeZone = dateTimeSettings.timeZone || CONFIG.REPORTING.TIMEZONE;
+    const normalizedRange = this.normalizeMonthlyAttendanceRange(attendanceTime, timeZone);
+    const report = await attendanceReportRepository.getMonthlyAttendanceReport(
+      {
+        ...payload,
+        filter: {
+          ...filter,
+          attendanceTime: normalizedRange,
+        },
+      },
+      timeZone
+    );
+    const attendanceByUserAndDate = new Map<string, string>();
+    report.attendance.forEach((record) => {
+      attendanceByUserAndDate.set(
+        `${record.userId}:${moment.unix(Number(record.attendanceTime)).tz(timeZone).format('YYYY-MM-DD')}`,
+        record.attendanceStatus || ''
+      );
+    });
+    const leaveDates = new Set(report.leaveDates.map((row) => `${row.userId}:${row.leaveDate}`));
+    const holidayDates = new Set(
+      report.holidays.map((row) => `${row.holidayCalendarId}:${row.holidayDate}`)
+    );
+    const from = moment.unix(normalizedRange.from).tz(timeZone).startOf('day');
+    const till = moment
+      .unix(normalizedRange.to - 1)
+      .tz(timeZone)
+      .startOf('day');
+    const today = moment.tz(timeZone).startOf('day');
+    const dates: moment.Moment[] = [];
+    for (const cursor = from.clone(); cursor.isSameOrBefore(till, 'day'); cursor.add(1, 'day')) {
+      dates.push(cursor.clone());
+    }
+
+    const employees: MonthlyAttendanceEmployee[] = report.users.map((user) => {
+      const settings = user.settings?.find((setting) => setting.settingName === 'weeklyOffMask');
+      const weeklyOffMask = Number(settings?.settingValue || 0);
+      const attendance: MonthlyAttendanceEmployee['attendance'] = {};
+      const summary = {
+        present: 0,
+        absent: 0,
+        leave: 0,
+        weekOff: 0,
+        holiday: 0,
+        workingDays: 0,
+        attendancePercentage: 0,
+      };
+
+      dates.forEach((date) => {
+        const dateKey = date.format('YYYY-MM-DD');
+        const recordStatus = attendanceByUserAndDate.get(`${user.id}:${dateKey}`);
+        const isPresent = recordStatus?.toLowerCase() === 'present';
+        const isLeave = !isPresent && leaveDates.has(`${user.id}:${dateKey}`);
+        const isHoliday = holidayDates.has(`${user.holidayCalendarId}:${dateKey}`);
+        const isWeekOff = (weeklyOffMask & (1 << date.day())) !== 0;
+        const isFuture = date.isAfter(today, 'day');
+        const status = isPresent
+          ? 'P'
+          : isLeave
+            ? 'L'
+            : isHoliday
+              ? 'H'
+              : isWeekOff
+                ? 'WO'
+                : isFuture
+                  ? '-'
+                  : 'A';
+        attendance[String(date.date())] = status;
+        if (status !== '-') {
+          summary[
+            status === 'P'
+              ? 'present'
+              : status === 'L'
+                ? 'leave'
+                : status === 'H'
+                  ? 'holiday'
+                  : status === 'WO'
+                    ? 'weekOff'
+                    : 'absent'
+          ] += 1;
+        }
+      });
+
+      summary.workingDays =
+        dates.filter((date) => !date.isAfter(today, 'day')).length -
+        summary.weekOff -
+        summary.holiday;
+      summary.attendancePercentage =
+        summary.workingDays > 0
+          ? Number(((summary.present / summary.workingDays) * 100).toFixed(2))
+          : 0;
+      return {
+        userId: user.id,
+        employeeCode: user.employeeCode,
+        employeeName: user.name,
+        attendance,
+        summary,
+      };
+    });
+
+    return { employees, pagination: report.pagination };
+  }
+
+  private normalizeMonthlyAttendanceRange(
+    range: { from: number | string; to: number | string } | MonthlyAttendanceMonthFilter,
+    timeZone: string
+  ): { from: number; to: number } {
+    if ('month' in range && 'year' in range) {
+      const month = Number(range.month);
+      const year = Number(range.year);
+      const monthStart = moment.tz({ year, month: month - 1, day: 1 }, timeZone);
+
+      if (
+        !Number.isInteger(month) ||
+        month < 1 ||
+        month > 12 ||
+        !Number.isInteger(year) ||
+        year < 1970 ||
+        !monthStart.isValid() ||
+        monthStart.year() !== year ||
+        monthStart.month() !== month - 1
+      ) {
+        throw createConfiguredError(
+          'VALIDATION_ERROR',
+          'filter.attendanceTime.month must be between 1 and 12 and year must be valid',
+          400,
+          'VALIDATION_ERROR'
+        );
+      }
+
+      return {
+        from: monthStart.startOf('month').unix(),
+        to: monthStart.clone().add(1, 'month').startOf('month').unix(),
+      };
+    }
+
+    const parseDate = (value: number | string, endOfDay = false): moment.Moment => {
+      if (typeof value === 'number' || /^\d+$/.test(value)) {
+        return moment.unix(Number(value)).tz(timeZone);
+      }
+
+      return moment.tz(value, 'YYYY-MM-DD', true, timeZone).startOf(endOfDay ? 'day' : 'day');
+    };
+
+    const from = parseDate(range.from);
+    const to = parseDate(range.to, true);
+    if (!from.isValid() || !to.isValid() || from.isAfter(to, 'day')) {
+      throw createConfiguredError(
+        'VALIDATION_ERROR',
+        'filter.attendanceTime.from and filter.attendanceTime.to must be valid dates with from less than or equal to to',
+        400,
+        'VALIDATION_ERROR'
+      );
+    }
+
+    return {
+      from: from.startOf('day').unix(),
+      to: to.add(1, 'day').startOf('day').unix(),
+    };
   }
 }
 

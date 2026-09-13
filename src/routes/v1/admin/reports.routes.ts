@@ -20,4 +20,9 @@ router.post('/reports/getAllActivities', reportController.getAllActivities.bind(
 router.post('/reports/getLastLocations', reportController.getLastLocations.bind(reportController));
 router.post('/reports/getActivityTrend', reportController.getActivityTrend.bind(reportController));
 
+router.post(
+  '/reports/getMonthlyAttendance',
+  reportController.getMonthlyAttendance.bind(reportController)
+);
+
 export default router;

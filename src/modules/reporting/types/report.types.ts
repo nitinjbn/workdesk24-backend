@@ -219,8 +219,13 @@ export interface AdminGpsHistoryJourneyResponse {
 export type AttendanceReportFilter = UserScopedReportFilter;
 
 export interface AttendanceTimeRangeFilter {
-  from: number;
-  to: number;
+  from: number | string;
+  to: number | string;
+}
+
+export interface MonthlyAttendanceMonthFilter {
+  month: number | string;
+  year: number | string;
 }
 
 export interface AttendanceReportFilterWithTime extends AttendanceReportFilter {
@@ -228,6 +233,37 @@ export interface AttendanceReportFilterWithTime extends AttendanceReportFilter {
 }
 
 export interface AttendanceReportPayload extends UserScopedReportPayload {}
+
+export interface MonthlyAttendanceReportPayload extends ReportPaginationParams {
+  hostId: number;
+  filter: {
+    userId?: number[];
+    attendanceTime?: AttendanceTimeRangeFilter | MonthlyAttendanceMonthFilter;
+  };
+}
+
+export interface MonthlyAttendanceSummary {
+  present: number;
+  absent: number;
+  leave: number;
+  weekOff: number;
+  holiday: number;
+  workingDays: number;
+  attendancePercentage: number;
+}
+
+export interface MonthlyAttendanceEmployee {
+  userId: number;
+  employeeCode?: string;
+  employeeName?: string;
+  attendance: Record<string, 'P' | 'A' | 'L' | 'WO' | 'H' | '-'>;
+  summary: MonthlyAttendanceSummary;
+}
+
+export interface MonthlyAttendanceReportResponse {
+  employees: MonthlyAttendanceEmployee[];
+  pagination?: ReportPaginationMeta;
+}
 
 export interface ReportScope {
   hostId: number;
