@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import inquiryController from '../../../modules/public/controllers/inquiry.controller';
 import { apiLogRouteContext } from '../../../modules/api-logs';
+import { downloadAndroidApk } from '../../../modules/public/controllers/download.controller';
 
 const router = Router();
 router.use('/inquiries', apiLogRouteContext('public', 'inquiries'));
@@ -25,5 +26,7 @@ router.post('/info/version', (req, res) => {
     api: 'v1',
   });
 });
+
+router.get('/download/android', downloadAndroidApk);
 
 export default router;
