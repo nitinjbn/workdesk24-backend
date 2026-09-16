@@ -71,6 +71,7 @@ export interface GetUsersFilter {
   };
   isFieldAppUser?: number;
   isAdminUser?: number;
+  designationId?: number;
 }
 
 export interface GetRolesPayload {

@@ -151,6 +151,10 @@ export class usersRepository {
       filter.id = filter.userId || filter.id;
     }
 
+    if (filter.designationId) {
+      where.designationId = filter.designationId;
+    }
+
     if (filter.name) {
       where.name = {
         [Op.like]: `%${filter.name.trim()}%`,
