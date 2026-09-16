@@ -237,6 +237,26 @@
               "response": []
             }
           ]
+        },
+        {
+          "name": "Downloads",
+          "description": "Public application downloads",
+          "item": [
+            {
+              "name": "Download Android APK",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/public/download/android",
+                  "host": ["{{BASE_URL}}"],
+                  "path": ["api", "v1", "public", "download", "android"]
+                },
+                "description": "Download the current Android APK as a binary attachment"
+              },
+              "response": []
+            }
+          ]
         }
       ]
     },
