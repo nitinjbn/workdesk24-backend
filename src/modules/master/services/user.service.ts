@@ -225,6 +225,10 @@ export class UserService {
     };
   }
 
+  async getTotalAppUsersCount(hostId: number): Promise<number> {
+    return await usersRepository.getTotalAppUsersCount({ hostId });
+  }
+
   async createAppUser(payload: any): Promise<any> {
     const {
       hostId,
@@ -258,6 +262,8 @@ export class UserService {
       leavePolicyId,
       attendanceSites,
     } = payload;
+
+    // Validate the current subscription for the host
 
     let settings = payload.settings;
     if (settings && typeof settings !== 'object') {

@@ -989,6 +989,19 @@ export class usersRepository {
       designationId,
     };
   }
+
+  async getTotalAppUsersCount(payload: { hostId: number }): Promise<number> {
+    const { hostId } = payload;
+    const count = await User.count({
+      where: {
+        hostId,
+        isFieldAppUser: 1,
+        accountStatus: 'ACTIVE',
+        isDeleted: 0,
+      },
+    });
+    return count;
+  }
 }
 
 export default new usersRepository();

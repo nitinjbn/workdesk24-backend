@@ -7,6 +7,9 @@ import { uploadBufferToMediaStorage } from '../../../shared/utils/media-storage.
 import { PhoneUtil } from '../../../shared/utils/phone.util';
 import { EmailUtil } from '../../../shared/utils/email.util';
 import { CONFIG } from '../../../config/constants';
+import UserValidator from '../helpers/user.validator';
+import { createConfiguredError } from '../../../shared/utils/error.util';
+
 export class UserController {
   async getAppUsers(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     await this.executeUserScopedReport(
@@ -169,6 +172,10 @@ export class UserController {
         leavePolicyId,
         attendanceSites,
       } = req.body;
+
+      // Check if the host is eligible to create an app user, this will throw an error if not eligible
+      await UserValidator.checkCreateAppUserEligibility(hostId);
+
       const file = req.file as Express.Multer.File | undefined;
 
       //Step 1: Validate the mobile number uniqueness and format using PhoneUtil
@@ -594,6 +601,35 @@ export class UserController {
         success: true,
         message: 'Designation updated successfully',
         data: result.designation,
+      } as ApiResponse);
+    } catch (error: any) {
+      next(error);
+    }
+  }
+
+  async checkCreateAppUserEligibility(
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const { hostId } = req.body;
+
+      if (!hostId) {
+        res.status(400).json({
+          success: false,
+          message: 'hostId is required',
+        } as ApiResponse);
+        return;
+      }
+
+      // Check if the host is eligible to create an app user, this will throw an error if not eligible
+      await UserValidator.checkCreateAppUserEligibility(hostId);
+
+      res.json({
+        success: true,
+        message: 'You are eligible to create an app user.',
+        data: {},
       } as ApiResponse);
     } catch (error: any) {
       next(error);

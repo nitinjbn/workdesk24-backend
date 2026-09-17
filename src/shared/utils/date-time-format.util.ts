@@ -9,7 +9,7 @@ const FIELD_FORMAT_CONFIG: Record<string, 'date' | 'datetime'> = {
   // Date-only fields (YYYY-MM-DD)
   dateOfBirth: 'date',
   joiningDate: 'date',
-  
+
   // DateTime fields (full format)
   createdAt: 'datetime',
   updatedAt: 'datetime',
@@ -50,7 +50,11 @@ export class DateTimeFormatUtil {
     return false;
   }
 
-  private static formatUnixValue(value: number | string, settings?: HostDateTimeSettings, formatType: 'date' | 'datetime' = 'datetime'): string | number {
+  private static formatUnixValue(
+    value: number | string,
+    settings?: HostDateTimeSettings,
+    formatType: 'date' | 'datetime' = 'datetime'
+  ): string | number {
     const unixMs = DateTimeFormatUtil.asUnixMs(value);
     if (unixMs === null) {
       return value;
@@ -63,7 +67,10 @@ export class DateTimeFormatUtil {
       : DEFAULT_DATE_TIME_SETTINGS.timeZone;
 
     // Use date-only format (YYYY-MM-DD) for date fields, full format for datetime
-    const formatPattern = formatType === 'date' ?  (effectiveSettings.dateFormat || DEFAULT_DATE_TIME_SETTINGS.dateFormat) : (effectiveSettings.dateTimeFormat || DEFAULT_DATE_TIME_SETTINGS.dateTimeFormat);
+    const formatPattern =
+      formatType === 'date'
+        ? effectiveSettings.dateFormat || DEFAULT_DATE_TIME_SETTINGS.dateFormat
+        : effectiveSettings.dateTimeFormat || DEFAULT_DATE_TIME_SETTINGS.dateTimeFormat;
     const dateTime = moment.tz(unixMs, timeZone);
 
     if (!dateTime.isValid()) {
@@ -73,9 +80,15 @@ export class DateTimeFormatUtil {
     return dateTime.format(formatPattern);
   }
 
-  private static cloneAndFormat(input: unknown, settings?: HostDateTimeSettings, fieldFormatConfig?: Record<string, 'date' | 'datetime'>): unknown {
+  private static cloneAndFormat(
+    input: unknown,
+    settings?: HostDateTimeSettings,
+    fieldFormatConfig?: Record<string, 'date' | 'datetime'>
+  ): unknown {
     if (Array.isArray(input)) {
-      return input.map((item) => DateTimeFormatUtil.cloneAndFormat(item, settings, fieldFormatConfig));
+      return input.map((item) =>
+        DateTimeFormatUtil.cloneAndFormat(item, settings, fieldFormatConfig)
+      );
     }
 
     if (!input || typeof input !== 'object') {
@@ -111,13 +124,24 @@ export class DateTimeFormatUtil {
     return output;
   }
 
-  static formatDateTimeFieldsBySettings<T>(data: T, settings?: HostDateTimeSettings, fieldFormatConfig?: Record<string, 'date' | 'datetime'>): T {
+  static formatDateTimeFieldsBySettings<T>(
+    data: T,
+    settings?: HostDateTimeSettings,
+    fieldFormatConfig?: Record<string, 'date' | 'datetime'>
+  ): T {
     return DateTimeFormatUtil.cloneAndFormat(data, settings, fieldFormatConfig) as T;
   }
 
   static getCurrentUnixTime(timezone = 'UTC'): number {
-    console.log("############################## getCurrentUnixTime Started:", moment().tz(timezone).unix());
+    console.log(
+      '############################## getCurrentUnixTime Started:',
+      moment().tz(timezone).unix()
+    );
     return moment().tz(timezone).unix();
+  }
+
+  static getCurrentDateInTimeZone(timezone = 'Asia/Kolkata'): string {
+    return moment().tz(timezone).format('YYYY-MM-DD');
   }
 
   static getWeeklyOffMask(days: string[]): number {
@@ -133,14 +157,19 @@ export class DateTimeFormatUtil {
   }
 
   static getWeeklyOffDays(mask: number): string[] {
-    return Object.keys(CONFIG.WEEKDAY_FLAGS).filter(day => (mask & CONFIG.WEEKDAY_FLAGS[day]) !== 0);
+    return Object.keys(CONFIG.WEEKDAY_FLAGS).filter(
+      (day) => (mask & CONFIG.WEEKDAY_FLAGS[day]) !== 0
+    );
 
     // Example
     // console.log(DateTimeFormatUtil.getWeeklyOffDays(65));
     // Output: ['SUNDAY', 'SATURDAY']
   }
 
-  static getUnixDateRange(payload: { year: number; month: number }): { fromDate: number; tillDate: number } {
+  static getUnixDateRange(payload: { year: number; month: number }): {
+    fromDate: number;
+    tillDate: number;
+  } {
     const { year, month } = payload;
     const selectedMonth = moment({ year, month: month - 1 });
 
@@ -180,7 +209,11 @@ export class DateTimeFormatUtil {
   }
 }
 
-export const formatDateTimeFieldsBySettings = <T>(data: T, settings?: HostDateTimeSettings, fieldFormatConfig?: Record<string, 'date' | 'datetime'>): T => {
+export const formatDateTimeFieldsBySettings = <T>(
+  data: T,
+  settings?: HostDateTimeSettings,
+  fieldFormatConfig?: Record<string, 'date' | 'datetime'>
+): T => {
   return DateTimeFormatUtil.formatDateTimeFieldsBySettings(data, settings, fieldFormatConfig);
 };
 

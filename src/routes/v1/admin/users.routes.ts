@@ -11,6 +11,11 @@ router.post('/users/getDesignations', userController.getDesignations.bind(userCo
 router.post('/users/getRoles', userController.getRoles.bind(userController));
 router.post('/users/getUsers', userController.getAppUsers.bind(userController));
 router.post('/users/getUserDetails', userController.getUserDetails.bind(userController));
+
+router.post(
+  '/users/checkCreateAppUserEligibility',
+  userController.checkCreateAppUserEligibility.bind(userController)
+);
 router.post(
   '/users/createUser',
   upload.single('media'),

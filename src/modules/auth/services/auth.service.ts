@@ -28,6 +28,7 @@ import {
 } from '../../../shared/utils/date-time-format.util';
 import { formatStorageFieldsByConfig } from '../../../shared/utils/storage-format.util';
 import { getHostDateTimeSettings } from '../../../shared/utils/host-settings.util';
+import hostService from '../../master/services/host.service';
 
 interface RegisterDto {
   hostId?: number;
@@ -349,6 +350,12 @@ export class AuthService {
     //const isAdmin = await isAdminRole(user.hostId, user.roleId);
     if (!user.isAdminUser) {
       throw createConfiguredError('ADMIN_PORTAL_ACCESS_DENIED');
+    }
+
+    // Check if the host has an active subscription, this will throw an error if not active
+    const currentSubscription = await hostService.getCurrentSubscription(user.hostId);
+    if (!currentSubscription || Object.keys(currentSubscription).length === 0) {
+      throw createConfiguredError('NO_ACTIVE_SUBSCRIPTION_FOR_HOST');
     }
 
     const sessionTokens = await this.createUserSessionTokens({

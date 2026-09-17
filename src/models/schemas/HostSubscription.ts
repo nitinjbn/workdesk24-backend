@@ -1,9 +1,15 @@
 import { Model, DataTypes, Sequelize, Optional } from 'sequelize';
 import { HostSubscriptionAttributes } from '../../types';
 
-interface HostSubscriptionCreationAttributes extends Optional<HostSubscriptionAttributes, 'id' | 'isEnabled' | 'isDeleted' | 'createdAt' | 'updatedAt' | 'deletedAt'> {}
+interface HostSubscriptionCreationAttributes extends Optional<
+  HostSubscriptionAttributes,
+  'id' | 'isEnabled' | 'isDeleted' | 'createdAt' | 'updatedAt' | 'deletedAt'
+> {}
 
-class HostSubscription extends Model<HostSubscriptionAttributes , HostSubscriptionCreationAttributes > implements HostSubscriptionAttributes {
+class HostSubscription
+  extends Model<HostSubscriptionAttributes, HostSubscriptionCreationAttributes>
+  implements HostSubscriptionAttributes
+{
   public id!: number;
   public hostId!: number;
   public licensedUserCount!: number;
@@ -92,11 +98,11 @@ export function initHostSubscription(sequelize: Sequelize): typeof HostSubscript
         allowNull: false,
       },
       planStartDate: {
-        type: DataTypes.BIGINT,
+        type: DataTypes.DATEONLY,
         allowNull: false,
       },
       planEndDate: {
-        type: DataTypes.BIGINT,
+        type: DataTypes.DATEONLY,
         allowNull: false,
       },
       paymentStatus: {

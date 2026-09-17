@@ -4,6 +4,8 @@ import { initUser } from './schemas/User';
 import { initUserSettings } from './schemas/UserSettings';
 import { initHost } from './schemas/Host';
 import { initHostSettings } from './schemas/HostSettings';
+import { initHostSubscription } from './schemas/HostSubscription';
+import { initSubscriptionCycle } from './schemas/SubscriptionCycle';
 import { initRole } from './schemas/Role';
 import { initPermission } from './schemas/Permission';
 import { initRolePermission } from './schemas/RolePermission';
@@ -117,6 +119,7 @@ const connectionManager = new DatabaseConnectionManager(sequelize);
 // Initialize all models
 const Host = initHost(sequelize);
 const HostSettings = initHostSettings(sequelize);
+const HostSubscription = initHostSubscription(sequelize);
 const Role = initRole(sequelize);
 const Permission = initPermission(sequelize);
 const RolePermission = initRolePermission(sequelize);
@@ -167,11 +170,12 @@ const Holiday = initHoliday(sequelize);
 const HolidayCalendar = initHolidayCalendar(sequelize);
 const AttendanceSite = initAttendanceSite(sequelize);
 const UserAttendanceSite = initUserAttendanceSite(sequelize);
-
+const SubscriptionCycle = initSubscriptionCycle(sequelize);
 // Store models in an object
 const db: any = {
   Host,
   HostSettings,
+  HostSubscription,
   Role,
   Permission,
   RolePermission,
@@ -225,6 +229,7 @@ const db: any = {
   connectionManager,
   AttendanceSite,
   UserAttendanceSite,
+  SubscriptionCycle,
 };
 
 // Setup associations
@@ -278,6 +283,7 @@ export {
   Sequelize,
   Host,
   HostSettings,
+  HostSubscription,
   Role,
   Permission,
   RolePermission,
@@ -329,6 +335,7 @@ export {
   HolidayCalendar,
   AttendanceSite,
   UserAttendanceSite,
+  SubscriptionCycle,
 };
 
 export default db;
