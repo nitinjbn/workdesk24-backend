@@ -75,6 +75,13 @@ interface VerifyOtpDto {
 
 interface AuthResponse {
   user: unknown;
+  subscription: {
+    status: string;
+    canUseApp: boolean;
+    isReadOnly: boolean;
+    canRenew: boolean;
+    message: string;
+  };
   accessToken: string;
   refreshToken: string;
   permissionsByModule: Array<{
@@ -85,7 +92,12 @@ interface AuthResponse {
 
 interface AdminAuthResponse {
   user: unknown;
-  //permissions: RolePermissionView[];
+  subscription: {
+    status: string;
+    canUseApp: boolean;
+    isReadOnly: boolean;
+    canRenew: boolean;
+  };
   permissionsByModule: Array<{
     moduleName: string;
     actions: RolePermissionView[];
@@ -314,11 +326,15 @@ export class AuthService {
     // Format user data with settings, datetime, and storage fields
     const formattedUser = await this.formatUserWithSettings(user);
 
+    // Fetch subscription status for the host
+    const subscription = await this.getSubscriptionStatusForHost(user.hostId, 'APP');
+
     return {
       user: formattedUser,
       accessToken: sessionTokens.accessToken,
       refreshToken: sessionTokens.refreshToken,
       permissionsByModule,
+      subscription,
     };
   }
 
@@ -343,6 +359,32 @@ export class AuthService {
     return userData;
   }
 
+  private async getSubscriptionStatusForHost(hostId: number, context: 'APP' | 'ADMIN') {
+    const subscription = {
+      status: 'ACTIVE',
+      canUseApp: true,
+      isReadOnly: false,
+      canRenew: false,
+      message: '',
+    };
+    const currentSubscription = await hostService.getCurrentSubscription(hostId);
+    if (!currentSubscription || Object.keys(currentSubscription).length === 0) {
+      subscription.status = 'INACTIVE';
+      subscription.canUseApp = false;
+      subscription.isReadOnly = true;
+
+      if (context === 'APP') {
+        subscription.message =
+          'Your company subscription has expired. New activities are disabled. Please contact your administrator.';
+      } else if (context === 'ADMIN') {
+        subscription.canRenew = true;
+        subscription.message =
+          'Your WorkDesk24 subscription has expired. Your account is currently in read-only mode. Renew your subscription to restore full access.';
+      }
+    }
+    return subscription;
+  }
+
   async adminLogin(data: LoginDto): Promise<AdminAuthResponse> {
     const user = await this.validateCredentials(data);
     //console.log("#################### user:", user);
@@ -353,10 +395,7 @@ export class AuthService {
     }
 
     // Check if the host has an active subscription, this will throw an error if not active
-    const currentSubscription = await hostService.getCurrentSubscription(user.hostId);
-    if (!currentSubscription || Object.keys(currentSubscription).length === 0) {
-      throw createConfiguredError('NO_ACTIVE_SUBSCRIPTION_FOR_HOST');
-    }
+    const subscription = await this.getSubscriptionStatusForHost(user.hostId, 'ADMIN');
 
     const sessionTokens = await this.createUserSessionTokens({
       hostId: user.hostId,
@@ -372,7 +411,7 @@ export class AuthService {
 
     return {
       user: user.toJSON(),
-      //permissions,
+      subscription,
       permissionsByModule,
       accessToken: sessionTokens.accessToken,
       refreshToken: sessionTokens.refreshToken,
@@ -462,9 +501,13 @@ export class AuthService {
       user.id
     );
 
+    // Check if the host has an active subscription, this will throw an error if not active
+    const subscription = await this.getSubscriptionStatusForHost(user.hostId, 'ADMIN');
+
     return {
       user: user.toJSON(),
       //permissions,
+      subscription,
       permissionsByModule,
       accessToken: rotatedTokens.accessToken,
       refreshToken: rotatedTokens.refreshToken,
@@ -608,11 +651,15 @@ export class AuthService {
     // Format user data with settings, datetime, and storage fields
     const formattedUser = await this.formatUserWithSettings(user);
 
+    // Fetch subscription status for the host
+    const subscription = await this.getSubscriptionStatusForHost(user.hostId, 'APP');
+
     return {
       user: formattedUser,
       accessToken: rotatedTokens.accessToken,
       refreshToken: rotatedTokens.refreshToken,
       permissionsByModule,
+      subscription,
     };
   }
 

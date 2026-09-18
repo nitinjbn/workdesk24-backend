@@ -10,8 +10,14 @@ export class AuthController {
   async requestOtp(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       let { identifier, deviceDetails } = req.body;
-      const user = await authService.getUserByIdentifier({ identifier, deviceId: deviceDetails?.deviceId });
-      console.log(`################ AuthController.requestOtp: User lookup for identifier "${identifier}" returned:`, user);
+      const user = await authService.getUserByIdentifier({
+        identifier,
+        deviceId: deviceDetails?.deviceId,
+      });
+      console.log(
+        `################ AuthController.requestOtp: User lookup for identifier "${identifier}" returned:`,
+        user
+      );
       if (!user) {
         res.status(404).json({
           success: false,
@@ -45,7 +51,7 @@ export class AuthController {
         });
       }
       */
-      
+
       //console.log("################ AuthController.requestOtp: User found:", user);
       const { email, mobile } = user;
       const otpCode = CommonUtil.generateOTP(CONFIG.OTP.AUTH.CODE_LENGTH);
@@ -61,7 +67,23 @@ export class AuthController {
       const fcmToken = user.device?.fcmToken?.trim();
       const currentTime = DateTimeFormatUtil.getCurrentUnixTime();
 
-      let sendEmailOtpResult: { deliveryChannel: "EMAIL", destination: string; messageId?: string; provider?: string; status?: string | null; failedReason?: string | null; sentAt?: number | null } = { deliveryChannel: "EMAIL", destination: email, messageId: null, provider: null, status: null, failedReason: null, sentAt: null };
+      let sendEmailOtpResult: {
+        deliveryChannel: 'EMAIL';
+        destination: string;
+        messageId?: string;
+        provider?: string;
+        status?: string | null;
+        failedReason?: string | null;
+        sentAt?: number | null;
+      } = {
+        deliveryChannel: 'EMAIL',
+        destination: email,
+        messageId: null,
+        provider: null,
+        status: null,
+        failedReason: null,
+        sentAt: null,
+      };
       try {
         console.log(`Sending OTP email to ${email} for user ${user.id}. OTP Code: ${otpCode}`);
         sendEmailOtpResult = await authNotificationService.sendOtpEmail({
@@ -71,15 +93,40 @@ export class AuthController {
           appName: CONFIG.APP_CONFIG.NAME,
           expiryMinutes: CONFIG.OTP.AUTH.EXPIRY_MINUTES,
         });
-        console.log(`OTP email sent for user ${user.id}. Message ID: ${sendEmailOtpResult.messageId || 'N/A'}`);
+        console.log(
+          `OTP email sent for user ${user.id}. Message ID: ${sendEmailOtpResult.messageId || 'N/A'}`
+        );
         //console.log("################ AuthController.requestOtp: OTP email sent successfully:", sendEmailOtpResult);
       } catch (logError) {
         console.error(`Failed to log OTP sending attempt for user ${user.id}:`, logError);
-        sendEmailOtpResult = { deliveryChannel: "EMAIL", destination: email, messageId: null, provider: null, status: "FAILED", failedReason: logError?.message || 'Failed to send OTP email', sentAt: null };
+        sendEmailOtpResult = {
+          deliveryChannel: 'EMAIL',
+          destination: email,
+          messageId: null,
+          provider: null,
+          status: 'FAILED',
+          failedReason: logError?.message || 'Failed to send OTP email',
+          sentAt: null,
+        };
       }
-      
 
-      let sendPushOtpResult: { deliveryChannel: "PUSH", destination: string; messageId?: string; provider?: string; status?: string | null; failedReason?: string | null, sentAt?: number | null } | null = { deliveryChannel: "PUSH", destination: fcmToken || '', messageId: null, provider: null, status: null, failedReason: null, sentAt: null };
+      let sendPushOtpResult: {
+        deliveryChannel: 'PUSH';
+        destination: string;
+        messageId?: string;
+        provider?: string;
+        status?: string | null;
+        failedReason?: string | null;
+        sentAt?: number | null;
+      } | null = {
+        deliveryChannel: 'PUSH',
+        destination: fcmToken || '',
+        messageId: null,
+        provider: null,
+        status: null,
+        failedReason: null,
+        sentAt: null,
+      };
       if (fcmToken) {
         try {
           sendPushOtpResult = await authNotificationService.sendOtpPushNotification({
@@ -89,16 +136,32 @@ export class AuthController {
             appName: CONFIG.APP_CONFIG.NAME,
             expiryMinutes: CONFIG.OTP.AUTH.EXPIRY_MINUTES,
           });
-          console.log("################ AuthController.requestOtp: OTP push notification sent successfully:", sendPushOtpResult);
-          console.log(`OTP push notification sent for user ${user.id}. Message ID: ${sendPushOtpResult.messageId || 'N/A'}`);
+          console.log(
+            '################ AuthController.requestOtp: OTP push notification sent successfully:',
+            sendPushOtpResult
+          );
+          console.log(
+            `OTP push notification sent for user ${user.id}. Message ID: ${sendPushOtpResult.messageId || 'N/A'}`
+          );
         } catch (pushError: any) {
-          console.error(`Failed to send OTP push notification for user ${user.id}:`, pushError?.message || pushError);
-          sendPushOtpResult = { deliveryChannel: "PUSH", destination: fcmToken || '', messageId: null, provider: null, status: "FAILED", failedReason: pushError?.message || 'Failed to send OTP push notification', sentAt: null };
+          console.error(
+            `Failed to send OTP push notification for user ${user.id}:`,
+            pushError?.message || pushError
+          );
+          sendPushOtpResult = {
+            deliveryChannel: 'PUSH',
+            destination: fcmToken || '',
+            messageId: null,
+            provider: null,
+            status: 'FAILED',
+            failedReason: pushError?.message || 'Failed to send OTP push notification',
+            sentAt: null,
+          };
         }
       }
 
       // If both email and push OTP sending failed, return an error response
-      if (sendEmailOtpResult?.status === "FAILED" && sendPushOtpResult?.status === "FAILED") {
+      if (sendEmailOtpResult?.status === 'FAILED' && sendPushOtpResult?.status === 'FAILED') {
         res.status(500).json({
           success: false,
           message: 'Failed to send OTP. Please try again later.',
@@ -111,17 +174,17 @@ export class AuthController {
       const smsOtpStatus = false; // SMS sending is not implemented yet
       const pushOtpStatus = !!sendPushOtpResult?.messageId;
 
-      if(emailOtpStatus || pushOtpStatus) {
+      if (emailOtpStatus || pushOtpStatus) {
         const otpDeliveriesResults = [];
-        if(email) {
+        if (email) {
           otpDeliveriesResults.push(sendEmailOtpResult);
         }
-        if(fcmToken) {
+        if (fcmToken) {
           otpDeliveriesResults.push(sendPushOtpResult);
         }
 
         // Save the OTP code and its expiry time in the database for the user
-        const otpExpiryTime = currentTime + (CONFIG.OTP.AUTH.EXPIRY_MINUTES * 60);
+        const otpExpiryTime = currentTime + CONFIG.OTP.AUTH.EXPIRY_MINUTES * 60;
         const saveOtpResult = await authService.saveOtpForUser({
           hostId: user.hostId,
           userId: user.id,
@@ -134,7 +197,7 @@ export class AuthController {
           maxAttempts: CONFIG.OTP.AUTH.MAX_ATTEMPTS,
           requestIp: req.ip,
           createdAt: currentTime,
-          otpDeliveries: otpDeliveriesResults || []
+          otpDeliveries: otpDeliveriesResults || [],
         });
         console.log(`OTP code saved for user ${user.id}. Save result:`, saveOtpResult);
       }
@@ -145,7 +208,7 @@ export class AuthController {
           email,
           mobile,
           emailOtpStatus,
-          smsOtpStatus
+          smsOtpStatus,
         }),
         data: {
           email: emailOtpStatus,
@@ -155,8 +218,8 @@ export class AuthController {
             email: emailOtpStatus && email ? CommonUtil.maskEmail(email) : null,
             mobile: smsOtpStatus && mobile ? CommonUtil.maskMobile(mobile) : null,
             push: pushOtpStatus,
-          }
-        }
+          },
+        },
       } as ApiResponse);
     } catch (error) {
       next(error);
@@ -196,7 +259,19 @@ export class AuthController {
 
   async register(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { hostId, email, password, name, roleId, designationId, mobile, employeeCode, reportingManagerId, profileImageUrl, joiningDate } = req.body;
+      const {
+        hostId,
+        email,
+        password,
+        name,
+        roleId,
+        designationId,
+        mobile,
+        employeeCode,
+        reportingManagerId,
+        profileImageUrl,
+        joiningDate,
+      } = req.body;
 
       if (!email || !password) {
         res.status(400).json({
@@ -206,7 +281,19 @@ export class AuthController {
         return;
       }
 
-      const result = await authService.register({ hostId, email, password, name, roleId, designationId, mobile, employeeCode, reportingManagerId, profileImageUrl, joiningDate });
+      const result = await authService.register({
+        hostId,
+        email,
+        password,
+        name,
+        roleId,
+        designationId,
+        mobile,
+        employeeCode,
+        reportingManagerId,
+        profileImageUrl,
+        joiningDate,
+      });
 
       res.status(201).json({
         success: true,
@@ -239,6 +326,7 @@ export class AuthController {
           user: result.user,
           accessToken: result.accessToken,
           refreshToken: result.refreshToken,
+          subscription: result.subscription,
           permissions: result.permissionsByModule,
         },
       } as ApiResponse);
@@ -268,6 +356,7 @@ export class AuthController {
           user: result.user,
           accessToken: result.accessToken,
           refreshToken: result.refreshToken,
+          subscription: result.subscription,
           permissions: result.permissionsByModule,
         },
       } as ApiResponse);
