@@ -1,48 +1,78 @@
 import { FindAndCountOptions, Includeable, Op } from 'sequelize';
 import db, { Visit } from '../../../models';
-import { AttendanceReportFilter, CommonReportSortBy, ReportResponse, ReportSortDirection, GetVisitsReportPayload } from '../types/report.types';
+import {
+  AttendanceReportFilter,
+  CommonReportSortBy,
+  ReportResponse,
+  ReportSortDirection,
+  GetVisitsReportPayload,
+} from '../types/report.types';
 import baseReportHelper from '../helpers/base-report.helper';
-import { buildCommonReportOrder, buildDynamicModelFilters, buildUserInclude, buildUserScopedWhere, extractUserFilter } from './user-scoped-report.helper';
-
+import {
+  buildCommonReportOrder,
+  buildDynamicModelFilters,
+  buildUserInclude,
+  buildUserScopedWhere,
+  extractUserFilter,
+} from './user-scoped-report.helper';
 
 export class VisitsReportRepository {
   async getVisitsReport(params: GetVisitsReportPayload): Promise<ReportResponse<any>> {
-    const { page, limit, filter, hostId, sortBy, sortOrder } = params;
+    const { page, limit, filter, hostId, sortBy, sortOrder, download } = params;
     const { offset } = baseReportHelper.normalizePagination({ page, limit });
 
     let where: Record<string, any> = { hostId, isDeleted: 0 };
-    if(filter) {
-      if(filter.userId) {
+    if (filter) {
+      if (filter.userId) {
         where.userId = filter.userId;
       }
-      if(filter.customerId) {
+      if (filter.customerId) {
         where.customerId = filter.customerId;
       }
-      if(filter.customerName?.trim()) {
+      if (filter.customerName?.trim()) {
         where.customerName = { [Op.like]: `%${filter.customerName?.trim()}%` };
       }
-      if(filter.checkInTime) {
+      if (filter.checkInTime) {
         where.checkInTime = {
           [Op.gte]: filter.checkInTime?.from,
           [Op.lte]: filter.checkInTime?.to,
         };
       }
-      if(filter.checkOutTime) {
+      if (filter.checkOutTime) {
         where.checkOutTime = {
           [Op.gte]: filter.checkOutTime?.from,
           [Op.lte]: filter.checkOutTime?.to,
         };
       }
     }
-    
+
     const query: FindAndCountOptions<any> = {
       attributes: {
-        exclude: ['id', 'localId', 'isDeleted', 'deletedAt', 'updatedAt', 'syncedAt', 'checkInLocationAccuracy', 'checkOutLocationAccuracy', 'checkInBatteryPercentage', 'checkOutBatteryPercentage', 'isChargingOnCheckIn', 'isChargingOnCheckOut', 'checkInLocationAltitude', 'checkOutLocationAltitude', 'checkInLocationSpeed', 'checkOutLocationSpeed', 'checkInLocationProvider', 'checkOutLocationProvider'],
+        exclude: [
+          'id',
+          'localId',
+          'isDeleted',
+          'deletedAt',
+          'updatedAt',
+          'syncedAt',
+          'checkInLocationAccuracy',
+          'checkOutLocationAccuracy',
+          'checkInBatteryPercentage',
+          'checkOutBatteryPercentage',
+          'isChargingOnCheckIn',
+          'isChargingOnCheckOut',
+          'checkInLocationAltitude',
+          'checkOutLocationAltitude',
+          'checkInLocationSpeed',
+          'checkOutLocationSpeed',
+          'checkInLocationProvider',
+          'checkOutLocationProvider',
+        ],
         include: [
           ['id', 'visitId'],
           [db.Sequelize.col('user.name'), 'employeeName'],
-          [db.Sequelize.col('user.employeeCode'), 'employeeCode']
-        ]
+          [db.Sequelize.col('user.employeeCode'), 'employeeCode'],
+        ],
       },
       where,
       include: [
@@ -70,7 +100,7 @@ export class VisitsReportRepository {
       logging: console.log, // Enable logging for debugging
     };
 
-    if(page && limit) {
+    if (page && limit && !download) {
       query.limit = limit;
       query.offset = offset;
 
@@ -80,11 +110,10 @@ export class VisitsReportRepository {
         data: rows,
         pagination: baseReportHelper.buildPagination(count, page, limit),
       };
-      
     } else {
       const rows = await Visit.findAll(query);
       return {
-        data: rows
+        data: rows,
       };
     }
   }

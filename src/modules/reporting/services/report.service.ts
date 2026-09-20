@@ -211,6 +211,7 @@ export class ReportService {
       enforceActiveUsersOnly,
       sortBy: sorting.sortBy,
       sortOrder: sorting.sortOrder,
+      download: payload.download,
     });
 
     const dateTimeSettings = await getHostDateTimeSettings(hostId);
@@ -295,13 +296,14 @@ export class ReportService {
     payload: GetVisitsReportPayload
   ): Promise<{ visits: any[]; pagination: any }> {
     const { page, limit } = baseReportHelper.normalizePagination(payload);
-    const { hostId, filter } = payload;
+    const { hostId, filter, download } = payload;
 
     const report = await visitsReportRepository.getVisitsReport({
       hostId,
       page,
       limit,
       filter,
+      download,
       sortBy: payload.sort?.by || payload.sortBy || 'createdAt',
       sortOrder: baseReportHelper.normalizeSortDirection(payload.sort?.order || payload.sortOrder),
     });
@@ -321,13 +323,14 @@ export class ReportService {
     payload: GetOrdersReportPayload
   ): Promise<{ orders: any[]; pagination: any }> {
     const { page, limit } = baseReportHelper.normalizePagination(payload);
-    const { hostId, filter } = payload;
+    const { hostId, filter, download } = payload;
 
     const report = await ordersReportRepository.getOrdersReport({
       hostId,
       page,
       limit,
       filter,
+      download,
       sortBy: payload.sort?.by || payload.sortBy,
       sortOrder: baseReportHelper.normalizeSortDirection(payload.sort?.order || payload.sortOrder),
     });
@@ -347,13 +350,14 @@ export class ReportService {
     payload: GetPaymentsReportPayload
   ): Promise<{ payments: any[]; pagination: any }> {
     const { page, limit } = baseReportHelper.normalizePagination(payload);
-    const { hostId, filter } = payload;
+    const { hostId, filter, download } = payload;
 
     const report = await paymentsReportRepository.getPaymentsReport({
       hostId,
       page,
       limit,
       filter,
+      download,
       sortBy: payload.sort?.by || payload.sortBy,
       sortOrder: baseReportHelper.normalizeSortDirection(payload.sort?.order || payload.sortOrder),
     });
@@ -372,13 +376,14 @@ export class ReportService {
     payload: GetFeedbacksReportPayload
   ): Promise<{ feedbacks: any[]; pagination: any }> {
     const { page, limit } = baseReportHelper.normalizePagination(payload);
-    const { hostId, filter } = payload;
+    const { hostId, filter, download } = payload;
 
     const report = await feedbacksReportRepository.getFeedbacksReport({
       hostId,
       page,
       limit,
       filter,
+      download,
       sortBy: payload.sort?.by || payload.sortBy,
       sortOrder: baseReportHelper.normalizeSortDirection(payload.sort?.order || payload.sortOrder),
     });
@@ -398,13 +403,14 @@ export class ReportService {
     payload: GetImagesReportPayload
   ): Promise<{ images: any[]; pagination: any }> {
     const { page, limit } = baseReportHelper.normalizePagination(payload);
-    const { hostId, filter } = payload;
+    const { hostId, filter, download } = payload;
 
     const report = await imagesReportRepository.getImagesReport({
       hostId,
       page,
       limit,
       filter,
+      download,
       sortBy: payload.sort?.by || payload.sortBy,
       sortOrder: baseReportHelper.normalizeSortDirection(payload.sort?.order || payload.sortOrder),
     });

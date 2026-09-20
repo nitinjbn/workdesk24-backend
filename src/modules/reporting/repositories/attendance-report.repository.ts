@@ -36,6 +36,7 @@ export interface AttendanceReportQuery {
   enforceActiveUsersOnly: boolean;
   sortBy: CommonReportSortBy;
   sortOrder: ReportSortDirection;
+  download?: boolean;
 }
 
 export interface MonthlyAttendanceSource {
@@ -183,8 +184,17 @@ export class AttendanceReportRepository {
   }
 
   async getReport(params: AttendanceReportQuery): Promise<ReportResponse<AttendanceInstance>> {
-    const { page, limit, filter, hostId, userId, enforceActiveUsersOnly, sortBy, sortOrder } =
-      params;
+    const {
+      page,
+      limit,
+      filter,
+      hostId,
+      userId,
+      enforceActiveUsersOnly,
+      sortBy,
+      sortOrder,
+      download,
+    } = params;
     const { offset } = baseReportHelper.normalizePagination({ page, limit });
     const where = this.buildWhere(filter, userId);
     const userFilter = extractUserFilter(filter as Record<string, unknown>);
@@ -212,7 +222,7 @@ export class AttendanceReportRepository {
       logging: console.log, // Enable logging for debugging
     };
 
-    if (page && limit) {
+    if (page && limit && !download) {
       query.limit = limit;
       query.offset = offset;
 

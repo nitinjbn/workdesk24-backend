@@ -89,6 +89,7 @@ export interface UserScopedReportPayload extends ReportPaginationParams, ReportS
   userId?: number | string;
   createdAt?: number | string | CreatedAtRangeFilter;
   filter?: UserScopedReportFilter;
+  download?: boolean;
 }
 
 export type CommonReportSortBy = 'createdAt' | 'batteryPercentage' | 'speed' | 'userName';
@@ -291,6 +292,7 @@ export interface GetVisitsReportPayload extends ReportPaginationParams, ReportSo
     by?: string;
     order?: ReportSortDirectionInput;
   };
+  download?: boolean;
 }
 
 export interface GetOrdersReportPayload extends ReportPaginationParams, ReportSortParams {
@@ -311,6 +313,7 @@ export interface GetOrdersReportPayload extends ReportPaginationParams, ReportSo
     by?: string;
     order?: ReportSortDirectionInput;
   };
+  download?: boolean;
 }
 
 export interface GetPaymentsReportPayload extends ReportPaginationParams, ReportSortParams {
@@ -331,6 +334,7 @@ export interface GetPaymentsReportPayload extends ReportPaginationParams, Report
     by?: string;
     order?: ReportSortDirectionInput;
   };
+  download?: boolean;
 }
 
 export interface GetFeedbacksReportPayload extends ReportPaginationParams, ReportSortParams {
@@ -351,6 +355,7 @@ export interface GetFeedbacksReportPayload extends ReportPaginationParams, Repor
     by?: string;
     order?: ReportSortDirectionInput;
   };
+  download?: boolean;
 }
 
 export interface GetImagesReportPayload extends ReportPaginationParams, ReportSortParams {
@@ -371,4 +376,5 @@ export interface GetImagesReportPayload extends ReportPaginationParams, ReportSo
     by?: string;
     order?: ReportSortDirectionInput;
   };
+  download?: boolean;
 }
