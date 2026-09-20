@@ -5,7 +5,6 @@ import { uploadBufferToMediaStorage } from '../../../shared/utils/media-storage.
 import { PhoneUtil } from '../../../shared/utils/phone.util';
 import { EmailUtil } from '../../../shared/utils/email.util';
 import { CONFIG } from '../../../config/constants';
-import UserValidator from '../helpers/user.validator';
 import { createConfiguredError } from '../../../shared/utils/error.util';
 import hostService from '../services/host.service';
 
