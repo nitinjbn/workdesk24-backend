@@ -6,6 +6,9 @@ export interface AuthUser {
   email: string;
   name?: string;
   roleId: number;
+  isFieldAppUser?: number;
+  isAdminUser?: number;
+  isSuperAdmin?: number;
 }
 
 export interface AuthRequest extends Request {

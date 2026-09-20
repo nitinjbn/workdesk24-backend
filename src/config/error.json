@@ -323,5 +323,10 @@
     "code": "MAX_APP_USERS_CREATED_UNDER_CURRENT_SUBSCRIPTION",
     "status": 403,
     "message": "You have already created the maximum number of users allowed under your current subscription. Please contact WorkDesk24 Support to add more users."
+  },
+  "SUPER_ADMIN_PORTAL_ACCESS_DENIED": {
+    "code": "SUPER_ADMIN_PORTAL_ACCESS_DENIED",
+    "status": 403,
+    "message": "You are not authorized to access the Super Admin portal."
   }
 }

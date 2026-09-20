@@ -565,9 +565,10 @@ export interface HostAttributes {
   addressLine2?: string;
   landmark?: string;
   city?: string;
-  state?: string;
+  stateName?: string;
+  stateIsoCode?: string;
   district?: string;
-  postalCode?: string;
+  pinCode?: string;
   countryName?: string;
   countryIsoCode?: string;
   latitude?: number;

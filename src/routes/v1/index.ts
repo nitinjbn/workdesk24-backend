@@ -3,6 +3,7 @@ import authRoutes from './auth';
 import publicRoutes from './public';
 import appRoutes from './app';
 import adminRoutes from './admin';
+import superadminRoutes from './superadmin';
 import { bullBoardBasePath, createBullBoardRouter } from '../../modules/bull-board';
 import { apiLogRouteContext } from '../../modules/api-logs';
 
@@ -13,6 +14,7 @@ router.use('/auth', apiLogRouteContext('auth', 'auth'), authRoutes);
 router.use('/app', apiLogRouteContext('app', 'app'), appRoutes);
 router.use('/admin', apiLogRouteContext('admin', 'admin'), adminRoutes);
 router.use('/public', apiLogRouteContext('public', 'public'), publicRoutes);
+router.use('/superadmin', apiLogRouteContext('superadmin', 'superadmin'), superadminRoutes);
 
 // Routes
 router.use(bullBoardBasePath, createBullBoardRouter(bullBoardBasePath));

@@ -38,6 +38,7 @@ interface UserAttributes extends BaseModel {
   leavePolicyId?: number;
   isFieldAppUser?: number;
   isAdminUser?: number;
+  isSuperAdmin?: number;
   employmentStatus?:
     'ACTIVE' | 'RESIGNED' | 'TERMINATED' | 'RETIRED' | 'CONTRACT_COMPLETED' | 'TRANSFERRED';
 }
@@ -117,6 +118,7 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
   public dateOfBirth?: number;
   public isFieldAppUser!: number;
   public isAdminUser!: number;
+  public isSuperAdmin!: number;
   public createdAt!: number;
   public updatedAt!: number;
   public isDeleted!: number;
@@ -193,11 +195,11 @@ export function initUser(sequelize: Sequelize): typeof User {
       },
       roleId: {
         type: DataTypes.BIGINT,
-        allowNull: false,
+        allowNull: true,
       },
       designationId: {
         type: DataTypes.BIGINT,
-        allowNull: false,
+        allowNull: true,
       },
       employeeCode: {
         type: DataTypes.STRING(20),
@@ -337,6 +339,11 @@ export function initUser(sequelize: Sequelize): typeof User {
         defaultValue: 0,
       },
       isAdminUser: {
+        type: DataTypes.TINYINT,
+        allowNull: false,
+        defaultValue: 0,
+      },
+      isSuperAdmin: {
         type: DataTypes.TINYINT,
         allowNull: false,
         defaultValue: 0,

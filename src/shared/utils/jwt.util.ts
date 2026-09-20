@@ -14,7 +14,9 @@ export const getJwtSecret = (): string => {
   return secret;
 };
 
-export const getJwtExpiresIn = (deviceType: 'WEB' | 'ANDROID' | 'IOS'): jwt.SignOptions['expiresIn'] => {
+export const getJwtExpiresIn = (
+  deviceType: 'WEB' | 'ANDROID' | 'IOS'
+): jwt.SignOptions['expiresIn'] => {
   switch (deviceType) {
     case 'WEB': {
       const webExpiresIn = process.env.JWT_EXPIRES_IN_WEB?.trim();
@@ -38,7 +40,7 @@ export const getJwtExpiresIn = (deviceType: 'WEB' | 'ANDROID' | 'IOS'): jwt.Sign
       break;
     }
   }
-  
+
   // Default fallback
   const expiresIn = process.env.JWT_EXPIRES_IN?.trim();
   if (!expiresIn) {
@@ -56,7 +58,9 @@ export const getJwtRefreshSecret = (): string => {
   return secret;
 };
 
-export const getJwtRefreshExpiresIn = (deviceType: 'WEB' | 'ANDROID' | 'IOS'): jwt.SignOptions['expiresIn'] => {
+export const getJwtRefreshExpiresIn = (
+  deviceType: 'WEB' | 'ANDROID' | 'IOS'
+): jwt.SignOptions['expiresIn'] => {
   switch (deviceType) {
     case 'WEB': {
       const webExpiresIn = process.env.JWT_REFRESH_EXPIRES_IN_WEB?.trim();
@@ -80,7 +84,7 @@ export const getJwtRefreshExpiresIn = (deviceType: 'WEB' | 'ANDROID' | 'IOS'): j
       break;
     }
   }
-  
+
   // Default fallback
   const expiresIn = process.env.JWT_REFRESH_EXPIRES_IN?.trim();
   if (expiresIn) {

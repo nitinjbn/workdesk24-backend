@@ -2,7 +2,36 @@ import { Model, DataTypes, Sequelize, Optional } from 'sequelize';
 import bcrypt from 'bcryptjs';
 import { HostAttributes } from '../../types';
 
-interface HostCreationAttributes extends Optional<HostAttributes, 'id' | 'companyName' | 'companyLogoUrl' | 'websiteUrl' | 'contactPerson' | 'callingCode' | 'mobile' | 'addressLine1' | 'addressLine2' | 'landmark' | 'city' | 'state' | 'postalCode' | 'countryName' | 'countryIsoCode' | 'district' | 'latitude' | 'longitude' | 'gstNumber' | 'panNumber' | 'isActive' | 'lastLoginAt' | 'createdAt' | 'updatedAt' | 'isDeleted' | 'deletedAt'> {}
+interface HostCreationAttributes extends Optional<
+  HostAttributes,
+  | 'id'
+  | 'companyName'
+  | 'companyLogoUrl'
+  | 'websiteUrl'
+  | 'contactPerson'
+  | 'callingCode'
+  | 'mobile'
+  | 'addressLine1'
+  | 'addressLine2'
+  | 'landmark'
+  | 'city'
+  | 'stateName'
+  | 'stateIsoCode'
+  | 'pinCode'
+  | 'countryName'
+  | 'countryIsoCode'
+  | 'district'
+  | 'latitude'
+  | 'longitude'
+  | 'gstNumber'
+  | 'panNumber'
+  | 'isActive'
+  | 'lastLoginAt'
+  | 'createdAt'
+  | 'updatedAt'
+  | 'isDeleted'
+  | 'deletedAt'
+> {}
 
 class Host extends Model<HostAttributes, HostCreationAttributes> implements HostAttributes {
   public id!: number;
@@ -15,8 +44,9 @@ class Host extends Model<HostAttributes, HostCreationAttributes> implements Host
   public addressLine1?: string;
   public addressLine2?: string;
   public city?: string;
-  public state?: string;
-  public postalCode?: string;
+  public stateName?: string;
+  public stateIsoCode?: string;
+  public pinCode?: string;
   public countryName?: string;
   public countryIsoCode?: string;
   public district?: string;
@@ -98,8 +128,12 @@ export function initHost(sequelize: Sequelize): typeof Host {
         type: DataTypes.CHAR(2),
         allowNull: true,
       },
-      state: {
+      stateName: {
         type: DataTypes.STRING(50),
+        allowNull: true,
+      },
+      stateIsoCode: {
+        type: DataTypes.CHAR(2),
         allowNull: true,
       },
       city: {
@@ -109,8 +143,8 @@ export function initHost(sequelize: Sequelize): typeof Host {
       district: {
         type: DataTypes.STRING(50),
         allowNull: true,
-      },      
-      postalCode: {
+      },
+      pinCode: {
         type: DataTypes.STRING(20),
         allowNull: true,
       },
@@ -139,36 +173,31 @@ export function initHost(sequelize: Sequelize): typeof Host {
         type: DataTypes.BIGINT,
         allowNull: true,
         defaultValue: null,
-        field: 'lastLoginAt',
       },
       createdAt: {
         type: DataTypes.BIGINT,
         allowNull: false,
-        field: 'createdAt',
       },
       updatedAt: {
         type: DataTypes.BIGINT,
-        allowNull: false,
-        field: 'updatedAt',
+        allowNull: true,
       },
       isDeleted: {
         type: DataTypes.TINYINT,
         allowNull: false,
         defaultValue: 0,
-        field: 'isDeleted',
       },
       deletedAt: {
         type: DataTypes.BIGINT,
         allowNull: true,
         defaultValue: null,
-        field: 'deletedAt',
       },
     },
     {
       sequelize,
       tableName: 'wd_hosts',
       timestamps: false,
-      underscored: false
+      underscored: false,
     }
   );
 

@@ -1,7 +1,7 @@
 import { Response, NextFunction } from 'express';
 import crypto from 'crypto';
 import { AuthRequest } from '../types/auth.types';
-import { getAdminCsrfCookieName } from '../utils/auth-cookie.util';
+import { getAdminCsrfCookieName, getSuperAdminCsrfCookieName } from '../utils/auth-cookie.util';
 
 const safeEqual = (a: string, b: string): boolean => {
   const aBuffer = Buffer.from(a, 'utf8');
@@ -20,6 +20,36 @@ export const requireAdminCsrfToken = (
   next: NextFunction
 ): void => {
   const csrfCookieName = getAdminCsrfCookieName();
+  const csrfCookieToken = req.cookies?.[csrfCookieName] as string | undefined;
+  const csrfHeaderToken = req.headers['x-csrf-token'];
+  const csrfToken = Array.isArray(csrfHeaderToken) ? csrfHeaderToken[0] : csrfHeaderToken;
+
+  if (!csrfCookieToken || !csrfToken) {
+    res.status(401).json({
+      success: false,
+      message: 'CSRF token is missing or invalid.',
+    });
+    return;
+  }
+
+  if (!safeEqual(csrfCookieToken, csrfToken)) {
+    res.status(401).json({
+      success: false,
+      message: 'Invalid CSRF token.',
+    });
+    return;
+  }
+
+  next();
+};
+
+// Middleware to require Super Admin CSRF token
+export const requireSuperAdminCsrfToken = (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): void => {
+  const csrfCookieName = getSuperAdminCsrfCookieName();
   const csrfCookieToken = req.cookies?.[csrfCookieName] as string | undefined;
   const csrfHeaderToken = req.headers['x-csrf-token'];
   const csrfToken = Array.isArray(csrfHeaderToken) ? csrfHeaderToken[0] : csrfHeaderToken;

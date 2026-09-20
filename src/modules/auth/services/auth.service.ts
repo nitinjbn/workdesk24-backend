@@ -107,6 +107,13 @@ interface AdminAuthResponse {
   csrfToken: string;
 }
 
+interface SuperAdminAuthResponse {
+  user: unknown;
+  accessToken: string;
+  refreshToken: string;
+  csrfToken: string;
+}
+
 interface RefreshTokenPayload extends jwt.JwtPayload {
   userId: number;
   tokenFamily: string;
@@ -1002,6 +1009,140 @@ export class AuthService {
 
     const user = users[0];
     return user;
+  }
+
+  ///////////////////// Super Admin Authentication Methods ///////////////////////
+  async superAdminLogin(data: LoginDto): Promise<SuperAdminAuthResponse> {
+    const user = await this.validateCredentials(data);
+    //console.log('#################### user:', user);
+
+    //const isAdmin = await isAdminRole(user.hostId, user.roleId);
+    if (!user.isSuperAdmin) {
+      throw createConfiguredError('SUPER_ADMIN_PORTAL_ACCESS_DENIED');
+    }
+
+    const sessionTokens = await this.createUserSessionTokens({
+      hostId: user.hostId,
+      userId: user.id,
+      deviceType: 'WEB',
+      deviceId: data.deviceDetails?.deviceId || 'default',
+    });
+
+    return {
+      user: user.toJSON(),
+      accessToken: sessionTokens.accessToken,
+      refreshToken: sessionTokens.refreshToken,
+      csrfToken: sessionTokens.csrfToken,
+    };
+  }
+
+  async refreshSuperAdminSession(refreshToken: string): Promise<SuperAdminAuthResponse> {
+    const payload = this.verifyRefreshToken(refreshToken);
+    const now = Math.floor(Date.now() / 1000);
+    const tokenHash = this.hashToken(refreshToken);
+    const tokenRecord = await userRefreshTokenRepository.findByTokenHash(tokenHash);
+
+    if (!tokenRecord) {
+      console.log(
+        '#################### refreshSuperAdminSession: Token record not found for hash:',
+        tokenHash
+      );
+      throw createConfiguredError('INVALID_REFRESH_TOKEN');
+    }
+
+    if (tokenRecord.isRevoked === 1) {
+      await userRefreshTokenRepository.revokeAllActiveForUser(tokenRecord.userId);
+      throw createConfiguredError('REFRESH_TOKEN_REUSE_DETECTED');
+    }
+
+    if (tokenRecord.expiresAt <= now) {
+      await userRefreshTokenRepository.revokeTokenById(tokenRecord.id);
+      throw createConfiguredError('REFRESH_TOKEN_EXPIRED');
+    }
+
+    if (tokenRecord.userId !== payload.userId || tokenRecord.tokenFamily !== payload.tokenFamily) {
+      console.log(
+        '#################### refreshSuperAdminSession: Token record userId or tokenFamily mismatch. Expected userId:',
+        payload.userId,
+        'tokenFamily:',
+        payload.tokenFamily,
+        'but got userId:',
+        tokenRecord.userId,
+        'tokenFamily:',
+        tokenRecord.tokenFamily
+      );
+      await userRefreshTokenRepository.revokeAllActiveForUser(tokenRecord.userId);
+      throw createConfiguredError('INVALID_REFRESH_TOKEN');
+    }
+
+    const user = await userRepository.findById(payload.userId);
+    if (!user) {
+      console.log(
+        '#################### refreshSuperAdminSession: User not found for userId:',
+        payload.userId
+      );
+      await userRefreshTokenRepository.revokeAllActiveForUser(payload.userId);
+      throw createConfiguredError('INVALID_REFRESH_TOKEN');
+    }
+
+    if (user.accountStatus !== 'ACTIVE') {
+      await userRefreshTokenRepository.revokeAllActiveForUser(payload.userId);
+      throw createConfiguredError('ACCOUNT_INACTIVE');
+    }
+
+    if (!user.isSuperAdmin) {
+      await userRefreshTokenRepository.revokeAllActiveForUser(payload.userId);
+      throw createConfiguredError('SUPER_ADMIN_ACCESS_DENIED');
+    }
+
+    const resolvedDeviceId = await this.resolveUserDeviceId(
+      user.hostId,
+      user.id,
+      tokenRecord.deviceId
+    );
+    const rotatedTokens = await this.createUserSessionTokens({
+      hostId: user.hostId,
+      userId: user.id,
+      tokenFamily: payload.tokenFamily,
+      deviceType: 'WEB',
+      deviceId: resolvedDeviceId,
+    });
+    await userRefreshTokenRepository.revokeTokenById(
+      tokenRecord.id,
+      rotatedTokens.refreshTokenHash
+    );
+
+    return {
+      user: user.toJSON(),
+      accessToken: rotatedTokens.accessToken,
+      refreshToken: rotatedTokens.refreshToken,
+      csrfToken: rotatedTokens.csrfToken,
+    };
+  }
+
+  async logoutSuperAdminSession(refreshToken?: string): Promise<void> {
+    if (!refreshToken) {
+      return;
+    }
+
+    try {
+      const payload = this.verifyRefreshToken(refreshToken);
+      const tokenHash = this.hashToken(refreshToken);
+      const tokenRecord = await userRefreshTokenRepository.findByTokenHash(tokenHash);
+
+      if (!tokenRecord) {
+        return;
+      }
+
+      if (tokenRecord.userId !== payload.userId) {
+        await userRefreshTokenRepository.revokeAllActiveForUser(tokenRecord.userId);
+        return;
+      }
+
+      await userRefreshTokenRepository.revokeTokenById(tokenRecord.id);
+    } catch {
+      return;
+    }
   }
 }
 

@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import { AuthRequest, JwtPayload } from '../types/auth.types';
 import userRepository from '../../modules/auth/repositories/user.repository';
 import { isAdminRole, getJwtSecret } from '../utils/jwt.util';
-import { getAdminAuthCookieName } from '../utils/auth-cookie.util';
+import { getAdminAuthCookieName, getSuperAdminAuthCookieName } from '../utils/auth-cookie.util';
 
 const getBearerToken = (authorizationHeader: string | undefined): string | null => {
   if (!authorizationHeader) {
@@ -63,6 +63,9 @@ export const authMiddleware = async (
       email: user.email,
       name: user.name,
       roleId: user.roleId,
+      isFieldAppUser: user.isFieldAppUser,
+      isAdminUser: user.isAdminUser,
+      isSuperAdmin: user.isSuperAdmin,
     };
 
     next();
@@ -105,7 +108,9 @@ export const requireAdminRole = async (
   }
 
   try {
-    const isAdmin = await isAdminRole(req.user.hostId, req.user.roleId);
+    console.log('##################### req.user:', req.user);
+    //const isAdmin = await isAdminRole(req.user.hostId, req.user.roleId);
+    const isAdmin = req.user.isAdminUser == 1;
 
     if (!isAdmin) {
       res.setHeader('x-auth-error-code', 'ADMIN_ACCESS_REQUIRED');
@@ -121,6 +126,118 @@ export const requireAdminRole = async (
 
     next();
   } catch (error) {
+    next(error);
+  }
+};
+
+export const requireSuperAdminRole = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  if (!req.user) {
+    res.setHeader('x-auth-error-code', 'AUTH_REQUIRED');
+    res.setHeader('x-http-status-code', '401');
+    res.status(401).json({
+      success: false,
+      code: 'AUTH_REQUIRED',
+      statusCode: 401,
+      message: 'Authentication required',
+    });
+    return;
+  }
+
+  try {
+    console.log('##################### req.user:', req.user);
+    //const isAdmin = await isAdminRole(req.user.hostId, req.user.roleId);
+    const isSuperAdmin = req.user.isSuperAdmin == 1;
+
+    if (!isSuperAdmin) {
+      res.setHeader('x-auth-error-code', 'SUPER_ADMIN_ACCESS_REQUIRED');
+      res.setHeader('x-http-status-code', '403');
+      res.status(403).json({
+        success: false,
+        code: 'SUPER_ADMIN_ACCESS_REQUIRED',
+        statusCode: 403,
+        message: 'Super admin access is required',
+      });
+      return;
+    }
+
+    next();
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const authMiddlewareSuperAdmin = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const tokenFromHeader = getBearerToken(req.headers.authorization);
+    const tokenFromCookie = req.cookies?.[getSuperAdminAuthCookieName()] as string | undefined;
+    const token = tokenFromHeader || tokenFromCookie;
+
+    if (!token) {
+      res.setHeader('x-auth-error-code', 'AUTH_REQUIRED');
+      res.setHeader('x-http-status-code', '401');
+      res.status(401).json({
+        success: false,
+        code: 'AUTH_REQUIRED',
+        statusCode: 401, // This is important for the APP to handle refresh token as fallback if HTTPS status code is not 401 (There was an issue in uploadMedia, where APP was getting -1 as HTTP status code, and it was not able to handle refresh token fallback)
+        message: 'Authentication required',
+      });
+      return;
+    }
+
+    const secret = getJwtSecret();
+    const decoded = jwt.verify(token, secret) as JwtPayload;
+
+    const user = await userRepository.findById(decoded.userId);
+
+    if (!user) {
+      res.setHeader('x-auth-error-code', 'INVALID_TOKEN');
+      res.setHeader('x-http-status-code', '401');
+      res.status(401).json({
+        success: false,
+        code: 'INVALID_TOKEN',
+        statusCode: 401, // This is important for the APP to handle refresh token as fallback if HTTPS status code is not 401 (There was an issue in uploadMedia, where APP was getting -1 as HTTP status code, and it was not able to handle refresh token fallback)
+        message: 'Invalid token',
+      });
+      return;
+    }
+
+    req.user = {
+      id: user.id,
+      hostId: user.hostId,
+      email: user.email,
+      name: user.name,
+      roleId: user.roleId,
+      isFieldAppUser: user.isFieldAppUser,
+      isAdminUser: user.isAdminUser,
+      isSuperAdmin: user.isSuperAdmin,
+    };
+
+    next();
+  } catch (error: unknown) {
+    if (
+      error instanceof jwt.TokenExpiredError ||
+      error instanceof jwt.JsonWebTokenError ||
+      error instanceof jwt.NotBeforeError
+    ) {
+      res.setHeader('x-auth-error-code', 'INVALID_OR_EXPIRED_TOKEN');
+      res.setHeader('x-http-status-code', '401');
+      res.status(401).json({
+        success: false,
+        code: 'INVALID_OR_EXPIRED_TOKEN',
+        statusCode: 401,
+        message: 'Invalid or expired token',
+      });
+      return;
+    }
+
     next(error);
   }
 };

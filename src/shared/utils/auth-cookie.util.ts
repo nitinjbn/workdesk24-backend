@@ -70,7 +70,10 @@ export const getAdminAuthCookieOptions = (): CookieOptions => {
     secure,
     sameSite,
     path: '/api/v1/admin',
-    maxAge: parseMaxAgeMsWithDefault(process.env.ADMIN_AUTH_COOKIE_MAX_AGE_MS, DEFAULT_ACCESS_COOKIE_MAX_AGE_MS),
+    maxAge: parseMaxAgeMsWithDefault(
+      process.env.ADMIN_AUTH_COOKIE_MAX_AGE_MS,
+      DEFAULT_ACCESS_COOKIE_MAX_AGE_MS
+    ),
   };
 };
 
@@ -83,7 +86,10 @@ export const getAdminRefreshCookieOptions = (): CookieOptions => {
     secure,
     sameSite,
     path: '/api/v1/admin',
-    maxAge: parseMaxAgeMsWithDefault(process.env.ADMIN_REFRESH_COOKIE_MAX_AGE_MS, DEFAULT_REFRESH_COOKIE_MAX_AGE_MS),
+    maxAge: parseMaxAgeMsWithDefault(
+      process.env.ADMIN_REFRESH_COOKIE_MAX_AGE_MS,
+      DEFAULT_REFRESH_COOKIE_MAX_AGE_MS
+    ),
   };
 };
 
@@ -96,7 +102,10 @@ export const getAdminCsrfCookieOptions = (): CookieOptions => {
     secure,
     sameSite,
     path: '/api/v1/admin',
-    maxAge: parseMaxAgeMsWithDefault(process.env.ADMIN_REFRESH_COOKIE_MAX_AGE_MS, DEFAULT_REFRESH_COOKIE_MAX_AGE_MS),
+    maxAge: parseMaxAgeMsWithDefault(
+      process.env.ADMIN_REFRESH_COOKIE_MAX_AGE_MS,
+      DEFAULT_REFRESH_COOKIE_MAX_AGE_MS
+    ),
   };
 };
 
@@ -122,6 +131,106 @@ export const getAdminRefreshClearCookieOptions = (): CookieOptions => {
 
 export const getAdminCsrfClearCookieOptions = (): CookieOptions => {
   const options = getAdminCsrfCookieOptions();
+  return {
+    httpOnly: options.httpOnly,
+    secure: options.secure,
+    sameSite: options.sameSite,
+    path: options.path,
+  };
+};
+
+// Utility functions for managing admin authentication cookies
+const SUPER_ADMIN_DEFAULT_ACCESS_COOKIE_NAME = 'wd24_super_admin_access_token';
+const SUPER_ADMIN_DEFAULT_REFRESH_COOKIE_NAME = 'wd24_super_admin_refresh_token';
+const SUPER_ADMIN_DEFAULT_CSRF_COOKIE_NAME = 'wd24_super_admin_csrf';
+const SUPER_ADMIN_DEFAULT_ACCESS_COOKIE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const SUPER_ADMIN_DEFAULT_REFRESH_COOKIE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+const SUPER_ADMIN_DEFAULT_CSRF_COOKIE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+export const getSuperAdminAuthCookieName = (): string => {
+  return process.env.SUPER_ADMIN_AUTH_COOKIE_NAME?.trim() || SUPER_ADMIN_DEFAULT_ACCESS_COOKIE_NAME;
+};
+
+export const getSuperAdminRefreshCookieName = (): string => {
+  return (
+    process.env.SUPER_ADMIN_REFRESH_COOKIE_NAME?.trim() || SUPER_ADMIN_DEFAULT_REFRESH_COOKIE_NAME
+  );
+};
+
+export const getSuperAdminCsrfCookieName = (): string => {
+  return process.env.SUPER_ADMIN_CSRF_COOKIE_NAME?.trim() || SUPER_ADMIN_DEFAULT_CSRF_COOKIE_NAME;
+};
+
+export const getSuperAdminAuthCookieOptions = (): CookieOptions => {
+  const secure = shouldUseSecureCookie();
+  const sameSite = parseSameSite(process.env.SUPER_ADMIN_AUTH_COOKIE_SAME_SITE);
+
+  return {
+    httpOnly: true,
+    secure,
+    sameSite,
+    path: '/api/v1/superadmin',
+    maxAge: parseMaxAgeMsWithDefault(
+      process.env.SUPER_ADMIN_AUTH_COOKIE_MAX_AGE_MS,
+      SUPER_ADMIN_DEFAULT_ACCESS_COOKIE_MAX_AGE_MS
+    ),
+  };
+};
+
+export const getSuperAdminRefreshCookieOptions = (): CookieOptions => {
+  const secure = shouldUseSecureCookie();
+  const sameSite = parseSameSite(process.env.SUPER_ADMIN_REFRESH_COOKIE_SAME_SITE);
+
+  return {
+    httpOnly: true,
+    secure,
+    sameSite,
+    path: '/api/v1/superadmin',
+    maxAge: parseMaxAgeMsWithDefault(
+      process.env.SUPER_ADMIN_REFRESH_COOKIE_MAX_AGE_MS,
+      SUPER_ADMIN_DEFAULT_REFRESH_COOKIE_MAX_AGE_MS
+    ),
+  };
+};
+
+export const getSuperAdminCsrfCookieOptions = (): CookieOptions => {
+  const secure = shouldUseSecureCookie();
+  const sameSite = parseSameSite(process.env.SUPER_ADMIN_CSRF_COOKIE_SAME_SITE);
+
+  return {
+    httpOnly: false,
+    secure,
+    sameSite,
+    path: '/api/v1/superadmin',
+    maxAge: parseMaxAgeMsWithDefault(
+      process.env.SUPER_ADMIN_CSRF_COOKIE_MAX_AGE_MS,
+      SUPER_ADMIN_DEFAULT_CSRF_COOKIE_MAX_AGE_MS
+    ),
+  };
+};
+
+export const getSuperAdminAuthClearCookieOptions = (): CookieOptions => {
+  const options = getSuperAdminAuthCookieOptions();
+  return {
+    httpOnly: options.httpOnly,
+    secure: options.secure,
+    sameSite: options.sameSite,
+    path: options.path,
+  };
+};
+
+export const getSuperAdminRefreshClearCookieOptions = (): CookieOptions => {
+  const options = getSuperAdminRefreshCookieOptions();
+  return {
+    httpOnly: options.httpOnly,
+    secure: options.secure,
+    sameSite: options.sameSite,
+    path: options.path,
+  };
+};
+
+export const getSuperAdminCsrfClearCookieOptions = (): CookieOptions => {
+  const options = getSuperAdminCsrfCookieOptions();
   return {
     httpOnly: options.httpOnly,
     secure: options.secure,
