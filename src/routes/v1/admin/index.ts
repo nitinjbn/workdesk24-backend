@@ -9,7 +9,7 @@ import customerRoutes from './customers.routes';
 import reportRoutes from './reports.routes';
 import inquiryRoutes from './inquiries.routes';
 import dashboardRoutes from './dashboard.routes';
-import aiRoutes from './ai.routes'; 
+import aiRoutes from './ai.routes';
 import aiInsightsRoutes from './ai-insights.routes';
 import leavesRoutes from './leaves.routes';
 import geoFencingRoutes from './geo-fencing.routes';
@@ -17,9 +17,31 @@ import { apiLogRouteContext } from '../../../modules/api-logs';
 
 const router = Router();
 
-router.post('/login', apiLogRouteContext('admin', 'auth'), rateLimitConfig.auth, adminAuthController.login.bind(adminAuthController));
-router.post('/refresh', apiLogRouteContext('admin', 'auth'), rateLimitConfig.auth, requireAdminCsrfToken, adminAuthController.refresh.bind(adminAuthController));
-router.post('/logout', apiLogRouteContext('admin', 'auth'), requireAdminCsrfToken, adminAuthController.logout.bind(adminAuthController));
+router.post(
+  '/validateSubDomain',
+  apiLogRouteContext('admin', 'auth'),
+  rateLimitConfig.auth,
+  adminAuthController.validateSubDomain.bind(adminAuthController)
+);
+router.post(
+  '/login',
+  apiLogRouteContext('admin', 'auth'),
+  rateLimitConfig.auth,
+  adminAuthController.login.bind(adminAuthController)
+);
+router.post(
+  '/refresh',
+  apiLogRouteContext('admin', 'auth'),
+  rateLimitConfig.auth,
+  requireAdminCsrfToken,
+  adminAuthController.refresh.bind(adminAuthController)
+);
+router.post(
+  '/logout',
+  apiLogRouteContext('admin', 'auth'),
+  requireAdminCsrfToken,
+  adminAuthController.logout.bind(adminAuthController)
+);
 
 router.use(authMiddleware);
 router.use(requireAdminRole);

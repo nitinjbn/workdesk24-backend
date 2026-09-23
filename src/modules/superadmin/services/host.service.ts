@@ -54,8 +54,17 @@ export class HostService {
     };
   }
 
+  async getHostBySubDomain(payload: { subDomain: string }): Promise<any> {
+    const { subDomain } = payload;
+    if (!subDomain) {
+      throw new Error('subDomain is required');
+    }
+    return hostsRepository.getHostBySubDomain({ subDomain });
+  }
+
   async createHost(payload: any): Promise<any> {
     const {
+      subDomain,
       companyName,
       contactPerson,
       companyLogoUrl,
@@ -80,6 +89,17 @@ export class HostService {
       timezone,
     } = payload;
 
+    // Validate subDomain
+    if (!subDomain) {
+      throw new Error('subDomain is required');
+    }
+
+    // Check if the subDomain is already taken
+    const existingHost = await this.getHostBySubDomain({ subDomain });
+    if (existingHost?.data?.id) {
+      throw new Error('subDomain is already taken');
+    }
+
     let subscription = payload.subscription;
     if (subscription && typeof subscription !== 'object') {
       subscription = CommonUtil.parseJsonField(subscription);
@@ -93,6 +113,7 @@ export class HostService {
       // Create the host record in the database
       const createHostResult = await hostsRepository.createHost(
         {
+          subDomain,
           companyName,
           contactPerson,
           companyLogoUrl,

@@ -35,6 +35,7 @@ interface HostCreationAttributes extends Optional<
 
 class Host extends Model<HostAttributes, HostCreationAttributes> implements HostAttributes {
   public id!: number;
+  public subDomain!: string;
   public companyName!: string;
   public companyLogoUrl?: string;
   public websiteUrl?: string;
@@ -77,6 +78,11 @@ export function initHost(sequelize: Sequelize): typeof Host {
         type: DataTypes.BIGINT,
         autoIncrement: true,
         primaryKey: true,
+      },
+      subDomain: {
+        type: DataTypes.STRING(20),
+        allowNull: false,
+        unique: true,
       },
       contactPerson: {
         type: DataTypes.STRING(100),

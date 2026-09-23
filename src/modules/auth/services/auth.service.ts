@@ -1144,6 +1144,11 @@ export class AuthService {
       return;
     }
   }
+
+  async doesSubDomainExist(subDomain: string): Promise<boolean> {
+    const existingHost = await hostService.getHostBySubDomain({ subDomain });
+    return !!existingHost?.data?.id;
+  }
 }
 
 export default new AuthService();

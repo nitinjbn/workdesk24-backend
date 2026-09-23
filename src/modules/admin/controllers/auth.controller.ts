@@ -111,6 +111,41 @@ export class AdminAuthController {
       next(error);
     }
   }
+
+  async validateSubDomain(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { subDomain } = req.body;
+
+      if (!subDomain) {
+        res.status(400).json({
+          success: false,
+          message: 'subDomain is required',
+        } as ApiResponse);
+        return;
+      }
+
+      const doesExist = await authService.doesSubDomainExist(subDomain);
+
+      // If the subDomain does not exist, return a 404 response
+      if (!doesExist) {
+        res.status(404).json({
+          success: false,
+          message: `SubDomain: ${subDomain} does not exists.`,
+        } as ApiResponse);
+        return;
+      }
+
+      res.json({
+        success: true,
+        message: 'SubDomain validation successful',
+        data: {
+          doesExist,
+        },
+      } as ApiResponse);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default new AdminAuthController();

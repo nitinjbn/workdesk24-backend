@@ -131,6 +131,22 @@ export class hostRepository {
       data: subscriptionDetails?.toJSON() || {},
     };
   }
+
+  async getHostBySubDomain(params: { subDomain: string }): Promise<any> {
+    const { subDomain } = params;
+
+    const host = await Host.findOne({
+      where: {
+        subDomain,
+        isDeleted: 0,
+      },
+      logging: console.log,
+    });
+
+    return {
+      data: host?.toJSON() || {},
+    };
+  }
 }
 
 export default new hostRepository();

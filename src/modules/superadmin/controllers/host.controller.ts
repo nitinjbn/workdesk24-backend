@@ -54,6 +54,7 @@ export class HostController {
   async createHost(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const {
+        subDomain,
         companyName,
         contactPerson,
         websiteUrl,
@@ -112,6 +113,7 @@ export class HostController {
       }
 
       const createUserResult = await hostService.createHost({
+        subDomain,
         companyName,
         companyLogoUrl,
         websiteUrl,

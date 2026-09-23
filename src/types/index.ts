@@ -554,6 +554,7 @@ export interface UserPermissionAttributes {
 
 export interface HostAttributes {
   id?: number;
+  subDomain: string;
   companyName: string;
   companyLogoUrl?: string;
   websiteUrl?: string;

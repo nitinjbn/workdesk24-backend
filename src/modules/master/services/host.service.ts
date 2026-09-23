@@ -37,6 +37,14 @@ export class HostService {
       ...subscription.data,
     };
   }
+
+  async getHostBySubDomain(payload: { subDomain: string }): Promise<any> {
+    const { subDomain } = payload;
+    if (!subDomain) {
+      throw new Error('subDomain is required');
+    }
+    return hostRepository.getHostBySubDomain({ subDomain });
+  }
 }
 
 export default new HostService();
