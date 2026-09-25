@@ -20,6 +20,7 @@ function formatUnixForDisplay(unix: number, settings?: HostDateTimeSettings): st
 }
 
 function replaceVars(template: string, vars: Record<string, string>): string {
+  console.log('Replacing vars in template:', template, 'with vars:', vars);
   return template.replace(/\$\{(\w+)\}/g, (_, key) => vars[key] ?? '');
 }
 
@@ -28,7 +29,10 @@ function deepReplaceVars(value: unknown, vars: Record<string, string>): unknown 
   if (Array.isArray(value)) return value.map((v) => deepReplaceVars(v, vars));
   if (value && typeof value === 'object') {
     return Object.fromEntries(
-      Object.entries(value as Record<string, unknown>).map(([k, v]) => [k, deepReplaceVars(v, vars)])
+      Object.entries(value as Record<string, unknown>).map(([k, v]) => [
+        k,
+        deepReplaceVars(v, vars),
+      ])
     );
   }
   return value;
@@ -46,28 +50,35 @@ export function resolveActivityEnrichment(
   const detail: ActivityDetail = ACTIVITY_DETAILS[descriptionKey];
   const metadata: Record<string, any> = record.metadata ?? {};
   const activityTime = Number(record.activityTime);
+  console.log('Activity time:', activityTime);
+  console.log('Metadata:', metadata);
 
   const tz = settings?.timeZone || CONFIG.REPORTING.TIMEZONE;
   const safeZone = moment.tz.zone(tz) ? tz : CONFIG.REPORTING.TIMEZONE;
-  const dayStart = Number.isFinite(activityTime) && activityTime > 0
-    ? moment.unix(activityTime).tz(safeZone).startOf('day').unix()
-    : null;
-  const dayEnd = Number.isFinite(activityTime) && activityTime > 0
-    ? moment.unix(activityTime).tz(safeZone).endOf('day').unix()
-    : null;
+  const dayStart =
+    Number.isFinite(activityTime) && activityTime > 0
+      ? moment.unix(activityTime).tz(safeZone).startOf('day').unix()
+      : null;
+  const dayEnd =
+    Number.isFinite(activityTime) && activityTime > 0
+      ? moment.unix(activityTime).tz(safeZone).endOf('day').unix()
+      : null;
 
   const vars: Record<string, string> = {
     employeeName: metadata.employeeName ?? '',
     customerName: metadata.customerName ?? '',
     userId: String(record.userId ?? ''),
-    activityTime: Number.isFinite(activityTime) && activityTime > 0
-      ? formatUnixForDisplay(activityTime, settings)
-      : '',
+    activityTime:
+      Number.isFinite(activityTime) && activityTime > 0
+        ? formatUnixForDisplay(activityTime, settings)
+        : '',
     fromTime: dayStart !== null ? String(dayStart) : '',
     toTime: dayEnd !== null ? String(dayEnd) : '',
     amount: String(metadata.amount ?? metadata.totalAmount ?? ''),
     lateMinutes: String(metadata.lateMinutes ?? ''),
     earlyMinutes: String(metadata.earlyMinutes ?? ''),
+    attendanceTime: formatUnixForDisplay(metadata.attendanceTime ?? '', settings),
+    dayoverTime: formatUnixForDisplay(metadata.dayoverTime ?? '', settings),
   };
 
   return {

@@ -1,18 +1,19 @@
-import { 
-  AttendanceRepository, 
-  GpsHistoryRepository, 
+import {
+  AttendanceRepository,
+  GpsHistoryRepository,
   type UserLastLocationUpsertPayload,
-  VisitRepository, 
-  OrderRepository, 
-  OrderProductRepository, 
-  PaymentRepository, 
-  FeedbackRepository, 
-  ImageRepository, 
-  CustomerRepository, 
+  VisitRepository,
+  OrderRepository,
+  OrderProductRepository,
+  PaymentRepository,
+  FeedbackRepository,
+  ImageRepository,
+  CustomerRepository,
   ProductRepository,
   UserDailySummaryRepository,
   VisitSummaryRepository,
-  ActivityLogRepository } from '../repositories';
+  ActivityLogRepository,
+} from '../repositories';
 import type { ActivityLogInput } from '../repositories/activity-log.repository';
 import { ActivityModule, ACTIVITY_DESCRIPTION_KEYS } from '../../../config/activityLog';
 import { User } from '../../../models';
@@ -24,9 +25,14 @@ import moment from 'moment-timezone';
 import { CONFIG } from '../../../config/constants';
 import { logger } from '../../../config/database';
 import { Op, Transaction } from 'sequelize';
-import { locationResolutionService, type LocationResolutionTarget } from '../../../infrastructure/background-jobs/services/location-resolution.service';
+import {
+  locationResolutionService,
+  type LocationResolutionTarget,
+} from '../../../infrastructure/background-jobs/services/location-resolution.service';
 import { getRedisConnectionStatus } from '../../../infrastructure/background-jobs/config/redis.config';
-import dashboardCacheInvalidationService, { type DashboardCacheInvalidationEvent } from '../../dashboard/services/dashboard-cache-invalidation.service';
+import dashboardCacheInvalidationService, {
+  type DashboardCacheInvalidationEvent,
+} from '../../dashboard/services/dashboard-cache-invalidation.service';
 
 const attendanceRepository = new AttendanceRepository();
 const gpsHistoryRepository = new GpsHistoryRepository();
@@ -76,7 +82,9 @@ interface LocationFieldMap {
   isChargingField?: string;
 }
 
-type ActivityLogFactory = (record: SyncRecord) => Omit<ActivityLogInput, 'hostId' | 'userId' | 'entityId' | 'activityTime'> | null;
+type ActivityLogFactory = (
+  record: SyncRecord
+) => Omit<ActivityLogInput, 'hostId' | 'userId' | 'entityId' | 'activityTime'> | null;
 
 export class SyncService {
   private async logActivity(
@@ -88,7 +96,14 @@ export class SyncService {
     const userId = Number(record.userId);
     const entityId = Number(record.id);
 
-    if (!Number.isInteger(hostId) || hostId <= 0 || !Number.isInteger(userId) || userId <= 0 || !Number.isInteger(entityId) || entityId <= 0) {
+    if (
+      !Number.isInteger(hostId) ||
+      hostId <= 0 ||
+      !Number.isInteger(userId) ||
+      userId <= 0 ||
+      !Number.isInteger(entityId) ||
+      entityId <= 0
+    ) {
       return;
     }
 
@@ -97,18 +112,40 @@ export class SyncService {
       return;
     }
 
-    const activityTime = Number((record as any).activityTime ?? (record as any).attendanceTime ?? (record as any).checkInTime ?? (record as any).orderTime ?? (record as any).paymentDate ?? (record as any).feedbackTime ?? (record as any).capturedAt ?? Math.floor(Date.now() / 1000));
+    const activityTime = Number(
+      (record as any).activityTime ??
+        (record as any).dayoverTime ??
+        (record as any).attendanceTime ??
+        (record as any).checkOutTime ??
+        (record as any).checkInTime ??
+        (record as any).orderTime ??
+        (record as any).paymentDate ??
+        (record as any).feedbackTime ??
+        (record as any).capturedAt ??
+        Math.floor(Date.now() / 1000)
+    );
 
-    const userRow = await User.findOne({ attributes: ['name'], where: { id: userId, hostId }, transaction });
+    const userRow = await User.findOne({
+      attributes: ['name'],
+      where: { id: userId, hostId },
+      transaction,
+    });
     const employeeName: string | null = (userRow as any)?.name ?? null;
 
     await activityLogRepository.log(
       {
         hostId,
         userId,
-        customerId: record.customerId ? Number(record.customerId) : entry.metadata.customerId ? Number(entry.metadata.customerId) : undefined,
+        customerId: record.customerId
+          ? Number(record.customerId)
+          : entry.metadata.customerId
+            ? Number(entry.metadata.customerId)
+            : undefined,
         entityId,
-        activityTime: Number.isFinite(activityTime) && activityTime > 0 ? activityTime : Math.floor(Date.now() / 1000),
+        activityTime:
+          Number.isFinite(activityTime) && activityTime > 0
+            ? activityTime
+            : Math.floor(Date.now() / 1000),
         ...entry,
         metadata: { employeeName, ...entry.metadata },
       },
@@ -153,7 +190,10 @@ export class SyncService {
     });
   }
 
-  private buildLocationCandidate(source: SyncRecord, map: LocationFieldMap): UserLastLocationUpsertPayload | null {
+  private buildLocationCandidate(
+    source: SyncRecord,
+    map: LocationFieldMap
+  ): UserLastLocationUpsertPayload | null {
     const latitude = this.toFiniteNumber(source[map.latitudeField]);
     const longitude = this.toFiniteNumber(source[map.longitudeField]);
 
@@ -161,7 +201,8 @@ export class SyncService {
       return null;
     }
 
-    const locationTime = this.toPositiveInteger(source[map.locationTimeField]) || Math.floor(Date.now() / 1000);
+    const locationTime =
+      this.toPositiveInteger(source[map.locationTimeField]) || Math.floor(Date.now() / 1000);
 
     return {
       hostId: 0,
@@ -170,20 +211,34 @@ export class SyncService {
       longitude,
       locationTime,
       localId: typeof source.localId === 'string' ? source.localId : undefined,
-      accuracy: map.accuracyField ? this.toFiniteNumber(source[map.accuracyField]) ?? undefined : undefined,
-      altitude: map.altitudeField ? this.toFiniteNumber(source[map.altitudeField]) ?? undefined : undefined,
-      speed: map.speedField ? this.toFiniteNumber(source[map.speedField]) ?? undefined : undefined,
-      provider: map.providerField && source[map.providerField] !== undefined && source[map.providerField] !== null
-        ? String(source[map.providerField])
+      accuracy: map.accuracyField
+        ? (this.toFiniteNumber(source[map.accuracyField]) ?? undefined)
         : undefined,
+      altitude: map.altitudeField
+        ? (this.toFiniteNumber(source[map.altitudeField]) ?? undefined)
+        : undefined,
+      speed: map.speedField
+        ? (this.toFiniteNumber(source[map.speedField]) ?? undefined)
+        : undefined,
+      provider:
+        map.providerField &&
+        source[map.providerField] !== undefined &&
+        source[map.providerField] !== null
+          ? String(source[map.providerField])
+          : undefined,
       batteryPercentage: map.batteryPercentageField
-        ? this.toFiniteNumber(source[map.batteryPercentageField]) ?? undefined
+        ? (this.toFiniteNumber(source[map.batteryPercentageField]) ?? undefined)
         : undefined,
-      isCharging: map.isChargingField ? this.toPositiveInteger(source[map.isChargingField]) ?? undefined : undefined,
+      isCharging: map.isChargingField
+        ? (this.toPositiveInteger(source[map.isChargingField]) ?? undefined)
+        : undefined,
     };
   }
 
-  private resolveLatestLocationCandidate(record: SyncRecord, sourceRecord?: SyncRecord): UserLastLocationUpsertPayload | null {
+  private resolveLatestLocationCandidate(
+    record: SyncRecord,
+    sourceRecord?: SyncRecord
+  ): UserLastLocationUpsertPayload | null {
     const sources: SyncRecord[] = [record];
     if (sourceRecord) {
       sources.push(sourceRecord);
@@ -333,7 +388,12 @@ export class SyncService {
     repository: any,
     userId: number,
     records: SyncRecord[],
-    afterPersist?: (record: SyncRecord, transaction: Transaction, previousRecord?: SyncRecord, sourceRecord?: SyncRecord) => Promise<void>,
+    afterPersist?: (
+      record: SyncRecord,
+      transaction: Transaction,
+      previousRecord?: SyncRecord,
+      sourceRecord?: SyncRecord
+    ) => Promise<void>,
     afterCommit?: (record: SyncRecord, previousRecord?: SyncRecord) => Promise<void>
   ): Promise<SyncResult> {
     const results: SyncResult = {
@@ -346,38 +406,47 @@ export class SyncService {
       try {
         const { localId, ...data } = record;
         const now = Math.floor(Date.now() / 1000);
-        const syncResult = await repository.getSequelize().transaction(async (transaction: Transaction): Promise<SyncTransactionResult> => {
-          const instance = localId
-            ? await repository.findOne({ userId, localId }, transaction)
-            : null;
+        const syncResult = await repository
+          .getSequelize()
+          .transaction(async (transaction: Transaction): Promise<SyncTransactionResult> => {
+            const instance = localId
+              ? await repository.findOne({ userId, localId }, transaction)
+              : null;
 
-          if (instance) {
-            const previousRecord = instance.toJSON();
-            const updatedRecord = await repository.update(instance.id, {
-              ...data,
-              userId,
-              syncedAt: now,
-            }, transaction);
+            if (instance) {
+              const previousRecord = instance.toJSON();
+              const updatedRecord = await repository.update(
+                instance.id,
+                {
+                  ...data,
+                  userId,
+                  syncedAt: now,
+                },
+                transaction
+              );
 
-            if (!updatedRecord) {
-              throw new Error(`Unable to update record ${instance.id}`);
+              if (!updatedRecord) {
+                throw new Error(`Unable to update record ${instance.id}`);
+              }
+
+              const persistedRecord = updatedRecord.toJSON();
+              await afterPersist?.(persistedRecord, transaction, previousRecord, record);
+              return { status: 'updated', serverId: instance.id, persistedRecord, previousRecord };
             }
 
-            const persistedRecord = updatedRecord.toJSON();
-            await afterPersist?.(persistedRecord, transaction, previousRecord, record);
-            return { status: 'updated', serverId: instance.id, persistedRecord, previousRecord };
-          }
-
-          const newRecord = await repository.create({
-            ...data,
-            userId,
-            localId,
-            syncedAt: now,
-          }, transaction);
-          const persistedRecord = newRecord.toJSON();
-          await afterPersist?.(persistedRecord, transaction, undefined, record);
-          return { status: 'created', serverId: newRecord.id, persistedRecord };
-        });
+            const newRecord = await repository.create(
+              {
+                ...data,
+                userId,
+                localId,
+                syncedAt: now,
+              },
+              transaction
+            );
+            const persistedRecord = newRecord.toJSON();
+            await afterPersist?.(persistedRecord, transaction, undefined, record);
+            return { status: 'created', serverId: newRecord.id, persistedRecord };
+          });
 
         if (afterCommit) {
           await afterCommit(syncResult.persistedRecord, syncResult.previousRecord);
@@ -411,7 +480,9 @@ export class SyncService {
           (r) => ({
             module: previousRecord ? ActivityModule.DAYOVER : ActivityModule.ATTENDANCE,
             action: previousRecord ? 'DAYOVER_MARKED' : 'ATTENDANCE_MARKED',
-            descriptionKey: previousRecord ? ACTIVITY_DESCRIPTION_KEYS.DAYOVER_MARKED : ACTIVITY_DESCRIPTION_KEYS.ATTENDANCE_MARKED,
+            descriptionKey: previousRecord
+              ? ACTIVITY_DESCRIPTION_KEYS.DAYOVER_MARKED
+              : ACTIVITY_DESCRIPTION_KEYS.ATTENDANCE_MARKED,
             metadata: {
               attendanceTime: r.attendanceTime ?? null,
               dayoverTime: r.dayoverTime ?? null,
@@ -435,7 +506,10 @@ export class SyncService {
     );
   }
 
-  private async scheduleAttendanceLocationJobs(record: SyncRecord, previousRecord?: SyncRecord): Promise<void> {
+  private async scheduleAttendanceLocationJobs(
+    record: SyncRecord,
+    previousRecord?: SyncRecord
+  ): Promise<void> {
     const locationTargets: ReadonlyArray<LocationSyncConfig> = [
       {
         recordId: Number(record.id),
@@ -458,12 +532,22 @@ export class SyncService {
     }
   }
 
-  private async scheduleLocationResolution(record: SyncRecord, target: LocationSyncConfig): Promise<void> {
+  private async scheduleLocationResolution(
+    record: SyncRecord,
+    target: LocationSyncConfig
+  ): Promise<void> {
     const recordId = Number(record.id ?? target.recordId);
     const hostId = Number(record.hostId);
     const userId = Number(record.userId);
 
-    if (!Number.isInteger(recordId) || recordId <= 0 || !Number.isInteger(hostId) || hostId <= 0 || !Number.isInteger(userId) || userId <= 0) {
+    if (
+      !Number.isInteger(recordId) ||
+      recordId <= 0 ||
+      !Number.isInteger(hostId) ||
+      hostId <= 0 ||
+      !Number.isInteger(userId) ||
+      userId <= 0
+    ) {
       return;
     }
 
@@ -504,7 +588,10 @@ export class SyncService {
     }
   }
 
-  private async syncUserDailySummary(attendance: SyncRecord, transaction: Transaction): Promise<void> {
+  private async syncUserDailySummary(
+    attendance: SyncRecord,
+    transaction: Transaction
+  ): Promise<void> {
     const hostId = Number(attendance.hostId);
     const attendanceTime = Number(attendance.attendanceTime);
 
@@ -522,9 +609,7 @@ export class SyncService {
     }
 
     const workingHours = Number(attendance.workingHours);
-    const workingMinutes = Number.isFinite(workingHours)
-      ? Math.round(workingHours * 60)
-      : 0;
+    const workingMinutes = Number.isFinite(workingHours) ? Math.round(workingHours * 60) : 0;
     const reportDate = moment
       .unix(attendanceTime)
       .tz(CONFIG.REPORTING.TIMEZONE)
@@ -545,16 +630,24 @@ export class SyncService {
 
     if (existingSummary) {
       await userDailySummaryRepository.update(existingSummary.id, summaryData as any, transaction);
-      await this.refreshUserDailySummary(hostId, Number(attendance.userId), reportDate, transaction);
+      await this.refreshUserDailySummary(
+        hostId,
+        Number(attendance.userId),
+        reportDate,
+        transaction
+      );
       return;
     }
 
-    await userDailySummaryRepository.create({
-      hostId,
-      userId: Number(attendance.userId),
-      reportDate,
-      ...summaryData,
-    } as any, transaction);
+    await userDailySummaryRepository.create(
+      {
+        hostId,
+        userId: Number(attendance.userId),
+        reportDate,
+        ...summaryData,
+      } as any,
+      transaction
+    );
 
     await this.refreshUserDailySummary(hostId, Number(attendance.userId), reportDate, transaction);
   }
@@ -583,7 +676,9 @@ export class SyncService {
           (r) => ({
             module: ActivityModule.VISIT,
             action: previousVisit ? 'VISIT_CHECKOUT' : 'VISIT_CHECKIN',
-            descriptionKey: previousVisit ? ACTIVITY_DESCRIPTION_KEYS.VISIT_CHECKOUT : ACTIVITY_DESCRIPTION_KEYS.VISIT_CHECKIN,
+            descriptionKey: previousVisit
+              ? ACTIVITY_DESCRIPTION_KEYS.VISIT_CHECKOUT
+              : ACTIVITY_DESCRIPTION_KEYS.VISIT_CHECKIN,
             metadata: {
               checkInTime: r.checkInTime ?? null,
               checkOutTime: r.checkOutTime ?? null,
@@ -597,12 +692,20 @@ export class SyncService {
       },
       async (record, previousRecord) => {
         await this.scheduleVisitLocationJobs(record, previousRecord);
-        await this.invalidateDashboardOverview('visit.changed', record, previousRecord, 'checkInTime');
+        await this.invalidateDashboardOverview(
+          'visit.changed',
+          record,
+          previousRecord,
+          'checkInTime'
+        );
       }
     );
   }
 
-  private async scheduleVisitLocationJobs(record: SyncRecord, previousRecord?: SyncRecord): Promise<void> {
+  private async scheduleVisitLocationJobs(
+    record: SyncRecord,
+    previousRecord?: SyncRecord
+  ): Promise<void> {
     const locationTargets: ReadonlyArray<LocationSyncConfig> = [
       {
         recordId: Number(record.id),
@@ -636,89 +739,112 @@ export class SyncService {
       try {
         const { localId, products, items, ...orderData } = record;
         const now = Math.floor(Date.now() / 1000);
-        const orderProducts = Array.isArray(products) ? products : Array.isArray(items) ? items : undefined;
-        const syncResult = await orderRepository.getSequelize().transaction(async (transaction: Transaction) => {
-          await resolveVisitLocalIdForRecord(userId, orderData, new Map(), transaction);
-          const visitId = orderData.visitId;
+        const orderProducts = Array.isArray(products)
+          ? products
+          : Array.isArray(items)
+            ? items
+            : undefined;
+        const syncResult = await orderRepository
+          .getSequelize()
+          .transaction(async (transaction: Transaction) => {
+            await resolveVisitLocalIdForRecord(userId, orderData, new Map(), transaction);
+            const visitId = orderData.visitId;
 
-          if (!visitId) {
-            throw new Error('visitLocalId or visitId is required');
-          }
+            if (!visitId) {
+              throw new Error('visitLocalId or visitId is required');
+            }
 
-          const { visitLocalId, ...orderPayload } = orderData;
-          const resolvedOrderData: SyncRecord = {
-            ...orderPayload,
-            visitId,
-          };
-          const instance = localId
-            ? await orderRepository.findOne({ userId, localId } as any, transaction)
-            : null;
-          const previousOrder = instance?.toJSON();
-          const order = instance
-            ? await orderRepository.update(instance.id, {
-                ...resolvedOrderData,
+            const { visitLocalId, ...orderPayload } = orderData;
+            const resolvedOrderData: SyncRecord = {
+              ...orderPayload,
+              visitId,
+            };
+            const instance = localId
+              ? await orderRepository.findOne({ userId, localId } as any, transaction)
+              : null;
+            const previousOrder = instance?.toJSON();
+            const order = instance
+              ? await orderRepository.update(
+                  instance.id,
+                  {
+                    ...resolvedOrderData,
+                    userId,
+                    syncedAt: now,
+                  },
+                  transaction
+                )
+              : await orderRepository.create(
+                  {
+                    ...resolvedOrderData,
+                    userId,
+                    localId,
+                    syncedAt: now,
+                  },
+                  transaction
+                );
+
+            if (!order) {
+              throw new Error('Unable to save order');
+            }
+
+            if (orderProducts) {
+              await orderProductRepository.replaceForOrder(
+                order.id,
                 userId,
-                syncedAt: now,
-              }, transaction)
-            : await orderRepository.create({
-                ...resolvedOrderData,
-                userId,
-                localId,
-                syncedAt: now,
-              }, transaction);
+                orderProducts.map((product) => ({
+                  ...product,
+                  visitId,
+                  customerId: product.customerId ?? resolvedOrderData.customerId,
+                })),
+                now,
+                transaction
+              );
+            }
 
-          if (!order) {
-            throw new Error('Unable to save order');
-          }
-
-          if (orderProducts) {
-            await orderProductRepository.replaceForOrder(
-              order.id,
-              userId,
-              orderProducts.map((product) => ({
-                ...product,
-                visitId,
-                customerId: product.customerId ?? resolvedOrderData.customerId,
-              })),
-              now,
+            await this.syncVisitSummaryForActivity(order.toJSON(), transaction, previousOrder);
+            await this.syncDailySummaryForActivity(
+              order.toJSON(),
+              'orderTime',
+              transaction,
+              previousOrder
+            );
+            await this.logActivity(
+              order.toJSON(),
+              (r) => ({
+                module: ActivityModule.ORDER,
+                action: 'ORDER_CREATED',
+                descriptionKey: ACTIVITY_DESCRIPTION_KEYS.ORDER_CREATED,
+                metadata: {
+                  orderTime: r.orderTime ?? null,
+                  totalAmount: r.totalAmount ?? null,
+                  employeeName: r.employeeName ?? orderData.employeeName ?? null,
+                  customerId: r.customerId ?? orderData.customerId ?? null,
+                  customerName: r.customerName ?? orderData.customerName ?? null,
+                  customerCode: r.customerCode ?? orderData.customerCode ?? null,
+                  customerType: r.customerType ?? orderData.customerType ?? null,
+                },
+              }),
               transaction
             );
-          }
 
-          await this.syncVisitSummaryForActivity(order.toJSON(), transaction, previousOrder);
-          await this.syncDailySummaryForActivity(order.toJSON(), 'orderTime', transaction, previousOrder);
-          await this.logActivity(
-            order.toJSON(),
-            (r) => ({
-              module: ActivityModule.ORDER,
-              action: 'ORDER_CREATED',
-              descriptionKey: ACTIVITY_DESCRIPTION_KEYS.ORDER_CREATED,
-              metadata: {
-                orderTime: r.orderTime ?? null,
-                totalAmount: r.totalAmount ?? null,
-                employeeName: r.employeeName ?? orderData.employeeName ?? null,
-                customerId: r.customerId ?? orderData.customerId ?? null,
-                customerName: r.customerName ?? orderData.customerName ?? null,
-                customerCode: r.customerCode ?? orderData.customerCode ?? null,
-                customerType: r.customerType ?? orderData.customerType ?? null,
-              },
-            }),
-            transaction
-          );
+            await this.upsertUserLastLocationFromRecord(order.toJSON(), transaction, record);
 
-          await this.upsertUserLastLocationFromRecord(order.toJSON(), transaction, record);
-
-          return {
-            status: instance ? 'updated' as const : 'created' as const,
-            serverId: order.id,
-            persistedRecord: order.toJSON(),
-            previousRecord: previousOrder,
-          };
-        });
+            return {
+              status: instance ? ('updated' as const) : ('created' as const),
+              serverId: order.id,
+              persistedRecord: order.toJSON(),
+              previousRecord: previousOrder,
+            };
+          });
 
         // Its commented out because the location resolution jobs are already scheduled in the syncVisitSummaryForActivity method, which is called above. Scheduling them again here would be redundant and could lead to unnecessary processing.
         //await this.scheduleOrderLocationJobs(syncResult.persistedRecord, syncResult.previousRecord);
-        await this.invalidateDashboardOverview('order.changed', syncResult.persistedRecord, syncResult.previousRecord, 'orderTime');
+        await this.invalidateDashboardOverview(
+          'order.changed',
+          syncResult.persistedRecord,
+          syncResult.previousRecord,
+          'orderTime'
+        );
 
         if (syncResult.status === 'updated') {
           results.updated.push({ localId, serverId: syncResult.serverId });
@@ -736,7 +862,10 @@ export class SyncService {
     return results;
   }
 
-  private async scheduleOrderLocationJobs(record: SyncRecord, previousRecord?: SyncRecord): Promise<void> {
+  private async scheduleOrderLocationJobs(
+    record: SyncRecord,
+    previousRecord?: SyncRecord
+  ): Promise<void> {
     const locationTargets: ReadonlyArray<LocationSyncConfig> = [
       {
         recordId: Number(record.id),
@@ -759,7 +888,12 @@ export class SyncService {
       records,
       async (payment, transaction, previousPayment, sourceRecord) => {
         await this.syncVisitSummaryForActivity(payment, transaction, previousPayment);
-        await this.syncDailySummaryForActivity(payment, 'paymentDate', transaction, previousPayment);
+        await this.syncDailySummaryForActivity(
+          payment,
+          'paymentDate',
+          transaction,
+          previousPayment
+        );
         await this.logActivity(
           payment,
           (r) => ({
@@ -781,7 +915,12 @@ export class SyncService {
         await this.upsertUserLastLocationFromRecord(payment, transaction, sourceRecord);
       },
       async (record, previousRecord) => {
-        await this.invalidateDashboardOverview('payment.changed', record, previousRecord, 'paymentDate');
+        await this.invalidateDashboardOverview(
+          'payment.changed',
+          record,
+          previousRecord,
+          'paymentDate'
+        );
       }
       // async (record, previousRecord) => {
       //   await this.schedulePaymentLocationJobs(record, previousRecord);
@@ -790,7 +929,10 @@ export class SyncService {
     // The scheduling of payment location jobs is commented out because the location resolution jobs are already scheduled in the syncVisitSummaryForActivity method, which is called above. Scheduling them again here would be redundant and could lead to unnecessary processing.
   }
 
-  private async schedulePaymentLocationJobs(record: SyncRecord, previousRecord?: SyncRecord): Promise<void> {
+  private async schedulePaymentLocationJobs(
+    record: SyncRecord,
+    previousRecord?: SyncRecord
+  ): Promise<void> {
     const locationTargets: ReadonlyArray<LocationSyncConfig> = [
       {
         recordId: Number(record.id),
@@ -813,7 +955,12 @@ export class SyncService {
       records,
       async (feedback, transaction, previousFeedback, sourceFeedback) => {
         await this.syncVisitSummaryForActivity(feedback, transaction, previousFeedback);
-        await this.syncDailySummaryForActivity(feedback, 'feedbackTime', transaction, previousFeedback);
+        await this.syncDailySummaryForActivity(
+          feedback,
+          'feedbackTime',
+          transaction,
+          previousFeedback
+        );
         await this.logActivity(
           feedback,
           (r) => ({
@@ -835,7 +982,12 @@ export class SyncService {
         await this.upsertUserLastLocationFromRecord(feedback, transaction, sourceFeedback);
       },
       async (record, previousRecord) => {
-        await this.invalidateDashboardOverview('feedback.changed', record, previousRecord, 'feedbackTime');
+        await this.invalidateDashboardOverview(
+          'feedback.changed',
+          record,
+          previousRecord,
+          'feedbackTime'
+        );
       }
       // async (record, previousRecord) => {
       //   await this.scheduleFeedbackLocationJobs(record, previousRecord);
@@ -844,7 +996,10 @@ export class SyncService {
     // The scheduling of feedback location jobs is commented out because the location resolution jobs are already scheduled in the syncVisitSummaryForActivity method, which is called above. Scheduling them again here would be redundant and could lead to unnecessary processing.
   }
 
-  private async scheduleFeedbackLocationJobs(record: SyncRecord, previousRecord?: SyncRecord): Promise<void> {
+  private async scheduleFeedbackLocationJobs(
+    record: SyncRecord,
+    previousRecord?: SyncRecord
+  ): Promise<void> {
     const locationTargets: ReadonlyArray<LocationSyncConfig> = [
       {
         recordId: Number(record.id),
@@ -888,7 +1043,12 @@ export class SyncService {
         await this.upsertUserLastLocationFromRecord(image, transaction, sourceRecord);
       },
       async (record, previousRecord) => {
-        await this.invalidateDashboardOverview('image.changed', record, previousRecord, 'capturedAt');
+        await this.invalidateDashboardOverview(
+          'image.changed',
+          record,
+          previousRecord,
+          'capturedAt'
+        );
       }
       // async (record, previousRecord) => {
       //   await this.scheduleImageLocationJobs(record, previousRecord);
@@ -897,7 +1057,10 @@ export class SyncService {
     // The scheduling of image location jobs is commented out because the location resolution jobs are already scheduled in the syncVisitSummaryForActivity method, which is called above. Scheduling them again here would be redundant and could lead to unnecessary processing.
   }
 
-  private async scheduleImageLocationJobs(record: SyncRecord, previousRecord?: SyncRecord): Promise<void> {
+  private async scheduleImageLocationJobs(
+    record: SyncRecord,
+    previousRecord?: SyncRecord
+  ): Promise<void> {
     const locationTargets: ReadonlyArray<LocationSyncConfig> = [
       {
         recordId: Number(record.id),
@@ -913,12 +1076,22 @@ export class SyncService {
     }
   }
 
-  private async syncVisitSummaryForVisit(visit: SyncRecord, transaction: Transaction): Promise<void> {
+  private async syncVisitSummaryForVisit(
+    visit: SyncRecord,
+    transaction: Transaction
+  ): Promise<void> {
     const hostId = Number(visit.hostId);
     const userId = Number(visit.userId);
     const visitId = Number(visit.id);
 
-    if (!Number.isInteger(hostId) || hostId <= 0 || !Number.isInteger(userId) || userId <= 0 || !Number.isInteger(visitId) || visitId <= 0) {
+    if (
+      !Number.isInteger(hostId) ||
+      hostId <= 0 ||
+      !Number.isInteger(userId) ||
+      userId <= 0 ||
+      !Number.isInteger(visitId) ||
+      visitId <= 0
+    ) {
       throw new Error('hostId, userId, and visitId are required to sync the visit summary');
     }
 
@@ -939,7 +1112,14 @@ export class SyncService {
     const userId = Number(record.userId);
     const visitId = Number(record.visitId);
 
-    if (!Number.isInteger(hostId) || hostId <= 0 || !Number.isInteger(userId) || userId <= 0 || !Number.isInteger(visitId) || visitId <= 0) {
+    if (
+      !Number.isInteger(hostId) ||
+      hostId <= 0 ||
+      !Number.isInteger(userId) ||
+      userId <= 0 ||
+      !Number.isInteger(visitId) ||
+      visitId <= 0
+    ) {
       throw new Error('hostId, userId, and visitId are required to sync the visit summary');
     }
 
@@ -950,7 +1130,12 @@ export class SyncService {
       const previousUserId = Number(previousRecord.userId);
       const previousVisitId = Number(previousRecord.visitId);
       if (previousHostId !== hostId || previousUserId !== userId || previousVisitId !== visitId) {
-        await this.refreshVisitSummary(previousHostId, previousUserId, previousVisitId, transaction);
+        await this.refreshVisitSummary(
+          previousHostId,
+          previousUserId,
+          previousVisitId,
+          transaction
+        );
       }
     }
   }
@@ -963,7 +1148,9 @@ export class SyncService {
   ): Promise<void> {
     const summary = await visitSummaryRepository.findByVisit(hostId, userId, visitId, transaction);
     if (!summary) {
-      throw new Error(`Visit summary not found for visitId ${visitId}; sync the visit before its related activity`);
+      throw new Error(
+        `Visit summary not found for visitId ${visitId}; sync the visit before its related activity`
+      );
     }
 
     const where = { hostId, userId, visitId };
@@ -983,18 +1170,23 @@ export class SyncService {
     const uniqueProducts = new Set(
       orderProducts.map((product: any) => product.productId ?? product.productName).filter(Boolean)
     );
-    const total = (records: any[], field: string) => records.reduce((sum, record) => sum + (Number(record[field]) || 0), 0);
+    const total = (records: any[], field: string) =>
+      records.reduce((sum, record) => sum + (Number(record[field]) || 0), 0);
 
-    await visitSummaryRepository.update(summary.id, {
-      totalOrders: orders.length,
-      orderAmount: total(orders, 'totalAmount'),
-      totalUniqueProducts: uniqueProducts.size,
-      totalQuantity: total(orderProducts, 'quantity'),
-      totalPayments: payments.length,
-      paymentAmount: total(payments, 'amount'),
-      totalFeedbacks: feedbacks.length,
-      totalImages: images.length,
-    } as any, transaction);
+    await visitSummaryRepository.update(
+      summary.id,
+      {
+        totalOrders: orders.length,
+        orderAmount: total(orders, 'totalAmount'),
+        totalUniqueProducts: uniqueProducts.size,
+        totalQuantity: total(orderProducts, 'quantity'),
+        totalPayments: payments.length,
+        paymentAmount: total(payments, 'amount'),
+        totalFeedbacks: feedbacks.length,
+        totalImages: images.length,
+      } as any,
+      transaction
+    );
   }
 
   private async syncDailySummaryForActivity(
@@ -1007,15 +1199,20 @@ export class SyncService {
     const userId = Number(record.userId);
     const timestamp = Number(record[timestampField]);
 
-    if (!Number.isInteger(hostId) || hostId <= 0 || !Number.isInteger(userId) || userId <= 0 || !Number.isFinite(timestamp) || timestamp <= 0) {
-      throw new Error(`hostId, userId, and ${timestampField} are required to sync the user daily summary`);
+    if (
+      !Number.isInteger(hostId) ||
+      hostId <= 0 ||
+      !Number.isInteger(userId) ||
+      userId <= 0 ||
+      !Number.isFinite(timestamp) ||
+      timestamp <= 0
+    ) {
+      throw new Error(
+        `hostId, userId, and ${timestampField} are required to sync the user daily summary`
+      );
     }
 
-    const reportDate = moment
-      .unix(timestamp)
-      .tz(CONFIG.REPORTING.TIMEZONE)
-      .startOf('day')
-      .unix();
+    const reportDate = moment.unix(timestamp).tz(CONFIG.REPORTING.TIMEZONE).startOf('day').unix();
     await this.refreshUserDailySummary(hostId, userId, reportDate, transaction);
 
     if (previousRecord) {
@@ -1029,8 +1226,17 @@ export class SyncService {
           .startOf('day')
           .unix();
 
-        if (previousReportDate !== reportDate || previousHostId !== hostId || previousUserId !== userId) {
-          await this.refreshUserDailySummary(previousHostId, previousUserId, previousReportDate, transaction);
+        if (
+          previousReportDate !== reportDate ||
+          previousHostId !== hostId ||
+          previousUserId !== userId
+        ) {
+          await this.refreshUserDailySummary(
+            previousHostId,
+            previousUserId,
+            previousReportDate,
+            transaction
+          );
         }
       }
     }
@@ -1042,7 +1248,12 @@ export class SyncService {
     reportDate: number,
     transaction: Transaction
   ): Promise<void> {
-    const summary = await userDailySummaryRepository.findByReportDate(hostId, userId, reportDate, transaction);
+    const summary = await userDailySummaryRepository.findByReportDate(
+      hostId,
+      userId,
+      reportDate,
+      transaction
+    );
 
     // A daily summary is created from attendance. Activity synced before attendance
     // is picked up when that attendance record is subsequently synced.
@@ -1050,14 +1261,24 @@ export class SyncService {
       return;
     }
 
-    const nextReportDate = moment.unix(reportDate).tz(CONFIG.REPORTING.TIMEZONE).add(1, 'day').unix();
+    const nextReportDate = moment
+      .unix(reportDate)
+      .tz(CONFIG.REPORTING.TIMEZONE)
+      .add(1, 'day')
+      .unix();
     const dateRange = { [Op.gte]: reportDate, [Op.lt]: nextReportDate };
     const where = { hostId, userId };
     const [visits, orders, payments, feedbacks, images] = await Promise.all([
       visitRepository.findAll({ where: { ...where, checkInTime: dateRange } as any, transaction }),
       orderRepository.findAll({ where: { ...where, orderTime: dateRange } as any, transaction }),
-      paymentRepository.findAll({ where: { ...where, paymentDate: dateRange } as any, transaction }),
-      feedbackRepository.findAll({ where: { ...where, feedbackTime: dateRange } as any, transaction }),
+      paymentRepository.findAll({
+        where: { ...where, paymentDate: dateRange } as any,
+        transaction,
+      }),
+      feedbackRepository.findAll({
+        where: { ...where, feedbackTime: dateRange } as any,
+        transaction,
+      }),
       imageRepository.findAll({ where: { ...where, capturedAt: dateRange } as any, transaction }),
     ]);
     const orderIds = orders.map((order) => order.id);
@@ -1070,19 +1291,24 @@ export class SyncService {
     const uniqueProducts = new Set(
       orderProducts.map((product: any) => product.productId ?? product.productName).filter(Boolean)
     );
-    const total = (records: any[], field: string) => records.reduce((sum, record) => sum + (Number(record[field]) || 0), 0);
+    const total = (records: any[], field: string) =>
+      records.reduce((sum, record) => sum + (Number(record[field]) || 0), 0);
 
-    await userDailySummaryRepository.update(summary.id, {
-      totalVisits: visits.length,
-      totalOrders: orders.length,
-      orderAmount: total(orders, 'totalAmount'),
-      totalUniqueProducts: uniqueProducts.size,
-      totalQuantity: total(orderProducts, 'quantity'),
-      totalPayments: payments.length,
-      paymentAmount: total(payments, 'amount'),
-      totalFeedbacks: feedbacks.length,
-      totalImages: images.length,
-    } as any, transaction);
+    await userDailySummaryRepository.update(
+      summary.id,
+      {
+        totalVisits: visits.length,
+        totalOrders: orders.length,
+        orderAmount: total(orders, 'totalAmount'),
+        totalUniqueProducts: uniqueProducts.size,
+        totalQuantity: total(orderProducts, 'quantity'),
+        totalPayments: payments.length,
+        paymentAmount: total(payments, 'amount'),
+        totalFeedbacks: feedbacks.length,
+        totalImages: images.length,
+      } as any,
+      transaction
+    );
   }
 
   async syncAll(userId: number, data: any): Promise<any> {
@@ -1171,35 +1397,41 @@ export class SyncService {
     };
   }
 
-  async getCustomers(payload: {userId: number, hostId: number}): Promise<any> {
+  async getCustomers(payload: { userId: number; hostId: number }): Promise<any> {
     return await customerRepository.getCustomers(payload);
   }
 
-  async getProducts(payload: {userId: number, hostId: number}): Promise<any> {
+  async getProducts(payload: { userId: number; hostId: number }): Promise<any> {
     return await productRepository.getProducts(payload);
   }
 
-  async getUserDetails(payload: {userId: number, hostId: number}): Promise<any> {
+  async getUserDetails(payload: { userId: number; hostId: number }): Promise<any> {
     // Fetch user settings from the database or any other source
     const userDetails = await userRepository.getUserById(payload);
     //console.log('User details retrieved:', userDetails);
     return userDetails ? this.formatUserWithSettings(userDetails) : {};
   }
 
-  private async formatUserWithSettings(user: { id: number; hostId: number; toJSON: () => any }): Promise<unknown> {
-      const userData = user as any;
-      // Convert settings array to key-value object
-      if (userData.settings && Array.isArray(userData.settings)) {
-        userData.settings = CommonUtil.convertSettingsToObject(userData.settings);
-  
-        // If weeklyOffMask is present, convert it to weeklyOffDays and remove weeklyOffMask
-        if (userData.settings?.weeklyOffMask) {
-          userData.settings.weeklyOffDays = DateTimeFormatUtil.getWeeklyOffDays(userData.settings.weeklyOffMask);
-          delete userData.settings.weeklyOffMask;
-        }
+  private async formatUserWithSettings(user: {
+    id: number;
+    hostId: number;
+    toJSON: () => any;
+  }): Promise<unknown> {
+    const userData = user as any;
+    // Convert settings array to key-value object
+    if (userData.settings && Array.isArray(userData.settings)) {
+      userData.settings = CommonUtil.convertSettingsToObject(userData.settings);
+
+      // If weeklyOffMask is present, convert it to weeklyOffDays and remove weeklyOffMask
+      if (userData.settings?.weeklyOffMask) {
+        userData.settings.weeklyOffDays = DateTimeFormatUtil.getWeeklyOffDays(
+          userData.settings.weeklyOffMask
+        );
+        delete userData.settings.weeklyOffMask;
       }
-      return userData;
     }
+    return userData;
+  }
 }
 
 export default new SyncService();
