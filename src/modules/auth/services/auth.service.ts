@@ -170,8 +170,9 @@ export class AuthService {
   }
 
   async login(data: LoginDto): Promise<AuthResponse> {
+    console.log('################ AuthService.login: Login data received:', data);
     const user = await this.validateCredentials(data);
-    return this.buildAppLoginResponse(user);
+    return this.buildAppLoginResponse(user, data.deviceDetails || {});
   }
 
   async verifyOtp(payload: VerifyOtpDto): Promise<AuthResponse> {
