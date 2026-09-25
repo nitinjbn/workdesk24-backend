@@ -317,7 +317,11 @@ export class AuthController {
         return;
       }
 
-      const result = await authService.login({ email, password });
+      const result = await authService.login({
+        email,
+        password,
+        deviceDetails: req.body.deviceDetails || {},
+      });
 
       res.json({
         success: true,
