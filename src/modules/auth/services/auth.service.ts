@@ -170,8 +170,18 @@ export class AuthService {
   }
 
   async login(data: LoginDto): Promise<AuthResponse> {
-    console.log('################ AuthService.login: Login data received:', data);
+    //console.log('################ AuthService.login: Login data received:', data);
     const user = await this.validateCredentials(data);
+
+    // Update user device details
+    if (data.deviceDetails) {
+      await userRepository.updateUserDeviceDetails({
+        hostId: user.hostId,
+        userId: user.id,
+        ...data.deviceDetails,
+      });
+    }
+
     return this.buildAppLoginResponse(user, data.deviceDetails || {});
   }
 
