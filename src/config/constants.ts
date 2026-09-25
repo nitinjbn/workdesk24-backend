@@ -12,6 +12,7 @@ export const CONFIG = {
     DATE_FORMAT: 'DD-MMM-YYYY',
     TIME_FORMAT: 'hh:mm A',
     DATE_TIME_FORMAT: 'DD-MMM-YYYY hh:mm A',
+    DEFAUL_MAX_WORKING_HOURS: 12,
   },
   LOCATION: {
     GOOGLE_GEOCODING_API_KEY: process.env.GOOGLE_GEOCODING_API_KEY || '',

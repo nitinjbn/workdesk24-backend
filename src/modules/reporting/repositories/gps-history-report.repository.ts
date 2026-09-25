@@ -13,7 +13,12 @@ import {
   ReportSortDirection,
 } from '../types/report.types';
 import baseReportHelper from '../helpers/base-report.helper';
-import { buildCommonReportOrder, buildUserInclude, buildUserScopedWhere, extractUserFilter } from './user-scoped-report.helper';
+import {
+  buildCommonReportOrder,
+  buildUserInclude,
+  buildUserScopedWhere,
+  extractUserFilter,
+} from './user-scoped-report.helper';
 
 type GpsHistoryInstance = typeof GpsHistory.prototype;
 
@@ -68,11 +73,70 @@ interface RawVisit {
   checkOutLatitude?: number | string;
   checkOutLongitude?: number | string;
   checkOutAddress?: string;
+  visitSummary?: {
+    totalOrders?: unknown;
+    totalPayments?: unknown;
+    totalFeedbacks?: unknown;
+    totalImages?: unknown;
+  };
 }
+
+interface JourneyAnchor {
+  type: 'ATTENDANCE' | 'VISIT' | 'DAYOVER';
+  id: number;
+  time: number;
+  timestamp: number;
+  latitude: number;
+  longitude: number;
+  address?: string;
+  title: string;
+  summary?: {
+    totalOrders: number;
+    totalPayments: number;
+    totalFeedbacks: number;
+    totalImages: number;
+  };
+  journeyId?: number;
+}
+
+interface JourneyEndpoint {
+  time: number;
+  latitude: number;
+  longitude: number;
+}
+
+interface JourneyTravel {
+  type: 'TRAVEL';
+  routeType: 'ESTIMATED';
+  gpsPointCount: number;
+  createdAt: {
+    from: number;
+    to: number;
+  };
+  coordinates: {
+    from: {
+      latitude: number;
+      longitude: number;
+    };
+    to: {
+      latitude: number;
+      longitude: number;
+    };
+  };
+  distanceKm: number;
+  durationMinutes: number;
+  journeyId: number;
+  title: string;
+  vehicleType: string;
+  vehicleCategory: string;
+}
+
+type JourneyItem = JourneyAnchor | JourneyTravel;
 
 export class GpsHistoryReportRepository {
   async getReport(params: GpsHistoryReportQuery): Promise<ReportResponse<GpsHistoryInstance>> {
-    const { page, limit, filter, hostId, userId, enforceActiveUsersOnly, sortBy, sortOrder } = params;
+    const { page, limit, filter, hostId, userId, enforceActiveUsersOnly, sortBy, sortOrder } =
+      params;
     const { offset } = baseReportHelper.normalizePagination({ page, limit });
     const where = buildUserScopedWhere<GpsHistoryInstance>(filter, userId);
     const userFilter = extractUserFilter(filter as Record<string, unknown>);
@@ -88,8 +152,8 @@ export class GpsHistoryReportRepository {
         exclude: ['localId', 'isDeleted', 'deletedAt'],
         include: [
           [db.Sequelize.col('user.name'), 'employeeName'],
-          [db.Sequelize.col('user.employeeCode'), 'employeeCode']
-        ]
+          [db.Sequelize.col('user.employeeCode'), 'employeeCode'],
+        ],
       },
       where,
       include: [userInclude as Includeable],
@@ -99,7 +163,7 @@ export class GpsHistoryReportRepository {
       distinct: true,
     };
 
-    if(page && limit) {
+    if (page && limit) {
       query.limit = limit;
       query.offset = offset;
 
@@ -109,16 +173,17 @@ export class GpsHistoryReportRepository {
         data: rows,
         pagination: baseReportHelper.buildPagination(count, page, limit),
       };
-      
     } else {
       const rows = await GpsHistory.findAll(query);
       return {
         data: rows,
       };
-    }    
+    }
   }
 
-  async getAdminGpsHistoryReport(params: AdminGpsHistoryReportQuery): Promise<AdminGpsHistoryResponse> {
+  async getAdminGpsHistoryReport(
+    params: AdminGpsHistoryReportQuery
+  ): Promise<AdminGpsHistoryResponse> {
     const { hostId, userId, fromDate, tillDate } = params;
 
     const [user, attendance, visits, dailySummary] = await Promise.all([
@@ -226,28 +291,28 @@ export class GpsHistoryReportRepository {
     const feedbackCount = this.toNonNegativeInteger(dailySummaryJson?.totalFeedbacks);
     const imageCount = this.toNonNegativeInteger(dailySummaryJson?.totalImages);
 
-    const newJourney = [];
+    const newJourney: JourneyAnchor[] = [];
     if (attendanceJson?.attendanceTime) {
       newJourney.push({
         type: 'ATTENDANCE',
         id: attendanceJson?.id,
         time: attendanceJson?.attendanceTime,
         timestamp: attendanceJson?.attendanceTime,
-        latitude: attendanceJson?.attendanceLatitude,
-        longitude: attendanceJson?.attendanceLongitude,
+        latitude: this.toFiniteNumber(attendanceJson?.attendanceLatitude) || 0,
+        longitude: this.toFiniteNumber(attendanceJson?.attendanceLongitude) || 0,
         address: attendanceJson?.attendanceAddress,
         title: 'Attendance',
       });
     }
 
-    visitsJson && visitsJson.forEach((visit) => {
+    visitsJson.forEach((visit) => {
       newJourney.push({
         type: 'VISIT',
         id: visit.id,
         time: visit.checkInTime,
         timestamp: visit.checkInTime,
-        latitude: this.toFiniteNumber(visit.checkInLatitude),
-        longitude: this.toFiniteNumber(visit.checkInLongitude),
+        latitude: this.toFiniteNumber(visit.checkInLatitude) || 0,
+        longitude: this.toFiniteNumber(visit.checkInLongitude) || 0,
         address: visit.checkInAddress,
         title: `Visit: ${visit.customerName}`,
         summary: {
@@ -265,82 +330,126 @@ export class GpsHistoryReportRepository {
         id: attendanceJson?.id,
         time: attendanceJson?.dayoverTime,
         timestamp: attendanceJson?.dayoverTime,
-        latitude: attendanceJson?.dayoverLatitude,
-        longitude: attendanceJson?.dayoverLongitude,
+        latitude: this.toFiniteNumber(attendanceJson?.dayoverLatitude) || 0,
+        longitude: this.toFiniteNumber(attendanceJson?.dayoverLongitude) || 0,
         address: attendanceJson?.dayoverAddress,
         title: 'Day Over',
       });
     }
 
+    let trailingGpsEndpoint: JourneyEndpoint | null = null;
+    if (attendanceJson?.attendanceTime && !attendanceJson?.dayoverTime && newJourney.length > 0) {
+      const lastJourneyAnchor = newJourney[newJourney.length - 1];
+      const lastGpsRow = await db.GpsHistory.findOne({
+        attributes: ['createdAt', 'latitude', 'longitude'],
+        where: {
+          hostId,
+          userId,
+          isDeleted: 0,
+          createdAt: {
+            [Op.gt]: lastJourneyAnchor.time,
+            [Op.lte]: tillDate,
+          },
+        },
+        order: [['createdAt', 'DESC']],
+      });
+
+      const lastGpsJson = lastGpsRow?.toJSON() as Record<string, unknown> | undefined;
+      const lastGpsTime = this.toNonNegativeInteger(lastGpsJson?.createdAt);
+      const lastGpsLatitude = this.toFiniteNumber(lastGpsJson?.latitude as number | string);
+      const lastGpsLongitude = this.toFiniteNumber(lastGpsJson?.longitude as number | string);
+
+      if (
+        lastGpsTime > lastJourneyAnchor.time &&
+        lastGpsLatitude !== null &&
+        lastGpsLongitude !== null
+      ) {
+        trailingGpsEndpoint = {
+          time: lastGpsTime,
+          latitude: lastGpsLatitude,
+          longitude: lastGpsLongitude,
+        };
+      }
+    }
+
     let journeyId = 1;
 
-    const finalJourney = [];
+    const finalJourney: JourneyItem[] = [];
     if (newJourney.length > 0) {
+      const journeyEndpoints = newJourney.map((journey, index): JourneyEndpoint => {
+        const nextJourney = newJourney[index + 1];
+        if (nextJourney) {
+          return nextJourney;
+        }
+
+        return trailingGpsEndpoint || journey;
+      });
+
       const pointCounts = await Promise.all(
-        newJourney.map((journey, index) =>
-          db.GpsHistory.count({
+        newJourney.map((journey, index) => {
+          const endpoint = journeyEndpoints[index];
+
+          return db.GpsHistory.count({
             where: {
               hostId,
               userId,
               isDeleted: 0,
               createdAt: {
-                [Op.between]: [journey.time, newJourney[index + 1]?.time || journey.time],
+                [Op.between]: [journey.time, endpoint.time],
               },
             },
-          })
-        )
+          });
+        })
       );
 
-      
       newJourney.forEach((journey, index) => {
+        const endpoint = journeyEndpoints[index];
         journey.journeyId = journeyId;
         journeyId++;
         finalJourney.push(journey);
         const gpsPointCount = pointCounts[index] || 0;
-        if (gpsPointCount > 0) {
+        if (gpsPointCount > 0 && endpoint.time >= journey.time) {
           const distanceKm = this.calculateDistanceKm(
             journey.latitude,
             journey.longitude,
-            newJourney[index + 1]?.latitude || journey.latitude,
-            newJourney[index + 1]?.longitude || journey.longitude
+            endpoint.latitude,
+            endpoint.longitude
           );
-          const durationMinutes = Math.max(0, Math.round(((newJourney[index + 1]?.time || journey.time) - journey.time) / 60));
+          const durationMinutes = Math.max(0, Math.round((endpoint.time - journey.time) / 60));
 
-          finalJourney.push(
-            {
-              type: "TRAVEL",
-              routeType: 'ESTIMATED',
-              gpsPointCount,
-              createdAt: {
-                from: parseInt(journey.time, 10),
-                to: parseInt(newJourney[index + 1]?.time || journey.time, 10),
+          finalJourney.push({
+            type: 'TRAVEL',
+            routeType: 'ESTIMATED',
+            gpsPointCount,
+            createdAt: {
+              from: journey.time,
+              to: endpoint.time,
+            },
+            coordinates: {
+              from: {
+                latitude: journey.latitude,
+                longitude: journey.longitude,
               },
-              coordinates: {
-                from: {
-                  latitude: journey.latitude,
-                  longitude: journey.longitude,
-                },
-                to: {
-                  latitude: newJourney[index + 1]?.latitude || journey.latitude,
-                  longitude: newJourney[index + 1]?.longitude || journey.longitude,
-                },
+              to: {
+                latitude: endpoint.latitude,
+                longitude: endpoint.longitude,
               },
-              distanceKm: this.roundToOneDecimal(distanceKm),
-              durationMinutes,
-              journeyId: journeyId,
-              title: "Travel",
-              vehicleType: attendanceJson?.vehicleType || '',
-              vehicleCategory: attendanceJson?.vehicleCategory || ''
-            }
-          );
+            },
+            distanceKm: this.roundToOneDecimal(distanceKm),
+            durationMinutes,
+            journeyId: journeyId,
+            title: 'Travel',
+            vehicleType: attendanceJson?.vehicleType || '',
+            vehicleCategory: attendanceJson?.vehicleCategory || '',
+          });
 
           journeyId++;
         }
-        
       });
     }
 
-    const coordinates = this.extractCoordinates(newJourney);
+    const mapPoints = trailingGpsEndpoint ? [...newJourney, trailingGpsEndpoint] : newJourney;
+    const coordinates = this.extractCoordinates(mapPoints);
     const totalDistanceKm = finalJourney.reduce((sum, journey) => {
       if (journey.type !== 'TRAVEL') {
         return sum;
@@ -352,10 +461,21 @@ export class GpsHistoryReportRepository {
 
     const attendanceTime = attendanceJson?.attendanceTime || null;
     const dayoverTime = attendanceJson?.dayoverTime || null;
+    const currentTime = Math.floor(Date.now() / 1000);
+    const defaultMaxWorkingMinutes = CONFIG.REPORTING.DEFAUL_MAX_WORKING_HOURS * 60;
+    const recordedWorkingMinutes = Math.max(
+      0,
+      Math.round((attendanceJson?.workingHours || 0) * 60)
+    );
+    const liveWorkingMinutes = attendanceTime
+      ? Math.max(0, Math.round((currentTime - attendanceTime) / 60))
+      : recordedWorkingMinutes;
     const workingMinutes =
       attendanceTime && dayoverTime && dayoverTime >= attendanceTime
         ? Math.round((dayoverTime - attendanceTime) / 60)
-        : Math.max(0, Math.round((attendanceJson?.workingHours || 0) * 60));
+        : attendanceTime && liveWorkingMinutes < defaultMaxWorkingMinutes
+          ? liveWorkingMinutes
+          : recordedWorkingMinutes;
 
     return {
       employee: {
@@ -377,7 +497,7 @@ export class GpsHistoryReportRepository {
         feedbackCount,
         imageCount,
       },
-      journeys: finalJourney,
+      journeys: finalJourney as unknown as AdminGpsHistoryJourney[],
       mapBounds: {
         north: coordinates.length ? Math.max(...coordinates.map((point) => point.latitude)) : 0,
         south: coordinates.length ? Math.min(...coordinates.map((point) => point.latitude)) : 0,
@@ -537,7 +657,9 @@ export class GpsHistoryReportRepository {
     return event.title || 'Visit';
   }
 
-  private extractCoordinates(journeys: AdminGpsHistoryJourney[]): Array<{ latitude: number; longitude: number }> {
+  private extractCoordinates(
+    journeys: Array<{ latitude: number; longitude: number }>
+  ): Array<{ latitude: number; longitude: number }> {
     const coordinates: Array<{ latitude: number; longitude: number }> = [];
 
     journeys.forEach((journey) => {
@@ -550,7 +672,12 @@ export class GpsHistoryReportRepository {
     return coordinates;
   }
 
-  private calculateDistanceKm(startLat: number, startLng: number, endLat: number, endLng: number): number {
+  private calculateDistanceKm(
+    startLat: number,
+    startLng: number,
+    endLat: number,
+    endLng: number
+  ): number {
     const earthRadiusKm = 6371;
     const deltaLat = this.degreesToRadians(endLat - startLat);
     const deltaLng = this.degreesToRadians(endLng - startLng);
@@ -591,7 +718,10 @@ export class GpsHistoryReportRepository {
     return Math.floor(parsedValue);
   }
 
-  async getLastLocationsReport(params: { hostId: number; filter?: Record<string, any> }): Promise<{ lastLocations: any[]; }> {
+  async getLastLocationsReport(params: {
+    hostId: number;
+    filter?: Record<string, any>;
+  }): Promise<{ lastLocations: any[] }> {
     const { hostId, filter } = params;
     const attendanceWhere: Record<string, any> = {
       hostId,
@@ -603,7 +733,7 @@ export class GpsHistoryReportRepository {
     };
 
     if (filter?.userId) {
-      if(Array.isArray(filter.userId)) {
+      if (Array.isArray(filter.userId)) {
         attendanceWhere.userId = {
           [Op.in]: filter.userId,
         };
@@ -646,12 +776,12 @@ export class GpsHistoryReportRepository {
 
     if (!allowedUserIds.length) {
       return {
-        lastLocations: []
+        lastLocations: [],
       };
     }
 
     const lastLocationWhere: Record<string, any> = {
-      hostId
+      hostId,
     };
 
     lastLocationWhere.userId = {
@@ -674,16 +804,16 @@ export class GpsHistoryReportRepository {
           as: 'user',
           attributes: [],
           where: {
-            isDeleted: 0
+            isDeleted: 0,
           },
-        }
+        },
       ],
       subQuery: false,
       logging: console.log, // Enable logging for debugging
     });
 
     return {
-      lastLocations: gpsRows.map((row) => row.toJSON())
+      lastLocations: gpsRows.map((row) => row.toJSON()),
     };
   }
 }
