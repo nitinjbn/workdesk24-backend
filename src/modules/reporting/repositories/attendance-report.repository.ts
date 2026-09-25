@@ -215,8 +215,6 @@ export class AttendanceReportRepository {
       },
       where,
       include: [userInclude as Includeable],
-      limit,
-      offset,
       order,
       distinct: true,
       logging: console.log, // Enable logging for debugging
