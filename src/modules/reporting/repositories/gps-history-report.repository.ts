@@ -730,6 +730,7 @@ export class GpsHistoryReportRepository {
       attendanceTime: {
         [Op.between]: [filter?.createdAt?.from, filter?.createdAt?.to],
       },
+      dayoverTime: null,
     };
 
     if (filter?.userId) {
@@ -756,6 +757,7 @@ export class GpsHistoryReportRepository {
           required: true,
         },
       ],
+      logging: console.log, // Enable logging for debugging
     });
 
     const presentUserIds = Array.from(
