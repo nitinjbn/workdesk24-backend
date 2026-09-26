@@ -491,8 +491,12 @@ export class AuthService {
       throw createConfiguredError('ACCOUNT_INACTIVE');
     }
 
-    const isAdmin = await isAdminRole(user.hostId, user.roleId);
-    if (!isAdmin) {
+    // const isAdmin = await isAdminRole(user.hostId, user.roleId);
+    // if (!isAdmin) {
+    //   await userRefreshTokenRepository.revokeAllActiveForUser(payload.userId);
+    //   throw createConfiguredError('ADMIN_PORTAL_ACCESS_DENIED');
+    // }
+    if (!user.isAdminUser) {
       await userRefreshTokenRepository.revokeAllActiveForUser(payload.userId);
       throw createConfiguredError('ADMIN_PORTAL_ACCESS_DENIED');
     }
