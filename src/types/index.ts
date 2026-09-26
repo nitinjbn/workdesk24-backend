@@ -844,3 +844,14 @@ export interface UserAttendanceSiteAttributes {
   deletedAt?: number | null;
   isDeleted: number;
 }
+
+export interface CustomerUserAssignmentAttributes {
+  id?: number;
+  hostId: number;
+  customerId: number;
+  userId: number;
+  createdAt?: number;
+  updatedAt?: number;
+  deletedAt?: number | null;
+  isDeleted?: number;
+}

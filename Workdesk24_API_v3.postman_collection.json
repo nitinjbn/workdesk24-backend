@@ -359,6 +359,34 @@
           "description": "Data synchronization endpoints for Android app",
           "item": [
             {
+              "name": "Get Customers",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{TOKEN}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"hostId\": 1\n}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/app/sync/getCustomers",
+                  "host": ["{{BASE_URL}}"],
+                  "path": ["api", "v1", "app", "sync", "getCustomers"]
+                },
+                "description": "Returns enabled, non-deleted customers with no active user assignment or an active assignment to the authenticated user. Response: { success, message, data: customers[] }."
+              },
+              "response": []
+            },
+            {
               "name": "Attendance",
               "description": "Attendance tracking sync",
               "item": [

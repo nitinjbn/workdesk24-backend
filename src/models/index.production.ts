@@ -60,6 +60,7 @@ import { initHoliday } from './schemas/Holiday';
 import { initHolidayCalendar } from './schemas/HolidayCalendar';
 import { initAttendanceSite } from './schemas/AttendanceSite';
 import { initUserAttendanceSite } from './schemas/UserAttendanceSite';
+import { initCustomerUserAssignment } from './schemas/CustomerUserAssignment';
 
 dotenv.config();
 
@@ -141,6 +142,7 @@ const Customer = initCustomer(sequelize);
 const CustomerMedia = initCustomerMedia(sequelize);
 const CustomerType = initCustomerType(sequelize);
 const CustomerAttribute = initCustomerAttribute(sequelize);
+const CustomerUserAssignment = initCustomerUserAssignment(sequelize);
 const Designation = initDesignation(sequelize);
 const Product = initProduct(sequelize);
 const ProductCategory = initProductCategory(sequelize);
@@ -186,6 +188,7 @@ const db: any = {
   Attendance,
   GpsHistory,
   Visit,
+  CustomerUserAssignment,
   Order,
   OrderProduct,
   Payment,
@@ -303,6 +306,7 @@ export {
   CustomerMedia,
   CustomerAttribute,
   CustomerType,
+  CustomerUserAssignment,
   UserLastLocation,
   UserRefreshToken,
   Designation,

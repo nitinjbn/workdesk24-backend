@@ -1,9 +1,36 @@
 import { Model, DataTypes, Sequelize, Optional } from 'sequelize';
 import { CustomerAttributes } from '../../types';
 
-interface CustomerCreationAttributes extends Optional<CustomerAttributes, 'id' | 'hostId' | 'customerCode' | 'customerName' | 'customerTypeId' | 'contactPerson' | 'mobile' | 'alternateMobile' | 'email' | 'gstNumber' | 'panNumber' | 'city' | 'stateName' | 'stateIsoCode' | 'postalCode' | 'countryName' | 'countryIsoCode' | 'isEnabled' | 'isDeleted' | 'createdAt' | 'updatedAt' | 'deletedAt'> {}
+interface CustomerCreationAttributes extends Optional<
+  CustomerAttributes,
+  | 'id'
+  | 'hostId'
+  | 'customerCode'
+  | 'customerName'
+  | 'customerTypeId'
+  | 'contactPerson'
+  | 'mobile'
+  | 'alternateMobile'
+  | 'email'
+  | 'gstNumber'
+  | 'panNumber'
+  | 'city'
+  | 'stateName'
+  | 'stateIsoCode'
+  | 'postalCode'
+  | 'countryName'
+  | 'countryIsoCode'
+  | 'isEnabled'
+  | 'isDeleted'
+  | 'createdAt'
+  | 'updatedAt'
+  | 'deletedAt'
+> {}
 
-class Customer extends Model<CustomerAttributes, CustomerCreationAttributes> implements CustomerAttributes {
+class Customer
+  extends Model<CustomerAttributes, CustomerCreationAttributes>
+  implements CustomerAttributes
+{
   public id!: number;
   public hostId!: number;
   public parentCustomerId?: number;
@@ -45,12 +72,17 @@ class Customer extends Model<CustomerAttributes, CustomerCreationAttributes> imp
     Customer.hasMany(models.CustomerMedia, {
       foreignKey: 'customerId',
       as: 'customerMedia',
-    })
+    });
 
     Customer.hasMany(models.CustomerAttribute, {
       foreignKey: 'customerId',
       as: 'customerAttribute',
-    })
+    });
+
+    Customer.hasMany(models.CustomerUserAssignment, {
+      foreignKey: 'customerId',
+      as: 'customerUserAssignments',
+    });
   }
 }
 
@@ -64,59 +96,59 @@ export function initCustomer(sequelize: Sequelize): typeof Customer {
       },
       hostId: {
         type: DataTypes.BIGINT,
-        allowNull: false
+        allowNull: false,
       },
       parentCustomerId: {
         type: DataTypes.BIGINT,
-        allowNull: true
+        allowNull: true,
       },
       customerCode: {
         type: DataTypes.STRING(50),
-        allowNull: true
+        allowNull: true,
       },
       customerName: {
         type: DataTypes.STRING(100),
-        allowNull: false
+        allowNull: false,
       },
       customerTypeId: {
         type: DataTypes.BIGINT,
-        allowNull: true
+        allowNull: true,
       },
       contactPerson: {
         type: DataTypes.STRING(100),
-        allowNull: true
+        allowNull: true,
       },
       mobile: {
         type: DataTypes.STRING(20),
-        allowNull: true
+        allowNull: true,
       },
       alternateMobile: {
         type: DataTypes.STRING(20),
-        allowNull: true
+        allowNull: true,
       },
       email: {
         type: DataTypes.STRING(255),
-        allowNull: true
+        allowNull: true,
       },
       gstNumber: {
         type: DataTypes.STRING(20),
-        allowNull: true
-       },
+        allowNull: true,
+      },
       panNumber: {
         type: DataTypes.STRING(20),
-        allowNull: true
+        allowNull: true,
       },
       addressLine1: {
         type: DataTypes.STRING(255),
-        allowNull: true
+        allowNull: true,
       },
       addressLine2: {
         type: DataTypes.STRING(255),
-        allowNull: true
+        allowNull: true,
       },
       city: {
         type: DataTypes.STRING(100),
-        allowNull: true
+        allowNull: true,
       },
       stateName: {
         type: DataTypes.STRING(50),
@@ -128,7 +160,7 @@ export function initCustomer(sequelize: Sequelize): typeof Customer {
       },
       postalCode: {
         type: DataTypes.STRING(20),
-        allowNull: true
+        allowNull: true,
       },
       countryName: {
         type: DataTypes.STRING(50),

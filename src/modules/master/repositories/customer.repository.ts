@@ -27,6 +27,7 @@ import {
 import baseReportHelper from '../helpers/base-report.helper';
 import { buildCommonReportOrder } from './user-scoped-report.helper';
 import { DateTimeFormatUtil } from '../../../shared/utils/date-time-format.util';
+import CustomerUserAssignment from '../../../models/schemas/CustomerUserAssignment';
 
 //type ProductInstance = typeof Product.prototype;
 
@@ -222,9 +223,46 @@ export class customerRepository {
           order: [['sortOrder', 'ASC']],
           required: false,
         },
+        {
+          model: CustomerUserAssignment,
+          as: 'customerUserAssignments',
+          attributes: ['userId'],
+          where: {
+            isDeleted: 0,
+          },
+          separate: true,
+          required: false,
+          include: [
+            {
+              model: db.User,
+              as: 'user',
+              attributes: ['id', 'name', 'employeeCode'],
+              where: {
+                isDeleted: 0,
+              },
+              required: true,
+            },
+          ],
+        },
       ],
       order,
       logging: console.log, // Enable logging for debugging
+    };
+
+    const mapAssignedUsers = (customer: any) => {
+      const customerData = customer.toJSON();
+      const assignments = Array.isArray(customerData.customerUserAssignments)
+        ? customerData.customerUserAssignments
+        : [];
+
+      customerData.assignedUsers = assignments.map((assignment: any) => ({
+        userId: Number(assignment?.userId ?? assignment?.user?.id ?? 0),
+        employeeName: String(assignment?.user?.name || ''),
+        employeeCode: String(assignment?.user?.employeeCode || ''),
+      }));
+
+      delete customerData.customerUserAssignments;
+      return customerData;
     };
 
     if (page && limit) {
@@ -234,13 +272,13 @@ export class customerRepository {
       const { rows, count } = await Customer.findAndCountAll(query);
 
       return {
-        data: rows,
+        data: rows.map(mapAssignedUsers),
         pagination: baseReportHelper.buildPagination(count, page, limit),
       };
     } else {
       const rows = await Customer.findAll(query);
       return {
-        data: rows,
+        data: rows.map(mapAssignedUsers),
       };
     }
   }
@@ -318,13 +356,48 @@ export class customerRepository {
           order: [['sortOrder', 'ASC']],
           required: false,
         },
+        {
+          model: CustomerUserAssignment,
+          as: 'customerUserAssignments',
+          attributes: ['userId'],
+          where: {
+            isDeleted: 0,
+          },
+          required: false,
+          include: [
+            {
+              model: db.User,
+              as: 'user',
+              attributes: ['id', 'name', 'employeeCode'],
+              where: {
+                isDeleted: 0,
+              },
+              required: true,
+            },
+          ],
+        },
       ],
       logging: console.log, // Enable logging for debugging
     };
 
     const customerDetails = await Customer.findOne(query);
+    const customerData: any = customerDetails?.toJSON
+      ? customerDetails.toJSON()
+      : customerDetails || {};
+
+    if (customerData) {
+      customerData.assignedUsers = (customerData.customerUserAssignments || []).map(
+        (assignment: any) => ({
+          userId: Number(assignment?.userId ?? assignment?.user?.id ?? 0),
+          employeeName: String(assignment?.user?.name || ''),
+          employeeCode: String(assignment?.user?.employeeCode || ''),
+        })
+      );
+      delete customerData.customerUserAssignments;
+    }
+
     return {
-      data: customerDetails?.toJSON() || {},
+      data: customerData,
     };
   }
 
@@ -519,6 +592,65 @@ export class customerRepository {
     return {
       customerTypeId,
     };
+  }
+
+  async getCustomerUserAssignments(params: { hostId: number; customerId: number }): Promise<any[]> {
+    const { hostId, customerId } = params;
+
+    return CustomerUserAssignment.findAll({
+      attributes: ['userId'],
+      where: {
+        hostId,
+        customerId,
+        isDeleted: 0,
+      },
+      raw: true,
+    });
+  }
+
+  async saveCustomerUserAssignments(payload: {
+    hostId: number;
+    customerId: number;
+    userIds: number[];
+    createdAt: number;
+  }): Promise<any> {
+    const { hostId, customerId, userIds, createdAt } = payload;
+    const result = await CustomerUserAssignment.bulkCreate(
+      userIds.map((userId) => ({
+        hostId,
+        customerId,
+        userId,
+        createdAt,
+      }))
+    );
+    return result;
+  }
+
+  async softDeleteCustomerUserAssignments(payload: {
+    hostId: number;
+    customerId: number;
+    userIds: number[];
+    deletedAt: number;
+  }): Promise<any> {
+    const { hostId, customerId, userIds, deletedAt } = payload;
+
+    return CustomerUserAssignment.update(
+      {
+        isDeleted: 1,
+        deletedAt,
+        updatedAt: deletedAt,
+      },
+      {
+        where: {
+          hostId,
+          customerId,
+          userId: {
+            [Op.in]: userIds,
+          },
+          isDeleted: 0,
+        },
+      }
+    );
   }
 }
 

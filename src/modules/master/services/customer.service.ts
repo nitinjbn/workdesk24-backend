@@ -25,6 +25,30 @@ import { deleteMediaFromStorage } from '../../../shared/utils/media-storage.util
 type ProductInstance = typeof Product.prototype;
 
 export class CustomerService {
+  resolveCustomerUserAssignmentChanges(
+    existingUserIds: number[],
+    incomingUserIds: number[]
+  ): { toInsert: number[]; toDelete: number[] } {
+    const normalizeUserIds = (value: number[] = []) =>
+      Array.from(
+        new Set(
+          value
+            .map((userId) => Number(userId))
+            .filter((userId) => Number.isFinite(userId) && userId > 0)
+        )
+      );
+
+    const normalizedExistingUserIds = normalizeUserIds(existingUserIds);
+    const normalizedIncomingUserIds = normalizeUserIds(incomingUserIds);
+    const existingUserIdSet = new Set(normalizedExistingUserIds);
+    const incomingUserIdSet = new Set(normalizedIncomingUserIds);
+
+    return {
+      toInsert: normalizedIncomingUserIds.filter((userId) => !existingUserIdSet.has(userId)),
+      toDelete: normalizedExistingUserIds.filter((userId) => !incomingUserIdSet.has(userId)),
+    };
+  }
+
   async getCustomerTypes(
     payload: {
       hostId: number;
@@ -342,7 +366,7 @@ export class CustomerService {
   }
 
   async createCustomer(payload: any): Promise<any> {
-    const { customerMedia, customerAttribute, ...otherPayload } = payload;
+    const { customerMedia, customerAttribute, assignedUserIds, ...otherPayload } = payload;
     const currentUnixTime = DateTimeFormatUtil.getCurrentUnixTime();
 
     // Validate required fields
@@ -399,13 +423,24 @@ export class CustomerService {
           createdAt: currentUnixTime,
         });
       }
+
+      if (assignedUserIds && Array.isArray(assignedUserIds)) {
+        // Now customer is created, so we can save the assigned users with the customerId
+        await customerRepository.saveCustomerUserAssignments({
+          hostId: otherPayload.hostId,
+          customerId: createCustomerResult.id,
+          userIds: assignedUserIds,
+          createdAt: currentUnixTime,
+        });
+      }
     }
 
     return createCustomerResult?.get({ plain: true }) || createCustomerResult;
   }
 
   async updateCustomer(payload: any): Promise<any> {
-    const { customerId, customerMedia, customerAttribute, ...otherPayload } = payload;
+    const { customerId, customerMedia, customerAttribute, assignedUserIds, ...otherPayload } =
+      payload;
     const currentUnixTime = DateTimeFormatUtil.getCurrentUnixTime();
 
     // Validate required fields
@@ -597,6 +632,48 @@ export class CustomerService {
             id: attributesToDelete.map((a) => a.attributeId || a.id),
             hostId: otherPayload.hostId,
           },
+        });
+      }
+    }
+
+    // Save assigned user IDs for the customer
+    if (assignedUserIds) {
+      const existingAssignments = await customerRepository.getCustomerUserAssignments({
+        hostId: otherPayload.hostId,
+        customerId,
+      });
+      const existingUserIds = existingAssignments.map((assignment: any) =>
+        Number(assignment.userId)
+      );
+      const incomingUserIds = Array.isArray(assignedUserIds)
+        ? [
+            ...new Set(
+              assignedUserIds
+                .map((userId) => Number(userId))
+                .filter((userId) => Number.isFinite(userId) && userId > 0)
+            ),
+          ]
+        : [];
+      const { toInsert, toDelete } = this.resolveCustomerUserAssignmentChanges(
+        existingUserIds,
+        incomingUserIds
+      );
+
+      if (toInsert.length > 0) {
+        await customerRepository.saveCustomerUserAssignments({
+          hostId: otherPayload.hostId,
+          customerId: customerId,
+          userIds: toInsert,
+          createdAt: currentUnixTime,
+        });
+      }
+
+      if (toDelete.length > 0) {
+        await customerRepository.softDeleteCustomerUserAssignments({
+          hostId: otherPayload.hostId,
+          customerId: customerId,
+          userIds: toDelete,
+          deletedAt: currentUnixTime,
         });
       }
     }

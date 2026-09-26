@@ -1,4 +1,11 @@
-import db, { Customer, CustomerMedia, CustomerAttribute, CustomerType } from '../../../models';
+import { Op } from 'sequelize';
+import db, {
+  Customer,
+  CustomerMedia,
+  CustomerAttribute,
+  CustomerType,
+  CustomerUserAssignment,
+} from '../../../models';
 
 export class CustomerRepository {
   async getCustomers(payload) {
@@ -6,60 +13,97 @@ export class CustomerRepository {
 
     const query = {
       attributes: {
-        exclude: ['id', 'customerTypeId', 'isEnabled', 'isDeleted', 'deletedAt', 'createdAt', 'updatedAt'],
+        exclude: [
+          'id',
+          'customerTypeId',
+          'isEnabled',
+          'isDeleted',
+          'deletedAt',
+          'createdAt',
+          'updatedAt',
+        ],
         include: [
           [db.Sequelize.col('Customer.id'), 'customerId'],
-          [db.Sequelize.col('customerTypeDetails.customerTypeName'), 'customerType']
-        ]
+          [db.Sequelize.col('customerTypeDetails.customerTypeName'), 'customerType'],
+        ],
       },
       where: {
         hostId: hostId,
-        isDeleted:0,
-        isEnabled: 1
+        isDeleted: 0,
+        isEnabled: 1,
+        [Op.or]: [
+          { '$customerUserAssignments.id$': null },
+          { '$customerUserAssignments.userId$': userId },
+        ],
       },
-      include:[
+      include: [
         {
-          attributes:[],
+          attributes: [],
           model: CustomerType,
           where: {
-            isDeleted: 0
+            isDeleted: 0,
           },
-          as: "customerTypeDetails",
-          required: true
+          as: 'customerTypeDetails',
+          required: true,
+        },
+        {
+          attributes: [],
+          model: CustomerUserAssignment,
+          as: 'customerUserAssignments',
+          where: { hostId, isDeleted: 0 },
+          required: false,
         },
         {
           attributes: {
-            exclude: ['id', 'hostId', 'customerId', 'isEnabled', 'isDeleted', 'deletedAt', 'createdAt', 'updatedAt'],
+            exclude: [
+              'id',
+              'hostId',
+              'customerId',
+              'isEnabled',
+              'isDeleted',
+              'deletedAt',
+              'createdAt',
+              'updatedAt',
+            ],
           },
           model: CustomerMedia,
           where: {
             isDeleted: 0,
-            isEnabled: 1
+            isEnabled: 1,
           },
-          as: "customerMedia",
+          as: 'customerMedia',
           separate: true,
-          order: [["sortOrder", "ASC"]],
-          required: false
+          order: [['sortOrder', 'ASC']],
+          required: false,
         },
         {
           attributes: {
-            exclude: ['id', 'hostId', 'customerId', 'isEnabled', 'isDeleted', 'deletedAt', 'createdAt', 'updatedAt'],
+            exclude: [
+              'id',
+              'hostId',
+              'customerId',
+              'isEnabled',
+              'isDeleted',
+              'deletedAt',
+              'createdAt',
+              'updatedAt',
+            ],
           },
           model: CustomerAttribute,
           where: {
-            isDeleted: 0
+            isDeleted: 0,
           },
-          as: "customerAttribute",
+          as: 'customerAttribute',
           separate: true,
-          order: [["sortOrder", "ASC"]],
-          required: false
-        }
+          order: [['sortOrder', 'ASC']],
+          required: false,
+        },
       ],
-      logging: console.log
-    }
+      logging: console.log,
+    };
 
     const rows = await Customer.findAll(query as any);
-    const customers = rows.map((customer:any) => {
+    const customers = rows.map((customer: any) => {
       const data = customer.toJSON();
       data.customerAttribute = this.groupCustomerAttributes(data.customerAttribute);
       return data;
@@ -72,7 +116,7 @@ export class CustomerRepository {
     const groups = {};
 
     for (const attribute of attributes) {
-      const group = attribute.attributeGroup || "General";
+      const group = attribute.attributeGroup || 'General';
 
       if (!groups[group]) {
         groups[group] = [];
@@ -83,13 +127,13 @@ export class CustomerRepository {
         attributeValue: attribute.attributeValue,
         attributeType: attribute.attributeType,
         attributeUomId: attribute.attributeUomId,
-        sortOrder: attribute.sortOrder
+        sortOrder: attribute.sortOrder,
       });
     }
 
     return Object.entries(groups).map(([groupName, attributes]) => ({
       groupName,
-      attributes
+      attributes,
     }));
   }
 }
