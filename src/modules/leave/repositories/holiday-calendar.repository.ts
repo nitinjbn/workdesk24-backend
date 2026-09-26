@@ -90,7 +90,7 @@ export class HolidayCalendarRepository extends BaseRepository<HolidayCalendarIns
     return this.findOne(
       { hostId, id: holidayCalendarId } as WhereOptions<HolidayCalendarInstance>,
       transaction
-    ).then((result) => result.toJSON?.() || null);
+    );
   }
 
   async checkCalendarNameExists(
