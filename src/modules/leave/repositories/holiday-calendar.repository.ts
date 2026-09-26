@@ -46,7 +46,15 @@ export class HolidayCalendarRepository extends BaseRepository<HolidayCalendarIns
     const order = buildSafeOrder({
       sortBy,
       sortOrder,
-      allowedSortBy: ['id', 'leaveYearId', 'name', 'isDefault', 'isEnabled', 'createdAt', 'updatedAt'],
+      allowedSortBy: [
+        'id',
+        'leaveYearId',
+        'name',
+        'isDefault',
+        'isEnabled',
+        'createdAt',
+        'updatedAt',
+      ],
       defaultOrder: [['createdAt', 'DESC']],
     });
 
@@ -82,7 +90,7 @@ export class HolidayCalendarRepository extends BaseRepository<HolidayCalendarIns
     return this.findOne(
       { hostId, id: holidayCalendarId } as WhereOptions<HolidayCalendarInstance>,
       transaction
-    );
+    ).then((result) => result.toJSON?.() || null);
   }
 
   async checkCalendarNameExists(
@@ -215,17 +223,11 @@ export class HolidayCalendarRepository extends BaseRepository<HolidayCalendarIns
     transaction?: Transaction
   ): Promise<HolidayCalendarInstance | null> {
     // Unset previous default
-    const previousDefault = await this.checkDefaultCalendarExists(
-      hostId,
-      holidayCalendarId
-    );
+    const previousDefault = await this.checkDefaultCalendarExists(hostId, holidayCalendarId);
 
     if (previousDefault) {
       const now = Math.floor(Date.now() / 1000);
-      await previousDefault.update(
-        { isDefault: 0, updatedAt: now } as any,
-        { transaction }
-      );
+      await previousDefault.update({ isDefault: 0, updatedAt: now } as any, { transaction });
     }
 
     // Set new default
@@ -237,10 +239,7 @@ export class HolidayCalendarRepository extends BaseRepository<HolidayCalendarIns
     if (!holidayCalendar) return null;
 
     const now = Math.floor(Date.now() / 1000);
-    await holidayCalendar.update(
-      { isDefault: 1, updatedAt: now } as any,
-      { transaction }
-    );
+    await holidayCalendar.update({ isDefault: 1, updatedAt: now } as any, { transaction });
 
     return holidayCalendar;
   }

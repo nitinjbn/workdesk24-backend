@@ -35,11 +35,7 @@ export class HolidayService {
     );
 
     if (!calendar) {
-      throw createConfiguredError(
-        'HOLIDAY_CALENDAR_NOT_FOUND',
-        'Holiday calendar not found',
-        404
-      );
+      throw createConfiguredError('HOLIDAY_CALENDAR_NOT_FOUND', 'Holiday calendar not found', 404);
     }
 
     const report = await holidayRepository.getHolidaysByCalendar({
@@ -63,27 +59,17 @@ export class HolidayService {
     };
   }
 
-  async getHolidayById(payload: {
-    hostId: number;
-    holidayId: number;
-  }): Promise<any> {
+  async getHolidayById(payload: { hostId: number; holidayId: number }): Promise<any> {
     const { hostId, holidayId } = payload;
 
     const holiday = await holidayRepository.getHolidayById(hostId, holidayId);
 
     if (!holiday) {
-      throw createConfiguredError(
-        'HOLIDAY_NOT_FOUND',
-        'Holiday not found',
-        404
-      );
+      throw createConfiguredError('HOLIDAY_NOT_FOUND', 'Holiday not found', 404);
     }
 
     const dateTimeSettings = await getHostDateTimeSettings(hostId);
-    const plainData =
-      holiday && typeof holiday.toJSON === 'function'
-        ? holiday.toJSON()
-        : holiday;
+    const plainData = holiday && typeof holiday.toJSON === 'function' ? holiday.toJSON() : holiday;
 
     return {
       holiday: formatDateTimeFieldsBySettings([plainData], dateTimeSettings)[0],
@@ -133,6 +119,7 @@ export class HolidayService {
       hostId,
       holidayCalendarId
     );
+    console.log('############# calendar', calendar);
 
     if (!calendar) {
       throw createConfiguredError(
@@ -143,30 +130,24 @@ export class HolidayService {
     }
 
     // Validate holiday date is within leave year range
-    const leaveYear = await leaveYearRepository.getLeaveYearById(
-      hostId,
-      (calendar as any).leaveYearId
-    );
+    // const leaveYear = await leaveYearRepository.getLeaveYearById(
+    //   hostId,
+    //   (calendar as any).leaveYearId
+    // );
 
-    if (!leaveYear) {
-      throw createConfiguredError(
-        'INVALID_LEAVE_YEAR',
-        'Associated leave year not found',
-        400
-      );
-    }
+    // if (!leaveYear) {
+    //   throw createConfiguredError('INVALID_LEAVE_YEAR', 'Associated leave year not found', 400);
+    // }
 
-    if (!this.validateDateRange(
-      holidayDate,
-      (leaveYear as any).startDate,
-      (leaveYear as any).endDate
-    )) {
-      throw createConfiguredError(
-        'HOLIDAY_DATE_OUT_OF_RANGE',
-        `Holiday date must be within leave year range (${(leaveYear as any).startDate} to ${(leaveYear as any).endDate})`,
-        400
-      );
-    }
+    // if (
+    //   !this.validateDateRange(holidayDate, (leaveYear as any).startDate, (leaveYear as any).endDate)
+    // ) {
+    //   throw createConfiguredError(
+    //     'HOLIDAY_DATE_OUT_OF_RANGE',
+    //     `Holiday date must be within leave year range (${(leaveYear as any).startDate} to ${(leaveYear as any).endDate})`,
+    //     400
+    //   );
+    // }
 
     // Check for duplicate holiday date in calendar
     const isDuplicate = await holidayRepository.checkHolidayDateExists(
@@ -194,10 +175,7 @@ export class HolidayService {
     });
 
     const dateTimeSettings = await getHostDateTimeSettings(hostId);
-    const plainData =
-      holiday && typeof holiday.toJSON === 'function'
-        ? holiday.toJSON()
-        : holiday;
+    const plainData = holiday && typeof holiday.toJSON === 'function' ? holiday.toJSON() : holiday;
 
     return {
       holiday: formatDateTimeFieldsBySettings([plainData], dateTimeSettings)[0],
@@ -219,11 +197,7 @@ export class HolidayService {
     const existingHoliday = await holidayRepository.getHolidayById(hostId, holidayId);
 
     if (!existingHoliday) {
-      throw createConfiguredError(
-        'HOLIDAY_NOT_FOUND',
-        'Holiday not found',
-        404
-      );
+      throw createConfiguredError('HOLIDAY_NOT_FOUND', 'Holiday not found', 404);
     }
 
     // Prepare update data
@@ -245,11 +219,13 @@ export class HolidayService {
       );
 
       if (leaveYear) {
-        if (!this.validateDateRange(
-          holidayDate,
-          (leaveYear as any).startDate,
-          (leaveYear as any).endDate
-        )) {
+        if (
+          !this.validateDateRange(
+            holidayDate,
+            (leaveYear as any).startDate,
+            (leaveYear as any).endDate
+          )
+        ) {
           throw createConfiguredError(
             'HOLIDAY_DATE_OUT_OF_RANGE',
             `Holiday date must be within leave year range (${(leaveYear as any).startDate} to ${(leaveYear as any).endDate})`,
@@ -295,39 +271,23 @@ export class HolidayService {
 
     if (isOptional !== undefined) {
       if (isOptional !== 0 && isOptional !== 1) {
-        throw createConfiguredError(
-          'INVALID_INPUT',
-          'isOptional must be 0 or 1',
-          400
-        );
+        throw createConfiguredError('INVALID_INPUT', 'isOptional must be 0 or 1', 400);
       }
       updateData.isOptional = isOptional;
     }
 
     if (isEnabled !== undefined) {
       if (isEnabled !== 0 && isEnabled !== 1) {
-        throw createConfiguredError(
-          'INVALID_INPUT',
-          'isEnabled must be 0 or 1',
-          400
-        );
+        throw createConfiguredError('INVALID_INPUT', 'isEnabled must be 0 or 1', 400);
       }
       updateData.isEnabled = isEnabled;
     }
 
     // Update holiday
-    const updatedHoliday = await holidayRepository.updateHoliday(
-      hostId,
-      holidayId,
-      updateData
-    );
+    const updatedHoliday = await holidayRepository.updateHoliday(hostId, holidayId, updateData);
 
     if (!updatedHoliday) {
-      throw createConfiguredError(
-        'HOLIDAY_NOT_FOUND',
-        'Holiday not found',
-        404
-      );
+      throw createConfiguredError('HOLIDAY_NOT_FOUND', 'Holiday not found', 404);
     }
 
     const dateTimeSettings = await getHostDateTimeSettings(hostId);
@@ -350,22 +310,14 @@ export class HolidayService {
 
     // Validation
     if (isEnabled !== 0 && isEnabled !== 1) {
-      throw createConfiguredError(
-        'INVALID_INPUT',
-        'isEnabled must be 0 or 1',
-        400
-      );
+      throw createConfiguredError('INVALID_INPUT', 'isEnabled must be 0 or 1', 400);
     }
 
     // Check if holiday exists
     const existingHoliday = await holidayRepository.getHolidayById(hostId, holidayId);
 
     if (!existingHoliday) {
-      throw createConfiguredError(
-        'HOLIDAY_NOT_FOUND',
-        'Holiday not found',
-        404
-      );
+      throw createConfiguredError('HOLIDAY_NOT_FOUND', 'Holiday not found', 404);
     }
 
     // Enable/disable holiday
@@ -376,11 +328,7 @@ export class HolidayService {
     );
 
     if (!updatedHoliday) {
-      throw createConfiguredError(
-        'HOLIDAY_NOT_FOUND',
-        'Holiday not found',
-        404
-      );
+      throw createConfiguredError('HOLIDAY_NOT_FOUND', 'Holiday not found', 404);
     }
 
     const dateTimeSettings = await getHostDateTimeSettings(hostId);
@@ -394,32 +342,21 @@ export class HolidayService {
     };
   }
 
-  async deleteHoliday(payload: {
-    hostId: number;
-    holidayId: number;
-  }): Promise<any> {
+  async deleteHoliday(payload: { hostId: number; holidayId: number }): Promise<any> {
     const { hostId, holidayId } = payload;
 
     // Check if holiday exists
     const existingHoliday = await holidayRepository.getHolidayById(hostId, holidayId);
 
     if (!existingHoliday) {
-      throw createConfiguredError(
-        'HOLIDAY_NOT_FOUND',
-        'Holiday not found',
-        404
-      );
+      throw createConfiguredError('HOLIDAY_NOT_FOUND', 'Holiday not found', 404);
     }
 
     // Delete holiday (soft delete)
     const deleted = await holidayRepository.deleteHoliday(hostId, holidayId);
 
     if (!deleted) {
-      throw createConfiguredError(
-        'HOLIDAY_NOT_FOUND',
-        'Holiday not found',
-        404
-      );
+      throw createConfiguredError('HOLIDAY_NOT_FOUND', 'Holiday not found', 404);
     }
 
     return { success: true };
@@ -475,11 +412,7 @@ export class HolidayService {
     );
 
     if (!leaveYear) {
-      throw createConfiguredError(
-        'INVALID_LEAVE_YEAR',
-        'Associated leave year not found',
-        400
-      );
+      throw createConfiguredError('INVALID_LEAVE_YEAR', 'Associated leave year not found', 400);
     }
 
     // Validate and prepare all holidays
@@ -506,11 +439,13 @@ export class HolidayService {
       }
 
       // Validate date is within leave year range
-      if (!this.validateDateRange(
-        h.holidayDate,
-        (leaveYear as any).startDate,
-        (leaveYear as any).endDate
-      )) {
+      if (
+        !this.validateDateRange(
+          h.holidayDate,
+          (leaveYear as any).startDate,
+          (leaveYear as any).endDate
+        )
+      ) {
         throw createConfiguredError(
           'HOLIDAY_DATE_OUT_OF_RANGE',
           `Row ${i + 1}: Holiday date must be within leave year range`,
