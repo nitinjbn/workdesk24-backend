@@ -193,14 +193,15 @@ export class UserController {
       }
 
       //Step 3: Check if the email is globally unique across all hosts, otherwise throw an error
-      const appUserRoleDetails = await userService.getRoleByCode({
-        roleCode: CONFIG.AUTH.APP.LOGIN.ALLOWED_ROLES[0],
-        hostId,
-      });
-      const roleId = appUserRoleDetails?.role?.id;
-      if (!roleId) {
-        throw new Error('Invalid role details');
-      }
+      // const appUserRoleDetails = await userService.getRoleByCode({
+      //   roleCode: CONFIG.AUTH.APP.LOGIN.ALLOWED_ROLES[0],
+      //   hostId,
+      // });
+      // const roleId = appUserRoleDetails?.role?.id;
+      // if (!roleId) {
+      //   throw new Error('Invalid role details');
+      // }
+      const roleId = 0;
 
       //Step 4: Upload the profile image to media storage if provided
       let profileImageUrl = '';
