@@ -1,50 +1,77 @@
-import { FindAndCountOptions, Op} from 'sequelize';
-import db, { Product, ProductAttribute, ProductBrand, ProductMedia, ProductCategory, UOM } from '../../../models';
-import { GetProductsPayload, GetProductDetailsByIdPayload, ReportResponse, SingleRecordResponse, ProductMediaResponse, GetProductMediaDetailsByIdPayload, GetProductAttributesDetailsByIdPayload, SaveProductMediaPayload, SaveProductAttributesPayload} from '../types/master.types';
+import { FindAndCountOptions, Op } from 'sequelize';
+import db, {
+  Product,
+  ProductAttribute,
+  ProductBrand,
+  ProductMedia,
+  ProductCategory,
+  UOM,
+} from '../../../models';
+import {
+  GetProductsPayload,
+  GetProductDetailsByIdPayload,
+  ReportResponse,
+  SingleRecordResponse,
+  ProductMediaResponse,
+  GetProductMediaDetailsByIdPayload,
+  GetProductAttributesDetailsByIdPayload,
+  SaveProductMediaPayload,
+  SaveProductAttributesPayload,
+} from '../types/master.types';
 import baseReportHelper from '../helpers/base-report.helper';
 import { buildCommonReportOrder } from './user-scoped-report.helper';
 
 type ProductInstance = typeof Product.prototype;
 
 export class productRepository {
-  async getCategories(params: { hostId: number, filter?: Record<string, unknown>, page?: number, limit?: number, sortBy?: string, sortOrder?: 'ASC' | 'DESC' }): Promise<ReportResponse<any>> {
+  async getCategories(params: {
+    hostId: number;
+    filter?: Record<string, unknown>;
+    page?: number;
+    limit?: number;
+    sortBy?: string;
+    sortOrder?: 'ASC' | 'DESC';
+  }): Promise<ReportResponse<any>> {
     const { page, limit, filter, hostId, sortBy, sortOrder } = params;
     const { offset } = baseReportHelper.normalizePagination({ page, limit });
     // const order = buildCommonReportOrder(sortBy as any, sortOrder, {
     //   createdAt: 'createdAt'
     // });
-    let order=[];
-    if(sortBy && sortOrder) {
-      order = [[sortBy, sortOrder]]
+    let order = [];
+    if (sortBy && sortOrder) {
+      order = [[sortBy, sortOrder]];
     }
-    
-    const where:any = {
+
+    const where: any = {
       hostId,
-      isDeleted:0
-    }
-    if(filter) {
-      if(filter.id || filter.categoryId) {
+      isDeleted: 0,
+    };
+    if (filter) {
+      if (filter.id || filter.categoryId) {
         where.id = filter.categoryId || filter.id;
       }
-      if(filter.categoryName) {
+      if (filter.categoryName) {
         where.categoryName = {
           [Op.like]: `%${(filter.categoryName as string).trim()}%`,
-        }
+        };
+      }
+      if (filter.ignoreId) {
+        where.id = {
+          [Op.ne]: filter.ignoreId,
+        };
       }
     }
     const query: FindAndCountOptions<any> = {
       attributes: {
         exclude: ['id', 'hostId', 'isDeleted', 'deletedAt'],
-        include: [
-          [db.Sequelize.col('ProductCategory.id'), 'categoryId']
-        ]
+        include: [[db.Sequelize.col('ProductCategory.id'), 'categoryId']],
       },
       where,
       order,
       logging: console.log, // Enable logging for debugging
     };
 
-    if(page && limit) {
+    if (page && limit) {
       query.limit = limit;
       query.offset = offset;
 
@@ -57,49 +84,59 @@ export class productRepository {
     } else {
       const rows = await ProductCategory.findAll(query);
       return {
-        data: rows
+        data: rows,
       };
     }
   }
 
-  async getBrands(params: { hostId: number, filter?: Record<string, unknown>, page?: number, limit?: number, sortBy?: string, sortOrder?: 'ASC' | 'DESC' }): Promise<ReportResponse<any>> {
+  async getBrands(params: {
+    hostId: number;
+    filter?: Record<string, unknown>;
+    page?: number;
+    limit?: number;
+    sortBy?: string;
+    sortOrder?: 'ASC' | 'DESC';
+  }): Promise<ReportResponse<any>> {
     const { page, limit, filter, hostId, sortBy, sortOrder } = params;
     const { offset } = baseReportHelper.normalizePagination({ page, limit });
     // const order = buildCommonReportOrder(sortBy as any, sortOrder, {
     //   createdAt: 'createdAt'
     // });
-    let order=[];
-    if(sortBy && sortOrder) {
-      order = [[sortBy, sortOrder]]
+    let order = [];
+    if (sortBy && sortOrder) {
+      order = [[sortBy, sortOrder]];
     }
 
-    const where:any = {
+    const where: any = {
       hostId,
-      isDeleted:0
-    }
-    if(filter) {
-      if(filter.id || filter.brandId) {
+      isDeleted: 0,
+    };
+    if (filter) {
+      if (filter.id || filter.brandId) {
         where.id = filter.brandId || filter.id;
       }
-      if(filter.brandName) {
+      if (filter.brandName) {
         where.brandName = {
           [Op.like]: `%${(filter.brandName as string).trim()}%`,
-        }
+        };
+      }
+      if (filter.ignoreId) {
+        where.id = {
+          [Op.ne]: filter.ignoreId,
+        };
       }
     }
     const query: FindAndCountOptions<any> = {
       attributes: {
         exclude: ['id', 'hostId', 'isDeleted', 'deletedAt'],
-        include: [
-          [db.Sequelize.col('ProductBrand.id'), 'brandId']
-        ]
+        include: [[db.Sequelize.col('ProductBrand.id'), 'brandId']],
       },
       where,
       order,
       logging: console.log, // Enable logging for debugging
     };
 
-    if(page && limit) {
+    if (page && limit) {
       query.limit = limit;
       query.offset = offset;
 
@@ -112,63 +149,65 @@ export class productRepository {
     } else {
       const rows = await ProductBrand.findAll(query);
       return {
-        data: rows
+        data: rows,
       };
     }
   }
 
-  async getUOM(params: { hostId: number, filter?: Record<string, unknown>, page?: number, limit?: number, sortBy?: string, sortOrder?: 'ASC' | 'DESC' }): Promise<ReportResponse<any>> {
+  async getUOM(params: {
+    hostId: number;
+    filter?: Record<string, unknown>;
+    page?: number;
+    limit?: number;
+    sortBy?: string;
+    sortOrder?: 'ASC' | 'DESC';
+  }): Promise<ReportResponse<any>> {
     const { page, limit, filter, hostId, sortBy, sortOrder } = params;
     const { offset } = baseReportHelper.normalizePagination({ page, limit });
     // const order = buildCommonReportOrder(sortBy as any, sortOrder, {
     //   createdAt: 'createdAt'
     // });
-    let order=[];
-    if(sortBy && sortOrder) {
-      order = [[sortBy, sortOrder]]
+    let order = [];
+    if (sortBy && sortOrder) {
+      order = [[sortBy, sortOrder]];
     }
 
-    const where:any = {
+    const where: any = {
       hostId: {
-        [Op.or]: [
-          { [Op.in]: [hostId, 0] },
-          { [Op.is]: null }
-        ] // Include UOMs with hostId 0 (global), specific hostId, and NULL hostId
+        [Op.or]: [{ [Op.in]: [hostId, 0] }, { [Op.is]: null }], // Include UOMs with hostId 0 (global), specific hostId, and NULL hostId
       },
-      isDeleted:0
-    }
-    if(filter?.isEnabled !== undefined) {
+      isDeleted: 0,
+    };
+    if (filter?.isEnabled !== undefined) {
       where.isEnabled = filter.isEnabled;
     } else {
       where.isEnabled = 1; // Default to only enabled UOMs if not specified
     }
-    
-    if(filter) {
-      if(filter.id || filter.uomId) {
+
+    if (filter) {
+      if (filter.id || filter.uomId) {
         where.id = filter.uomId || filter.id;
       }
-      if(filter.uomCode) {
+      if (filter.uomCode) {
         where.uomCode = filter.uomCode;
       }
-      if(filter.uomName) {
+      if (filter.uomName) {
         where.uomName = {
           [Op.like]: `%${(filter.uomName as string).trim()}%`,
-        }
+        };
       }
     }
     const query: FindAndCountOptions<any> = {
       attributes: {
         exclude: ['id', 'hostId', 'isDeleted', 'deletedAt'],
-        include: [
-          [db.Sequelize.col('UOM.id'), 'uomId']
-        ]
+        include: [[db.Sequelize.col('UOM.id'), 'uomId']],
       },
       where,
       order,
       logging: console.log, // Enable logging for debugging
     };
 
-    if(page && limit) {
+    if (page && limit) {
       query.limit = limit;
       query.offset = offset;
 
@@ -181,7 +220,7 @@ export class productRepository {
     } else {
       const rows = await UOM.findAll(query);
       return {
-        data: rows
+        data: rows,
       };
     }
   }
@@ -195,19 +234,19 @@ export class productRepository {
 
     let order: any = [
       ['updatedAt', 'DESC'],
-      ['createdAt', 'DESC']
+      ['createdAt', 'DESC'],
     ];
 
-    if(sortBy && sortOrder) {
+    if (sortBy && sortOrder) {
       order = [[sortBy, sortOrder]];
     }
 
-    const where:any = {
+    const where: any = {
       hostId,
-      isDeleted:0
-    }
+      isDeleted: 0,
+    };
 
-    if(filter) {
+    if (filter) {
       if (filter.searchKey?.trim()) {
         const searchKey = filter.searchKey.trim();
         where[Op.or] = [
@@ -228,35 +267,35 @@ export class productRepository {
           },
         ];
       }
-      
-      if(filter.productId || filter.id) {
+
+      if (filter.productId || filter.id) {
         filter.id = filter.productId || filter.id;
       }
-      if(filter.productName) {
+      if (filter.productName) {
         where.productName = {
           [Op.like]: `%${filter.productName.trim()}%`,
-        }
+        };
       }
-      if(filter.productCode) {
+      if (filter.productCode) {
         where.productCode = filter.productCode;
       }
-      if(filter.sku) {
+      if (filter.sku) {
         where.sku = filter.sku;
       }
-      if(filter.barCode) {
+      if (filter.barCode) {
         where.barCode = filter.barCode;
       }
-      if(filter.hsnCode) {
+      if (filter.hsnCode) {
         where.hsnCode = filter.hsnCode;
       }
-      if(filter.categoryId) {
+      if (filter.categoryId) {
         where.categoryId = filter.categoryId;
       }
-      if(filter.brandId) {
+      if (filter.brandId) {
         where.brandId = filter.brandId;
       }
     }
-   
+
     const query: FindAndCountOptions<ProductInstance> = {
       attributes: {
         exclude: ['id', 'isEnabled', 'isDeleted', 'deletedAt'],
@@ -264,72 +303,89 @@ export class productRepository {
           [db.Sequelize.col('Product.id'), 'productId'],
           [db.Sequelize.col('productCategoryDetails.categoryName'), 'category'],
           [db.Sequelize.col('productBrandDetails.brandName'), 'brand'],
-          [db.Sequelize.col('productUOMDetails.uomName'), 'uom']
-        ]
+          [db.Sequelize.col('productUOMDetails.uomName'), 'uom'],
+        ],
       },
       where,
-      include:[
+      include: [
         {
-          attributes:[],
+          attributes: [],
           model: ProductCategory,
           where: {
-            isDeleted: 0
+            isDeleted: 0,
           },
-          as: "productCategoryDetails",
-          required: false
+          as: 'productCategoryDetails',
+          required: false,
         },
         {
-          attributes:[],
+          attributes: [],
           model: ProductBrand,
           where: {
-            isDeleted: 0
+            isDeleted: 0,
           },
-          as: "productBrandDetails",
-          required: false
+          as: 'productBrandDetails',
+          required: false,
         },
         {
-          attributes:[],
+          attributes: [],
           model: UOM,
           where: {
-            isDeleted: 0
+            isDeleted: 0,
           },
-          as: "productUOMDetails",
-          required: false
+          as: 'productUOMDetails',
+          required: false,
         },
         {
           attributes: {
-            include: [["id", "mediaId"]],
-            exclude: ['id', 'hostId', 'productId', 'isEnabled', 'isDeleted', 'deletedAt', 'createdAt', 'updatedAt'],
+            include: [['id', 'mediaId']],
+            exclude: [
+              'id',
+              'hostId',
+              'productId',
+              'isEnabled',
+              'isDeleted',
+              'deletedAt',
+              'createdAt',
+              'updatedAt',
+            ],
           },
           model: ProductMedia,
           where: {
             isDeleted: 0,
-            isEnabled: 1
+            isEnabled: 1,
           },
-          as: "productMedia",
+          as: 'productMedia',
           separate: true,
-          order: [["sortOrder", "ASC"]],
-          required: false
+          order: [['sortOrder', 'ASC']],
+          required: false,
         },
         {
           attributes: {
-            exclude: ['hostId', 'productId', 'isEnabled', 'isDeleted', 'deletedAt', 'createdAt', 'updatedAt'],
+            exclude: [
+              'hostId',
+              'productId',
+              'isEnabled',
+              'isDeleted',
+              'deletedAt',
+              'createdAt',
+              'updatedAt',
+            ],
           },
           model: ProductAttribute,
           where: {
-            isDeleted: 0
+            isDeleted: 0,
           },
-          as: "productAttribute",
+          as: 'productAttribute',
           separate: true,
-          order: [["sortOrder", "ASC"]],
-          required: false
-        }
+          order: [['sortOrder', 'ASC']],
+          required: false,
+        },
       ],
       order: order as any,
       logging: console.log, // Enable logging for debugging
     };
 
-    if(page && limit) {
+    if (page && limit) {
       query.limit = limit;
       query.offset = offset;
 
@@ -339,11 +395,10 @@ export class productRepository {
         data: rows,
         pagination: baseReportHelper.buildPagination(count, page, limit),
       };
-
     } else {
       const rows = await Product.findAll(query);
       return {
-        data: rows
+        data: rows,
       };
     }
   }
@@ -351,12 +406,12 @@ export class productRepository {
   async getProductById(params: GetProductDetailsByIdPayload): Promise<any> {
     const { hostId, productId } = params;
 
-    const where:any = {
+    const where: any = {
       id: productId,
       hostId,
-      isDeleted:0
-    }
-   
+      isDeleted: 0,
+    };
+
     const query: FindAndCountOptions<ProductInstance> = {
       attributes: {
         exclude: ['id', 'isEnabled', 'isDeleted', 'deletedAt', 'createdAt', 'updatedAt'],
@@ -364,150 +419,180 @@ export class productRepository {
           [db.Sequelize.col('Product.id'), 'productId'],
           [db.Sequelize.col('productCategoryDetails.categoryName'), 'category'],
           [db.Sequelize.col('productBrandDetails.brandName'), 'brand'],
-          [db.Sequelize.col('productUOMDetails.uomName'), 'uom']
-        ]
+          [db.Sequelize.col('productUOMDetails.uomName'), 'uom'],
+        ],
       },
       where,
-      include:[
+      include: [
         {
-          attributes:[],
+          attributes: [],
           model: ProductCategory,
           where: {
-            isDeleted: 0
+            isDeleted: 0,
           },
-          as: "productCategoryDetails",
-          required: false
+          as: 'productCategoryDetails',
+          required: false,
         },
         {
-          attributes:[],
+          attributes: [],
           model: ProductBrand,
           where: {
-            isDeleted: 0
+            isDeleted: 0,
           },
-          as: "productBrandDetails",
-          required: false
+          as: 'productBrandDetails',
+          required: false,
         },
         {
-          attributes:[],
+          attributes: [],
           model: UOM,
           where: {
-            isDeleted: 0
+            isDeleted: 0,
           },
-          as: "productUOMDetails",
-          required: false
+          as: 'productUOMDetails',
+          required: false,
         },
         {
           attributes: {
-            include: [["id", "mediaId"]],
-            exclude: ['id', 'hostId', 'productId', 'isEnabled', 'isDeleted', 'deletedAt', 'createdAt', 'updatedAt'],
+            include: [['id', 'mediaId']],
+            exclude: [
+              'id',
+              'hostId',
+              'productId',
+              'isEnabled',
+              'isDeleted',
+              'deletedAt',
+              'createdAt',
+              'updatedAt',
+            ],
           },
           model: ProductMedia,
           where: {
             isDeleted: 0,
-            isEnabled: 1
+            isEnabled: 1,
           },
-          as: "productMedia",
+          as: 'productMedia',
           separate: true,
-          order: [["sortOrder", "ASC"]],
-          required: false
+          order: [['sortOrder', 'ASC']],
+          required: false,
         },
         {
           attributes: {
-            exclude: ['hostId', 'productId', 'isEnabled', 'isDeleted', 'deletedAt', 'createdAt', 'updatedAt'],
+            exclude: [
+              'hostId',
+              'productId',
+              'isEnabled',
+              'isDeleted',
+              'deletedAt',
+              'createdAt',
+              'updatedAt',
+            ],
           },
           model: ProductAttribute,
           where: {
-            isDeleted: 0
+            isDeleted: 0,
           },
-          as: "productAttribute",
+          as: 'productAttribute',
           separate: true,
-          order: [["sortOrder", "ASC"]],
-          required: false
-        }
+          order: [['sortOrder', 'ASC']],
+          required: false,
+        },
       ],
       logging: console.log, // Enable logging for debugging
     };
 
     const productDetails = await Product.findOne(query);
     return {
-      data: productDetails?.toJSON() || {}
+      data: productDetails?.toJSON() || {},
     };
   }
 
   async getProductMedia(params: GetProductMediaDetailsByIdPayload): Promise<any> {
     const { hostId, productId, filter } = params;
 
-    const where:any = {
+    const where: any = {
       productId: productId,
       hostId,
-      isDeleted:0
-    }
-    if(filter) {
-      if(filter.mediaId || filter.id) {
+      isDeleted: 0,
+    };
+    if (filter) {
+      if (filter.mediaId || filter.id) {
         where.id = filter.mediaId || filter.id;
       }
-      if(filter.mediaType) {
+      if (filter.mediaType) {
         where.mediaType = filter.mediaType;
       }
-      if(filter.isEnabled !== undefined) {
+      if (filter.isEnabled !== undefined) {
         where.isEnabled = filter.isEnabled;
       }
     }
-   
-    const query: FindAndCountOptions<any> = {      
+
+    const query: FindAndCountOptions<any> = {
       attributes: {
         exclude: ['hostId', 'productId', 'isDeleted', 'deletedAt'],
-      },         
+      },
       where,
-      order: [["sortOrder", "ASC"]],
+      order: [['sortOrder', 'ASC']],
       raw: true,
       logging: console.log, // Enable logging for debugging
     };
 
     const mediaDetails = await ProductMedia.findAll(query);
     return {
-      data: mediaDetails
+      data: mediaDetails,
     };
   }
 
   async getProductAttributes(params: GetProductAttributesDetailsByIdPayload): Promise<any> {
     const { hostId, productId, filter } = params;
 
-    const where:any = {
+    const where: any = {
       productId: productId,
       hostId,
-      isDeleted:0
-    }
-    if(filter) {
-      if(filter.attributeId || filter.id) {
+      isDeleted: 0,
+    };
+    if (filter) {
+      if (filter.attributeId || filter.id) {
         where.id = filter.attributeId || filter.id;
       }
-      if(filter.attributeType) {
+      if (filter.attributeType) {
         where.attributeType = filter.attributeType;
       }
-      if(filter.isEnabled !== undefined) {
+      if (filter.isEnabled !== undefined) {
         where.isEnabled = filter.isEnabled;
       }
     }
-   
-    const query: FindAndCountOptions<any> = {      
+
+    const query: FindAndCountOptions<any> = {
       attributes: {
         exclude: ['hostId', 'productId', 'isDeleted', 'deletedAt'],
-      },         
+      },
       where,
-      order: [["sortOrder", "ASC"]],
+      order: [['sortOrder', 'ASC']],
       raw: true,
       logging: console.log, // Enable logging for debugging
     };
 
     const attributeDetails = await ProductAttribute.findAll(query);
     return {
-      data: attributeDetails
+      data: attributeDetails,
     };
   }
 
   async saveProductMedia(params: SaveProductMediaPayload): Promise<any> {
-    const { hostId, productId, mediaUrl, mediaType, publicId, fileName, fileSizeInBytes, mimeType, isPrimary, sortOrder, isEnabled, createdAt } = params;
+    const {
+      hostId,
+      productId,
+      mediaUrl,
+      mediaType,
+      publicId,
+      fileName,
+      fileSizeInBytes,
+      mimeType,
+      isPrimary,
+      sortOrder,
+      isEnabled,
+      createdAt,
+    } = params;
     const newMedia = await ProductMedia.create({
       hostId,
       productId,
@@ -520,7 +605,7 @@ export class productRepository {
       isPrimary,
       sortOrder,
       isEnabled,
-      createdAt
+      createdAt,
     });
 
     return newMedia;
@@ -529,7 +614,7 @@ export class productRepository {
   async updateProductMedia(params: any): Promise<any> {
     const { updatePayload, where } = params;
     const updateResult = await ProductMedia.update(updatePayload, {
-      where
+      where,
     });
 
     return updateResult;
@@ -559,7 +644,25 @@ export class productRepository {
   }
 
   async createProduct(params: any): Promise<any> {
-    const { hostId, productCode, productName, shortName, categoryId, brandId, uomId, sku, barcode, hsnCode, purchasePrice, sellingPrice, mrp, taxPercentage, remarks, isEnabled, createdAt } = params;
+    const {
+      hostId,
+      productCode,
+      productName,
+      shortName,
+      categoryId,
+      brandId,
+      uomId,
+      sku,
+      barcode,
+      hsnCode,
+      purchasePrice,
+      sellingPrice,
+      mrp,
+      taxPercentage,
+      remarks,
+      isEnabled,
+      createdAt,
+    } = params;
     const newProduct = await Product.create({
       hostId,
       productCode,
@@ -577,25 +680,25 @@ export class productRepository {
       taxPercentage,
       remarks,
       isEnabled,
-      createdAt
+      createdAt,
     });
 
     return newProduct;
   }
 
-  async getProductMediaById(params: { hostId: number, mediaId: number }): Promise<any> {
+  async getProductMediaById(params: { hostId: number; mediaId: number }): Promise<any> {
     const { hostId, mediaId } = params;
 
-    const where:any = {
+    const where: any = {
       id: mediaId,
       hostId,
-      isDeleted:0
-    }
-       
-    const query: FindAndCountOptions<any> = {      
+      isDeleted: 0,
+    };
+
+    const query: FindAndCountOptions<any> = {
       attributes: {
         exclude: ['hostId', 'productId', 'isDeleted', 'deletedAt'],
-      },         
+      },
       where,
       raw: true,
       logging: console.log, // Enable logging for debugging
@@ -603,14 +706,14 @@ export class productRepository {
 
     const mediaDetails = await ProductMedia.findOne(query);
     return {
-      data: mediaDetails
+      data: mediaDetails,
     };
   }
 
   async updateProduct(params: any): Promise<any> {
     const { updatePayload, where } = params;
     const updateResult = await Product.update(updatePayload, {
-      where
+      where,
     });
     return updateResult;
   }
@@ -618,8 +721,84 @@ export class productRepository {
   async updateProductAttributes(params: any): Promise<any> {
     const { updatePayload, where } = params;
     const updateResult = await ProductAttribute.update(updatePayload, {
-      where
+      where,
     });
+    return updateResult;
+  }
+
+  async createCategory(params: any): Promise<any> {
+    const { hostId, categoryName, createdAt } = params;
+    const newCategory = await ProductCategory.create({
+      hostId,
+      categoryName,
+      createdAt,
+    });
+    return newCategory.toJSON?.() ?? null;
+  }
+
+  async updateCategory(params: any): Promise<any> {
+    const { hostId, categoryId, categoryName, updatedAt } = params;
+    const updateResult = await ProductCategory.update(
+      { categoryName, updatedAt },
+      {
+        where: {
+          id: categoryId,
+          hostId,
+        },
+      }
+    );
+    return updateResult;
+  }
+
+  async deleteCategory(params: any): Promise<any> {
+    const { hostId, categoryId, deletedAt } = params;
+    const updateResult = await ProductCategory.update(
+      { isDeleted: 1, deletedAt },
+      {
+        where: {
+          id: categoryId,
+          hostId,
+        },
+      }
+    );
+    return updateResult;
+  }
+
+  async createBrand(params: any): Promise<any> {
+    const { hostId, brandName, createdAt } = params;
+    const newBrand = await ProductBrand.create({
+      hostId,
+      brandName,
+      createdAt,
+    });
+    return newBrand.toJSON?.() ?? null;
+  }
+
+  async updateBrand(params: any): Promise<any> {
+    const { hostId, brandId, brandName, updatedAt } = params;
+    const updateResult = await ProductBrand.update(
+      { brandName, updatedAt },
+      {
+        where: {
+          id: brandId,
+          hostId,
+        },
+      }
+    );
+    return updateResult;
+  }
+
+  async deleteBrand(params: any): Promise<any> {
+    const { hostId, brandId, deletedAt } = params;
+    const updateResult = await ProductBrand.update(
+      { isDeleted: 1, deletedAt },
+      {
+        where: {
+          id: brandId,
+          hostId,
+        },
+      }
+    );
     return updateResult;
   }
 }

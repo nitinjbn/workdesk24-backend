@@ -37,7 +37,7 @@ export class ProductController {
       'Product UOM retrieved successfully'
     );
   }
-  
+
   async getProducts(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     await this.executeUserScopedReport(
       req,
@@ -82,7 +82,10 @@ export class ProductController {
     req: AuthRequest,
     res: Response,
     next: NextFunction,
-    handler: (payload: Record<string, unknown>, scope: { hostId: number; requestUserId?: number }) => Promise<unknown>,
+    handler: (
+      payload: Record<string, unknown>,
+      scope: { hostId: number; requestUserId?: number }
+    ) => Promise<unknown>,
     successMessage: string,
     restrictToSelf = false
   ): Promise<void> {
@@ -104,7 +107,7 @@ export class ProductController {
 
   async uploadMedia(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { hostId, productId, mediaType, isPrimary, sortOrder, isEnabled } =  req.body;
+      const { hostId, productId, mediaType, isPrimary, sortOrder, isEnabled } = req.body;
       const file = req.file as Express.Multer.File | undefined;
 
       if (!file) {
@@ -129,7 +132,7 @@ export class ProductController {
         mimeType: file.mimetype,
         isPrimary: isPrimary || 0,
         sortOrder: sortOrder || 0,
-        isEnabled: isEnabled || 0
+        isEnabled: isEnabled || 0,
       });
       //console.log('####################### Media saved to database:', saveMedia);
 
@@ -144,7 +147,7 @@ export class ProductController {
           isPrimary: saveMedia.isPrimary,
           fileName: saveMedia.fileName,
           fileSizeInBytes: saveMedia.fileSizeInBytes,
-          mimeType: saveMedia.mimeType
+          mimeType: saveMedia.mimeType,
         },
       } as ApiResponse);
     } catch (error: any) {
@@ -185,7 +188,6 @@ export class ProductController {
         message: 'Media deleted successfully',
         data: deleteResult,
       } as ApiResponse);
-
     } catch (error: any) {
       next(error);
     }
@@ -200,7 +202,97 @@ export class ProductController {
         message: 'Product deleted successfully',
         data: deleteResult,
       } as ApiResponse);
+    } catch (error: any) {
+      next(error);
+    }
+  }
+  async createCategory(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { hostId, categoryName } = req.body;
+      const createResult = await productService.createCategory({ hostId, categoryName });
+      res.json({
+        success: true,
+        message: 'Category created successfully',
+        data: createResult,
+      } as ApiResponse);
+    } catch (error: any) {
+      next(error);
+    }
+  }
 
+  async updateCategory(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { hostId, categoryId, categoryName } = req.body;
+      const updateResult = await productService.updateCategory({
+        hostId,
+        categoryId,
+        categoryName,
+      });
+      res.json({
+        success: true,
+        message: 'Category updated successfully',
+        data: updateResult,
+      } as ApiResponse);
+    } catch (error: any) {
+      next(error);
+    }
+  }
+
+  async deleteCategory(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { hostId, categoryId } = req.body;
+      const deleteResult = await productService.deleteCategory({ hostId, categoryId });
+      res.json({
+        success: true,
+        message: 'Category deleted successfully',
+        data: deleteResult,
+      } as ApiResponse);
+    } catch (error: any) {
+      next(error);
+    }
+  }
+
+  async createBrand(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { hostId, brandName } = req.body;
+      const createResult = await productService.createBrand({ hostId, brandName });
+      res.json({
+        success: true,
+        message: 'Brand created successfully',
+        data: createResult,
+      } as ApiResponse);
+    } catch (error: any) {
+      next(error);
+    }
+  }
+
+  async updateBrand(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { hostId, brandId, brandName } = req.body;
+      const updateResult = await productService.updateBrand({
+        hostId,
+        brandId,
+        brandName,
+      });
+      res.json({
+        success: true,
+        message: 'Brand updated successfully',
+        data: updateResult,
+      } as ApiResponse);
+    } catch (error: any) {
+      next(error);
+    }
+  }
+
+  async deleteBrand(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { hostId, brandId } = req.body;
+      const deleteResult = await productService.deleteBrand({ hostId, brandId });
+      res.json({
+        success: true,
+        message: 'Brand deleted successfully',
+        data: deleteResult,
+      } as ApiResponse);
     } catch (error: any) {
       next(error);
     }
