@@ -55,6 +55,9 @@ export class productRepository {
           [Op.like]: `%${(filter.categoryName as string).trim()}%`,
         };
       }
+      if (filter.exactCategoryName) {
+        where.categoryName = filter.exactCategoryName;
+      }
       if (filter.ignoreId) {
         where.id = {
           [Op.ne]: filter.ignoreId,
@@ -120,6 +123,11 @@ export class productRepository {
           [Op.like]: `%${(filter.brandName as string).trim()}%`,
         };
       }
+
+      if (filter.exactBrandName) {
+        where.brandName = filter.exactBrandName;
+      }
+
       if (filter.ignoreId) {
         where.id = {
           [Op.ne]: filter.ignoreId,
@@ -170,6 +178,8 @@ export class productRepository {
     let order = [];
     if (sortBy && sortOrder) {
       order = [[sortBy, sortOrder]];
+    } else {
+      order = [['uomName', 'ASC']];
     }
 
     const where: any = {

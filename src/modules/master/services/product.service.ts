@@ -684,7 +684,7 @@ export class ProductService {
     const existingCategory = await productRepository.getCategories({
       hostId,
       filter: {
-        categoryName,
+        exactCategoryName: categoryName,
         ignoreId: categoryId,
       },
     });
@@ -749,7 +749,7 @@ export class ProductService {
     const existingBrand = await productRepository.getBrands({
       hostId,
       filter: {
-        brandName,
+        exactBrandName: brandName,
         ignoreId: brandId,
       },
     });
