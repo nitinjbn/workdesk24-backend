@@ -260,10 +260,7 @@ export class UserService {
       timezone,
       holidayCalendarId,
       leavePolicyId,
-      attendanceSites,
     } = payload;
-
-    // Validate the current subscription for the host
 
     let settings = payload.settings;
     if (settings && typeof settings !== 'object') {
@@ -320,6 +317,11 @@ export class UserService {
       settings: CommonUtil.convertSettingsToArray(settings),
       createdAt: currentUnixTime,
     });
+
+    let attendanceSites = payload.attendanceSites;
+    if (attendanceSites && typeof attendanceSites !== 'object') {
+      attendanceSites = CommonUtil.parseJsonField(attendanceSites);
+    }
 
     if (attendanceSites && attendanceSites.length > 0) {
       await usersRepository.createUserAttendanceSites({
