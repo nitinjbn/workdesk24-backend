@@ -21,6 +21,11 @@ import { resolveVisitLocalIdForRecord } from '../../../shared/utils/visit-local-
 import userRepository from '../repositories/users.repository';
 import { CommonUtil } from '../../../shared/utils/common.util';
 import { DateTimeFormatUtil } from '../../../shared/utils/date-time-format.util';
+import {
+  type AttendanceShiftContext,
+  buildAttendanceShiftMetrics,
+  getAttendanceShiftContext,
+} from '../../../shared/utils/attendance-shift.util';
 import moment from 'moment-timezone';
 import { CONFIG } from '../../../config/constants';
 import { logger } from '../../../config/database';
@@ -468,11 +473,54 @@ export class SyncService {
     return results;
   }
 
+  /**
+   * Resolves shift timings and early/late/overtime minutes from user & host settings
+   * so they are persisted together with the attendance record.
+   */
+  private async enrichAttendanceRecords(
+    userId: number,
+    records: SyncRecord[]
+  ): Promise<SyncRecord[]> {
+    const contextByHostId = new Map<number, AttendanceShiftContext>();
+    const enrichedRecords: SyncRecord[] = [];
+
+    for (const record of records) {
+      const hostId = this.toPositiveInteger(record.hostId);
+      if (hostId === null) {
+        enrichedRecords.push(record);
+        continue;
+      }
+
+      let context = contextByHostId.get(hostId);
+      if (!context) {
+        context = await getAttendanceShiftContext(hostId, userId);
+        contextByHostId.set(hostId, context);
+      }
+
+      // A dayover-only payload has no attendanceTime; fall back to the stored record.
+      let attendanceTime = record.attendanceTime;
+      if (this.toPositiveInteger(attendanceTime) === null && record.localId) {
+        const existingRecord = await attendanceRepository.findOne({
+          userId,
+          localId: record.localId,
+        } as any);
+        attendanceTime = (existingRecord as any)?.attendanceTime;
+      }
+
+      enrichedRecords.push({
+        ...record,
+        ...buildAttendanceShiftMetrics(context, attendanceTime, record.dayoverTime),
+      });
+    }
+
+    return enrichedRecords;
+  }
+
   async syncAttendance(userId: number, records: SyncRecord[]): Promise<SyncResult> {
     return this.syncData(
       attendanceRepository,
       userId,
-      records,
+      await this.enrichAttendanceRecords(userId, records),
       async (record, transaction, previousRecord, sourceRecord) => {
         await this.syncUserDailySummary(record, transaction);
         await this.logActivity(

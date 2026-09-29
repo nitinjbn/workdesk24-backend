@@ -36,12 +36,72 @@ interface AttendanceAttributes extends BaseModel {
   dayoverTime?: number;
   autoDayover?: number;
   workingHours?: number;
+
+  shiftStartTime?: string;
+  shiftEndTime?: string;
+
+  earlyAttendanceMinutes?: number;
+  lateAttendanceMinutes?: number;
+  earlyDayoverMinutes?: number;
+  lateDayoverMinutes?: number;
+
+  overtimeAllowed?: number;
+  overtimeMinutes?: number;
+
   syncedAt?: number;
 }
 
-interface AttendanceCreationAttributes extends Optional<AttendanceAttributes, 'id' | 'attendanceStatus' | 'vehicleType' | 'vehicleCategory' | 'attendanceOdometerReading' | 'attendanceImage' | 'attendanceRemarks' | 'attendanceLatitude' | 'attendanceLongitude' | 'attendanceLocationAccuracy' | 'attendanceLocationAltitude' | 'attendanceLocationSpeed' | 'attendanceLocationProvider' | 'attendanceAddress' | 'attendanceBatteryPercentage' | 'isChargingOnAttendance' | 'dayoverLatitude' | 'dayoverLongitude' | 'dayoverLocationAccuracy' | 'dayoverLocationAltitude' | 'dayoverLocationSpeed' | 'dayoverLocationProvider' | 'dayoverAddress' | 'dayoverBatteryPercentage' | 'isChargingOnDayover' | 'dayoverRemarks' | 'attendanceTime' | 'dayoverTime' | 'autoDayover' | 'workingHours' | 'createdAt' | 'updatedAt' | 'syncedAt' | 'isDeleted' | 'deletedAt'> {}
+interface AttendanceCreationAttributes extends Optional<
+  AttendanceAttributes,
+  | 'id'
+  | 'attendanceStatus'
+  | 'vehicleType'
+  | 'vehicleCategory'
+  | 'attendanceOdometerReading'
+  | 'attendanceImage'
+  | 'attendanceRemarks'
+  | 'attendanceLatitude'
+  | 'attendanceLongitude'
+  | 'attendanceLocationAccuracy'
+  | 'attendanceLocationAltitude'
+  | 'attendanceLocationSpeed'
+  | 'attendanceLocationProvider'
+  | 'attendanceAddress'
+  | 'attendanceBatteryPercentage'
+  | 'isChargingOnAttendance'
+  | 'dayoverLatitude'
+  | 'dayoverLongitude'
+  | 'dayoverLocationAccuracy'
+  | 'dayoverLocationAltitude'
+  | 'dayoverLocationSpeed'
+  | 'dayoverLocationProvider'
+  | 'dayoverAddress'
+  | 'dayoverBatteryPercentage'
+  | 'isChargingOnDayover'
+  | 'dayoverRemarks'
+  | 'attendanceTime'
+  | 'dayoverTime'
+  | 'autoDayover'
+  | 'workingHours'
+  | 'shiftStartTime'
+  | 'shiftEndTime'
+  | 'earlyAttendanceMinutes'
+  | 'lateAttendanceMinutes'
+  | 'earlyDayoverMinutes'
+  | 'lateDayoverMinutes'
+  | 'overtimeAllowed'
+  | 'overtimeMinutes'
+  | 'createdAt'
+  | 'updatedAt'
+  | 'syncedAt'
+  | 'isDeleted'
+  | 'deletedAt'
+> {}
 
-class Attendance extends Model<AttendanceAttributes, AttendanceCreationAttributes> implements AttendanceAttributes {
+class Attendance
+  extends Model<AttendanceAttributes, AttendanceCreationAttributes>
+  implements AttendanceAttributes
+{
   public id!: number;
   public hostId!: number;
   public userId!: number;
@@ -77,6 +137,14 @@ class Attendance extends Model<AttendanceAttributes, AttendanceCreationAttribute
   public dayoverTime?: number;
   public autoDayover?: number;
   public workingHours?: number;
+  public shiftStartTime?: string;
+  public shiftEndTime?: string;
+  public earlyAttendanceMinutes?: number;
+  public lateAttendanceMinutes?: number;
+  public earlyDayoverMinutes?: number;
+  public lateDayoverMinutes?: number;
+  public overtimeAllowed?: number;
+  public overtimeMinutes?: number;
   public createdAt!: number;
   public updatedAt!: number;
   public syncedAt?: number;
@@ -106,7 +174,7 @@ export function initAttendance(sequelize: Sequelize): typeof Attendance {
       },
       hostId: {
         type: DataTypes.BIGINT,
-        allowNull: false
+        allowNull: false,
       },
       userId: {
         type: DataTypes.BIGINT,
@@ -118,128 +186,166 @@ export function initAttendance(sequelize: Sequelize): typeof Attendance {
       },
       attendanceStatus: {
         type: DataTypes.STRING(20),
-        allowNull: false
+        allowNull: false,
       },
       vehicleType: {
         type: DataTypes.STRING(20),
-        allowNull: true
+        allowNull: true,
       },
       vehicleCategory: {
         type: DataTypes.STRING(20),
-        allowNull: true
+        allowNull: true,
       },
       attendanceOdometerReading: {
         type: DataTypes.INTEGER,
-        allowNull: true
+        allowNull: true,
       },
       attendanceImage: {
         type: DataTypes.STRING(255),
-        allowNull: true
+        allowNull: true,
       },
       attendanceRemarks: {
         type: DataTypes.STRING(255),
-        allowNull: true
+        allowNull: true,
       },
       attendanceLatitude: {
         type: DataTypes.DECIMAL(10, 8),
-        allowNull: false
+        allowNull: false,
       },
       attendanceLongitude: {
         type: DataTypes.DECIMAL(11, 8),
-        allowNull: false
+        allowNull: false,
       },
       attendanceLocationAccuracy: {
         type: DataTypes.FLOAT,
-        allowNull: true
+        allowNull: true,
       },
       attendanceLocationAltitude: {
         type: DataTypes.FLOAT,
-        allowNull: true
+        allowNull: true,
       },
       attendanceLocationSpeed: {
         type: DataTypes.FLOAT,
-        allowNull: true
+        allowNull: true,
       },
       attendanceLocationProvider: {
         type: DataTypes.STRING(100),
-        allowNull: true
+        allowNull: true,
       },
       attendanceAddress: {
         type: DataTypes.STRING(255),
-        allowNull: true
+        allowNull: true,
       },
       attendanceBatteryPercentage: {
         type: DataTypes.SMALLINT,
-        allowNull: true
+        allowNull: true,
       },
       isChargingOnAttendance: {
         type: DataTypes.TINYINT,
-        allowNull: true
+        allowNull: true,
       },
       dayoverImage: {
         type: DataTypes.STRING(255),
-        allowNull: true
+        allowNull: true,
       },
       dayoverOdometerReading: {
         type: DataTypes.INTEGER,
-        allowNull: true
+        allowNull: true,
       },
       dayoverLatitude: {
         type: DataTypes.DECIMAL(10, 8),
-        allowNull: true
+        allowNull: true,
       },
       dayoverLongitude: {
         type: DataTypes.DECIMAL(11, 8),
-        allowNull: true
+        allowNull: true,
       },
       dayoverLocationAccuracy: {
         type: DataTypes.FLOAT,
-        allowNull: true
+        allowNull: true,
       },
       dayoverLocationAltitude: {
         type: DataTypes.FLOAT,
-        allowNull: true
+        allowNull: true,
       },
       dayoverLocationSpeed: {
         type: DataTypes.FLOAT,
-        allowNull: true
+        allowNull: true,
       },
       dayoverLocationProvider: {
         type: DataTypes.STRING(100),
-        allowNull: true
+        allowNull: true,
       },
       dayoverAddress: {
         type: DataTypes.STRING(255),
-        allowNull: true
+        allowNull: true,
       },
       dayoverBatteryPercentage: {
         type: DataTypes.SMALLINT,
-        allowNull: true
+        allowNull: true,
       },
       isChargingOnDayover: {
         type: DataTypes.TINYINT,
-        allowNull: true
+        allowNull: true,
       },
       dayoverRemarks: {
         type: DataTypes.STRING(255),
-        allowNull: true
+        allowNull: true,
       },
       attendanceTime: {
         type: DataTypes.BIGINT,
-        allowNull: false
+        allowNull: false,
       },
       dayoverTime: {
         type: DataTypes.BIGINT,
-        allowNull: true
+        allowNull: true,
       },
       autoDayover: {
         type: DataTypes.TINYINT,
         allowNull: true,
-        defaultValue: 0
+        defaultValue: 0,
       },
       workingHours: {
         type: DataTypes.FLOAT,
-        allowNull: true
+        allowNull: true,
+      },
+      shiftStartTime: {
+        type: DataTypes.TIME,
+        allowNull: true,
+      },
+      shiftEndTime: {
+        type: DataTypes.TIME,
+        allowNull: true,
+      },
+      earlyAttendanceMinutes: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0,
+        allowNull: false,
+      },
+      lateAttendanceMinutes: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0,
+        allowNull: false,
+      },
+      earlyDayoverMinutes: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0,
+        allowNull: false,
+      },
+      lateDayoverMinutes: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0,
+        allowNull: false,
+      },
+      overtimeAllowed: {
+        type: DataTypes.TINYINT,
+        defaultValue: 0,
+        allowNull: false,
+      },
+      overtimeMinutes: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0,
+        allowNull: false,
       },
       createdAt: {
         type: DataTypes.BIGINT,
