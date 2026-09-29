@@ -43,6 +43,17 @@ export class UserRepository extends BaseRepository<typeof User.prototype> {
     });
   }
 
+  async findWithHostIdAndEmail(
+    email: string,
+    hostId: number
+  ): Promise<typeof User.prototype | null> {
+    const where: WhereOptions<typeof User.prototype> = { hostId, email, isDeleted: 0 };
+    return this.model.findOne({
+      where: where,
+      attributes: { include: ['password'] },
+    });
+  }
+
   async getAttendanceSitesForUser(
     userId: number
   ): Promise<

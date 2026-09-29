@@ -52,6 +52,15 @@ interface LoginDto {
   };
 }
 
+interface HostSpecificLoginDto {
+  email: string;
+  password: string;
+  hostId: number;
+  deviceDetails?: {
+    deviceId: string;
+  };
+}
+
 interface VerifyOtpDto {
   identifier: string;
   otpCode: string;
@@ -403,8 +412,11 @@ export class AuthService {
     return subscription;
   }
 
-  async adminLogin(data: LoginDto): Promise<AdminAuthResponse> {
-    const user = await this.validateCredentials(data);
+  async adminLogin(data: HostSpecificLoginDto): Promise<AdminAuthResponse> {
+    // TODO: Call only host-specific method "validateHostSpecificCredentials", when the hostId is passed on login from UI
+    const user = data.hostId
+      ? await this.validateHostSpecificCredentials(data)
+      : await this.validateCredentials(data);
     //console.log("#################### user:", user);
 
     //const isAdmin = await isAdminRole(user.hostId, user.roleId);
@@ -683,6 +695,26 @@ export class AuthService {
       permissionsByModule,
       subscription,
     };
+  }
+
+  private async validateHostSpecificCredentials(data: HostSpecificLoginDto): Promise<LoginUser> {
+    const { email, password, hostId } = data;
+
+    const user = await userRepository.findWithHostIdAndEmail(email, hostId);
+    if (!user) {
+      throw createConfiguredError('INVALID_CREDENTIALS');
+    }
+
+    const isValid = await bcrypt.compare(password, user.password);
+    if (!isValid) {
+      throw createConfiguredError('INVALID_CREDENTIALS');
+    }
+
+    if (user.accountStatus != 'ACTIVE') {
+      throw createConfiguredError('ACCOUNT_INACTIVE');
+    }
+
+    return user;
   }
 
   private async validateCredentials(data: LoginDto): Promise<LoginUser> {
@@ -1163,6 +1195,11 @@ export class AuthService {
   async doesSubDomainExist(subDomain: string): Promise<boolean> {
     const existingHost = await hostService.getHostBySubDomain({ subDomain });
     return !!existingHost?.data?.id;
+  }
+
+  async getSubDomainDetails(subDomain: string): Promise<any> {
+    const subDomainDetails = await hostService.getHostBySubDomain({ subDomain });
+    return subDomainDetails?.data || null;
   }
 }
 

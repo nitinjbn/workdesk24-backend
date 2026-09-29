@@ -16,7 +16,7 @@ import {
 export class AdminAuthController {
   async login(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { email, password, deviceDetails } = req.body;
+      const { email, password, deviceDetails, hostId } = req.body;
 
       if (!email || !password) {
         res.status(400).json({
@@ -26,7 +26,7 @@ export class AdminAuthController {
         return;
       }
 
-      const result = await authService.adminLogin({ email, password, deviceDetails });
+      const result = await authService.adminLogin({ email, password, deviceDetails, hostId });
       const accessCookieName = getAdminAuthCookieName();
       const refreshCookieName = getAdminRefreshCookieName();
       const csrfCookieName = getAdminCsrfCookieName();
@@ -124,7 +124,8 @@ export class AdminAuthController {
         return;
       }
 
-      const doesExist = await authService.doesSubDomainExist(subDomain);
+      const subDomainDetails = await authService.getSubDomainDetails(subDomain);
+      const doesExist = !!subDomainDetails?.id;
 
       // If the subDomain does not exist, return a 404 response
       if (!doesExist) {
@@ -140,6 +141,7 @@ export class AdminAuthController {
         message: 'SubDomain validation successful',
         data: {
           doesExist,
+          hostId: subDomainDetails?.id,
         },
       } as ApiResponse);
     } catch (error) {
