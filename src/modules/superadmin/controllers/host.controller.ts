@@ -78,6 +78,7 @@ export class HostController {
         panNumber,
         timezone,
         subscription,
+        settings,
       } = req.body;
 
       console.log('Creating host with payload:', req.body);
@@ -140,6 +141,7 @@ export class HostController {
         panNumber,
         timezone,
         subscription,
+        settings,
       });
       //console.log('####################### createUserResult:', createUserResult);
 

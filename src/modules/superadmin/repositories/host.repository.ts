@@ -147,6 +147,37 @@ export class hostRepository {
       data: host?.toJSON() || {},
     };
   }
+
+  async createHostSettings(
+    params: {
+      hostId: number;
+      settings: Array<{ settingName: string; settingValue: string; isEnabled?: number }>;
+      createdAt: number;
+    },
+    transaction?: Transaction
+  ): Promise<any[]> {
+    const { hostId, settings, createdAt } = params;
+
+    if (!settings || !Array.isArray(settings) || settings.length === 0) {
+      return [];
+    }
+
+    if (!hostId) {
+      throw new Error('hostId is required');
+    }
+
+    const records = settings.map((s) => ({
+      hostId,
+      settingName: s.settingName,
+      settingValue: s.settingValue,
+      isEnabled: s.isEnabled || 1, // Default to 1 if not provided
+      isDeleted: 0,
+      createdAt,
+    }));
+
+    const created = await HostSettings.bulkCreate(records, { transaction });
+    return created;
+  }
 }
 
 export default new hostRepository();

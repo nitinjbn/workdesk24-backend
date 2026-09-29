@@ -100,11 +100,6 @@ export class HostService {
       throw new Error('subDomain is already taken');
     }
 
-    let subscription = payload.subscription;
-    if (subscription && typeof subscription !== 'object') {
-      subscription = CommonUtil.parseJsonField(subscription);
-    }
-
     const currentUnixTime = DateTimeFormatUtil.getCurrentUnixTime();
 
     const transaction = await sequelize.transaction();
@@ -182,6 +177,11 @@ export class HostService {
       }
 
       // Create host subscription for the newly created host
+      let subscription = payload.subscription;
+      if (subscription && typeof subscription !== 'object') {
+        subscription = CommonUtil.parseJsonField(subscription);
+      }
+
       const createHostSubscriptionResult = await hostsRepository.createHostSubscription(
         {
           hostId,
@@ -197,12 +197,32 @@ export class HostService {
         throw new Error('Failed to create host subscription');
       }
 
+      // Create host settings for the newly created host
+      let settings = payload.settings;
+      if (settings && typeof settings !== 'object') {
+        settings = CommonUtil.parseJsonField(settings);
+      }
+
+      const createHostSettingsResult = await hostsRepository.createHostSettings(
+        {
+          hostId,
+          settings: CommonUtil.convertSettingsToArray(settings),
+          createdAt: currentUnixTime,
+        },
+        transaction
+      );
+
+      if (!createHostSettingsResult) {
+        throw new Error('Failed to create host settings');
+      }
+
       await transaction.commit();
 
       return {
         host: createHostResult,
         user: createAdminUserResult,
         subscription: createHostSubscriptionResult,
+        settings: createHostSettingsResult,
       };
     } catch (error) {
       await transaction.rollback();

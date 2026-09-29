@@ -1,9 +1,15 @@
 import { Model, DataTypes, Sequelize, Optional } from 'sequelize';
 import { HostSettingsAttributes } from '../../types';
 
-interface HostSettingsCreationAttributes extends Optional<HostSettingsAttributes, 'id' | 'createdAt' | 'updatedAt' | 'isDeleted' | 'deletedAt'> {}
+interface HostSettingsCreationAttributes extends Optional<
+  HostSettingsAttributes,
+  'id' | 'createdAt' | 'updatedAt' | 'isDeleted' | 'deletedAt'
+> {}
 
-class HostSettings extends Model<HostSettingsAttributes, HostSettingsCreationAttributes> implements HostSettingsAttributes {
+class HostSettings
+  extends Model<HostSettingsAttributes, HostSettingsCreationAttributes>
+  implements HostSettingsAttributes
+{
   public id!: number;
   public hostId!: number;
   public settingName!: string;
@@ -51,24 +57,20 @@ export function initHostSettings(sequelize: Sequelize): typeof HostSettings {
       createdAt: {
         type: DataTypes.BIGINT,
         allowNull: false,
-        field: 'createdAt',
       },
       updatedAt: {
         type: DataTypes.BIGINT,
-        allowNull: false,
-        field: 'updatedAt',
+        allowNull: true,
       },
       isDeleted: {
         type: DataTypes.TINYINT,
         allowNull: false,
         defaultValue: 0,
-        field: 'isDeleted',
       },
       deletedAt: {
         type: DataTypes.BIGINT,
         allowNull: true,
         defaultValue: null,
-        field: 'deletedAt',
       },
     },
     {

@@ -1,9 +1,15 @@
 import { Model, DataTypes, Sequelize, Optional } from 'sequelize';
 import { UserSettingsAttributes } from '../../types';
 
-interface UserSettingsCreationAttributes extends Optional<UserSettingsAttributes, 'id' | 'createdAt' | 'updatedAt' | 'isDeleted' | 'deletedAt'> {}
+interface UserSettingsCreationAttributes extends Optional<
+  UserSettingsAttributes,
+  'id' | 'createdAt' | 'updatedAt' | 'isDeleted' | 'deletedAt'
+> {}
 
-class UserSettings extends Model<UserSettingsAttributes, UserSettingsCreationAttributes> implements UserSettingsAttributes {
+class UserSettings
+  extends Model<UserSettingsAttributes, UserSettingsCreationAttributes>
+  implements UserSettingsAttributes
+{
   public id!: number;
   public userId!: number;
   public settingName!: string;
@@ -55,20 +61,17 @@ export function initUserSettings(sequelize: Sequelize): typeof UserSettings {
       },
       updatedAt: {
         type: DataTypes.BIGINT,
-        allowNull: false,
-        field: 'updatedAt',
+        allowNull: true,
       },
       isDeleted: {
         type: DataTypes.TINYINT,
         allowNull: false,
         defaultValue: 0,
-        field: 'isDeleted',
       },
       deletedAt: {
         type: DataTypes.BIGINT,
         allowNull: true,
         defaultValue: null,
-        field: 'deletedAt',
       },
     },
     {
