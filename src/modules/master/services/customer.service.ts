@@ -394,6 +394,9 @@ export class CustomerService {
       remarks: otherPayload.remarks,
       isEnabled: otherPayload.isEnabled !== undefined ? otherPayload.isEnabled : 1, // Default to enabled if not provided
       createdAt: currentUnixTime,
+      createdByUserType: otherPayload.createdByUserType || 'ADMIN',
+      createdByUserId: otherPayload.createdByUserId || null,
+      approvalStatus: otherPayload.approvalStatus || 'APPROVED',
     });
 
     if (createCustomerResult?.id) {

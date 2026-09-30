@@ -488,6 +488,9 @@ export class customerRepository {
       countryIsoCode,
       remarks,
       isEnabled,
+      createdByUserType,
+      createdByUserId,
+      approvalStatus,
     } = params;
     const newCustomer = await Customer.create({
       hostId,
@@ -510,6 +513,9 @@ export class customerRepository {
       countryIsoCode,
       remarks,
       isEnabled,
+      createdByUserType,
+      createdByUserId,
+      approvalStatus,
       createdAt: DateTimeFormatUtil.getCurrentUnixTime(),
     });
 
