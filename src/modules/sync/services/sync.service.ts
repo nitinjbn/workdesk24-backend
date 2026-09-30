@@ -39,6 +39,8 @@ import dashboardCacheInvalidationService, {
   type DashboardCacheInvalidationEvent,
 } from '../../dashboard/services/dashboard-cache-invalidation.service';
 
+import { Country, State, City } from 'country-state-city';
+
 const attendanceRepository = new AttendanceRepository();
 const gpsHistoryRepository = new GpsHistoryRepository();
 const visitRepository = new VisitRepository();
@@ -1479,6 +1481,77 @@ export class SyncService {
       }
     }
     return userData;
+  }
+
+  async getLocationsData(payload: { userId: number; hostId: number }): Promise<any> {
+    const { hostId, userId } = payload;
+    const userDetails = await userRepository.getUserById({ hostId, userId });
+
+    const countryIsoCode = userDetails?.countryIsoCode || 'IN'; // Default to 'IN' if not set
+
+    if (!countryIsoCode) {
+      throw new Error('Country is not configured for this user.');
+    }
+
+    const normalizedCountryIsoCode = countryIsoCode.toUpperCase();
+
+    /**
+     * Get country
+     */
+    const country = Country.getCountryByCode(normalizedCountryIsoCode);
+
+    if (!country) {
+      throw new Error(`Invalid country ISO code: ${normalizedCountryIsoCode}`);
+    }
+
+    /**
+     * Get all states of country
+     */
+    const states = State.getStatesOfCountry(normalizedCountryIsoCode);
+
+    /**
+     * Get all cities of all states
+     */
+    const cities: {
+      name: string;
+      stateIsoCode: string;
+      countryIsoCode: string;
+    }[] = [];
+
+    for (const state of states) {
+      const stateCities = City.getCitiesOfState(normalizedCountryIsoCode, state.isoCode);
+
+      cities.push(
+        ...stateCities.map((city) => ({
+          name: city.name,
+          stateIsoCode: city.stateCode,
+          countryIsoCode: city.countryCode,
+        }))
+      );
+    }
+
+    return {
+      country: {
+        isoCode: country.isoCode,
+        name: country.name,
+        phoneCode: country.phonecode,
+      },
+
+      states: states.map((state) => ({
+        isoCode: state.isoCode,
+        name: state.name,
+        countryIsoCode: state.countryCode,
+      })),
+
+      cities,
+    };
+  }
+
+  async getCustomerTypes(payload: { hostId: number }): Promise<any> {
+    const { hostId } = payload;
+
+    const result = await customerRepository.getCustomerTypes({ hostId });
+    return result;
   }
 }
 

@@ -314,7 +314,7 @@ export class SyncController {
       const userId = req.user!.id;
       const { hostId } = req.body;
 
-      const result = await syncService.getCustomers({hostId, userId});
+      const result = await syncService.getCustomers({ hostId, userId });
 
       res.json({
         success: true,
@@ -331,7 +331,7 @@ export class SyncController {
       const userId = req.user!.id;
       const { hostId } = req.body;
 
-      const result = await syncService.getProducts({hostId, userId});
+      const result = await syncService.getProducts({ hostId, userId });
 
       res.json({
         success: true,
@@ -345,7 +345,6 @@ export class SyncController {
 
   async getUserSettings(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      
       const { hostId, userId } = req.body;
       if (!hostId || !userId) {
         res.status(400).json({
@@ -355,7 +354,7 @@ export class SyncController {
         return;
       }
 
-      const result = await syncService.getUserDetails({hostId, userId});
+      const result = await syncService.getUserDetails({ hostId, userId });
 
       res.json({
         success: true,
@@ -363,6 +362,40 @@ export class SyncController {
         data: {
           user: result || {},
         },
+      } as ApiResponse);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getLocationsData(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user!.id;
+      const { hostId } = req.body;
+
+      const result = await syncService.getLocationsData({ hostId, userId });
+
+      res.json({
+        success: true,
+        message: 'Locations data retrieved successfully',
+        data: result,
+      } as ApiResponse);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getCustomerTypes(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user!.id;
+      const { hostId } = req.body;
+
+      const result = await syncService.getCustomerTypes({ hostId });
+
+      res.json({
+        success: true,
+        message: 'Customer types retrieved successfully',
+        data: result,
       } as ApiResponse);
     } catch (error) {
       next(error);

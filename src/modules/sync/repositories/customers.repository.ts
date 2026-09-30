@@ -136,4 +136,24 @@ export class CustomerRepository {
       attributes,
     }));
   }
+
+  async getCustomerTypes(params: { hostId: number }): Promise<any> {
+    const { hostId } = params;
+
+    const where: any = {
+      hostId,
+      isDeleted: 0,
+    };
+
+    const query: any = {
+      attributes: [[db.Sequelize.col('CustomerType.id'), 'customerTypeId'], 'customerTypeName'],
+      where,
+      order: [['customerTypeName', 'ASC']],
+      raw: true,
+      logging: console.log, // Enable logging for debugging
+    };
+
+    const customerTypes = await CustomerType.findAll(query);
+    return customerTypes || [];
+  }
 }
