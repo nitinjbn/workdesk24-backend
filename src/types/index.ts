@@ -624,6 +624,13 @@ export interface CustomerAttributes {
   isEnabled?: number;
   isDeleted?: number;
   createdAt?: number;
+  createdByUserType?: 'ADMIN' | 'USER' | 'SYSTEM';
+  createdByUserId?: number;
+  approvalStatus?: 'PENDING' | 'APPROVED' | 'REJECTED';
+  approvalByUserId?: number;
+  approvalReason?: string;
+  approvalAt?: number;
+
   updatedAt?: number;
   deletedAt?: number | null;
 }

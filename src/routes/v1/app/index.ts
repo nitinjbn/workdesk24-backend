@@ -53,6 +53,7 @@ router.post(
 router.post('/sync/userSettings', syncController.getUserSettings.bind(syncController));
 router.post('/sync/getLocationsData', syncController.getLocationsData.bind(syncController));
 router.post('/sync/getCustomerTypes', syncController.getCustomerTypes.bind(syncController));
+router.post('/sync/createCustomer', syncController.createCustomer.bind(syncController));
 
 // Report related routes
 //router.post('/reports/getGPSHistory', reportController.getAppGpsHistory.bind(reportController));

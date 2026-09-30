@@ -23,6 +23,12 @@ interface CustomerCreationAttributes extends Optional<
   | 'isEnabled'
   | 'isDeleted'
   | 'createdAt'
+  | 'createdByUserType'
+  | 'createdByUserId'
+  | 'approvalStatus'
+  | 'approvalByUserId'
+  | 'approvalReason'
+  | 'approvalAt'
   | 'updatedAt'
   | 'deletedAt'
 > {}
@@ -55,6 +61,12 @@ class Customer
   public isEnabled!: number;
   public isDeleted!: number;
   public createdAt!: number;
+  public createdByUserType?: 'ADMIN' | 'USER' | 'SYSTEM';
+  public createdByUserId?: number;
+  public approvalStatus?: 'PENDING' | 'APPROVED' | 'REJECTED';
+  public approvalByUserId?: number;
+  public approvalReason?: string;
+  public approvalAt?: number;
   public updatedAt?: number;
   public deletedAt?: number | null;
 
@@ -190,6 +202,32 @@ export function initCustomer(sequelize: Sequelize): typeof Customer {
       createdAt: {
         type: DataTypes.BIGINT,
         allowNull: false,
+      },
+      createdByUserType: {
+        type: DataTypes.ENUM('ADMIN', 'USER', 'SYSTEM'),
+        allowNull: false,
+        defaultValue: 'ADMIN',
+      },
+      createdByUserId: {
+        type: DataTypes.BIGINT,
+        allowNull: true,
+      },
+      approvalStatus: {
+        type: DataTypes.ENUM('PENDING', 'APPROVED', 'REJECTED'),
+        defaultValue: 'APPROVED',
+        allowNull: false,
+      },
+      approvalByUserId: {
+        type: DataTypes.BIGINT,
+        allowNull: true,
+      },
+      approvalReason: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+      },
+      approvalAt: {
+        type: DataTypes.BIGINT,
+        allowNull: true,
       },
       updatedAt: {
         type: DataTypes.BIGINT,

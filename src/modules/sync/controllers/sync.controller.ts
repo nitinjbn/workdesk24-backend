@@ -6,6 +6,7 @@ import {
   uploadBufferToMediaStorage,
   uploadManyBuffersToMediaStorage,
 } from '../../../shared/utils/media-storage.util';
+import customerService from '../../master/services/customer.service';
 
 export class SyncController {
   async syncAttendance(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
@@ -396,6 +397,76 @@ export class SyncController {
         success: true,
         message: 'Customer types retrieved successfully',
         data: result,
+      } as ApiResponse);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async createCustomer(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user!.id;
+      const {
+        hostId,
+        customerCode,
+        customerName,
+        customerTypeId,
+        contactPerson,
+        email,
+        mobile,
+        alternateMobile,
+        gstNumber,
+        panNumber,
+        addressLine1,
+        addressLine2,
+        city,
+        stateName,
+        stateIsoCode,
+        postalCode,
+        countryName,
+        countryIsoCode,
+        remarks,
+        isEnabled,
+        customerMedia = [],
+        customerAttribute = [],
+        assignedUserIds = [],
+      } = req.body;
+
+      const result = await customerService.createCustomer({
+        hostId,
+        customerCode,
+        customerName,
+        customerTypeId,
+        contactPerson,
+        email,
+        mobile,
+        alternateMobile,
+        gstNumber,
+        panNumber,
+        addressLine1,
+        addressLine2,
+        city,
+        stateName,
+        stateIsoCode,
+        postalCode,
+        countryName,
+        countryIsoCode,
+        remarks,
+        isEnabled,
+        customerMedia,
+        customerAttribute,
+        assignedUserIds,
+        createdByUserType: 'USER',
+        createdByUserId: userId,
+        approvalStatus: 'PENDING',
+      });
+
+      res.json({
+        success: true,
+        message: 'Customer created successfully',
+        data: {
+          customerId: result.id,
+        },
       } as ApiResponse);
     } catch (error) {
       next(error);
