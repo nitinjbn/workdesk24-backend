@@ -255,6 +255,9 @@ export class SyncController {
         data: {
           url: result.url,
           public_id: result.fileId,
+          fileName: file.originalname,
+          fileSizeInBytes: file.size,
+          mimeType: file.mimetype,
         },
       } as ApiResponse);
     } catch (error: any) {

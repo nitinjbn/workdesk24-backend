@@ -400,17 +400,31 @@ export class CustomerService {
       if (customerMedia && Array.isArray(customerMedia)) {
         //Now customer is created, so we can save the media with the customerId
         for (const media of customerMedia) {
-          await customerRepository.updateCustomerMedia({
-            updatePayload: {
-              customerId: createCustomerResult.id,
-              isEnabled: media.isEnabled || 1, // Default to enabled if not provided
-              updatedAt: currentUnixTime,
-            },
-            where: {
-              id: media.mediaId,
+          if (!media.mediaId) {
+            await customerRepository.saveCustomerMedia({
               hostId: otherPayload.hostId,
-            },
-          });
+              customerId: createCustomerResult.id,
+              mediaUrl: media.mediaUrl,
+              mediaType: 'IMAGE',
+              fileName: media.fileName,
+              isPrimary: media.isPrimary || 0,
+              sortOrder: media.sortOrder || 0,
+              isEnabled: media.isEnabled !== undefined ? media.isEnabled : 1,
+              createdAt: currentUnixTime,
+            });
+          } else {
+            await customerRepository.updateCustomerMedia({
+              updatePayload: {
+                customerId: createCustomerResult.id,
+                isEnabled: media.isEnabled || 1, // Default to enabled if not provided
+                updatedAt: currentUnixTime,
+              },
+              where: {
+                id: media.mediaId,
+                hostId: otherPayload.hostId,
+              },
+            });
+          }
         }
       }
 
