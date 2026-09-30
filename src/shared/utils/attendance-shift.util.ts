@@ -90,22 +90,27 @@ const toOvertimeCalculationType = (value: unknown): OvertimeCalculationType => {
     : OvertimeCalculationType.NONE;
 };
 
+/**
+ * Overtime is capped by the net surplus (worked - shift) so that late arrivals or
+ * early exits cancel out the creditable edges instead of being paid twice.
+ */
 export const calculateOvertimeMinutes = (
   earlyAttendanceMinutes: number,
   lateDayoverMinutes: number,
+  surplusMinutes: number,
   overtimeAllowed: boolean,
   overtimeCalculationType: OvertimeCalculationType
 ): number => {
-  if (!overtimeAllowed) {
+  if (!overtimeAllowed || !Number.isFinite(surplusMinutes) || surplusMinutes <= 0) {
     return 0;
   }
 
   switch (overtimeCalculationType) {
     case OvertimeCalculationType.BOTH_SIDES:
-      return earlyAttendanceMinutes + lateDayoverMinutes;
+      return Math.min(earlyAttendanceMinutes + lateDayoverMinutes, surplusMinutes);
 
     case OvertimeCalculationType.AFTER_SHIFT_END:
-      return lateDayoverMinutes;
+      return Math.min(lateDayoverMinutes, surplusMinutes);
 
     default:
       return 0;
@@ -116,12 +121,12 @@ export const calculateOvertimeMinutes = (
  * Time the employee still owes against the rostered shift duration, so an early
  * start offsets an early finish and a late finish offsets a late start.
  */
-export const calculateShortfallMinutes = (shiftMinutes: number, workedMinutes: number): number => {
-  if (!Number.isFinite(shiftMinutes) || !Number.isFinite(workedMinutes)) {
+export const calculateShortfallMinutes = (surplusMinutes: number): number => {
+  if (!Number.isFinite(surplusMinutes)) {
     return 0;
   }
 
-  return Math.max(0, Math.round(shiftMinutes - workedMinutes));
+  return Math.max(0, -surplusMinutes);
 };
 
 export const getAttendanceShiftContext = async (
@@ -203,21 +208,21 @@ export const buildAttendanceShiftMetrics = (
     metrics.earlyDayoverMinutes = Math.max(0, -dayoverDeltaMinutes);
     metrics.lateDayoverMinutes = Math.max(0, dayoverDeltaMinutes);
 
-    // Overtime and shortfall need the full shift window, so both boundaries must be configured.
-    if (shiftStartSeconds !== null) {
+    // Overtime and shortfall are two sides of the same net surplus, so both shift
+    // boundaries and both punches are required before either can be derived.
+    if (shiftStartSeconds !== null && attendanceUnix !== null) {
+      const shiftMinutes = (shiftEndUnix - (startOfDayUnix + shiftStartSeconds)) / 60;
+      const workedMinutes = (dayoverUnix - attendanceUnix) / 60;
+      const surplusMinutes = Math.round(workedMinutes - shiftMinutes);
+
       metrics.overtimeMinutes = calculateOvertimeMinutes(
         metrics.earlyAttendanceMinutes,
         metrics.lateDayoverMinutes,
+        surplusMinutes,
         overtimeAllowed === 1,
         overtimeCalculationType
       );
-
-      if (attendanceUnix !== null) {
-        metrics.shortfallMinutes = calculateShortfallMinutes(
-          (shiftEndUnix - (startOfDayUnix + shiftStartSeconds)) / 60,
-          (dayoverUnix - attendanceUnix) / 60
-        );
-      }
+      metrics.shortfallMinutes = calculateShortfallMinutes(surplusMinutes);
     }
   }
 
