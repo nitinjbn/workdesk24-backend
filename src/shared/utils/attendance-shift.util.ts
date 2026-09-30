@@ -32,6 +32,7 @@ export interface AttendanceShiftMetrics {
   lateDayoverMinutes: number;
   overtimeAllowed: number;
   overtimeMinutes: number;
+  shortfallMinutes: number;
 }
 
 const toPositiveUnix = (value: unknown): number | null => {
@@ -111,6 +112,18 @@ export const calculateOvertimeMinutes = (
   }
 };
 
+/**
+ * Time the employee still owes against the rostered shift duration, so an early
+ * start offsets an early finish and a late finish offsets a late start.
+ */
+export const calculateShortfallMinutes = (shiftMinutes: number, workedMinutes: number): number => {
+  if (!Number.isFinite(shiftMinutes) || !Number.isFinite(workedMinutes)) {
+    return 0;
+  }
+
+  return Math.max(0, Math.round(shiftMinutes - workedMinutes));
+};
+
 export const getAttendanceShiftContext = async (
   hostId: number,
   userId: number
@@ -159,6 +172,7 @@ export const buildAttendanceShiftMetrics = (
     lateDayoverMinutes: 0,
     overtimeAllowed,
     overtimeMinutes: 0,
+    shortfallMinutes: 0,
   };
 
   // Both shift boundaries are anchored to the attendance day so that overnight
@@ -189,14 +203,21 @@ export const buildAttendanceShiftMetrics = (
     metrics.earlyDayoverMinutes = Math.max(0, -dayoverDeltaMinutes);
     metrics.lateDayoverMinutes = Math.max(0, dayoverDeltaMinutes);
 
-    // Calculate overtime minutes only if both shift start and end times are defined and dayover time is available.
-    if (shiftStartSeconds !== null && shiftEndSeconds !== null) {
+    // Overtime and shortfall need the full shift window, so both boundaries must be configured.
+    if (shiftStartSeconds !== null) {
       metrics.overtimeMinutes = calculateOvertimeMinutes(
         metrics.earlyAttendanceMinutes,
         metrics.lateDayoverMinutes,
         overtimeAllowed === 1,
         overtimeCalculationType
       );
+
+      if (attendanceUnix !== null) {
+        metrics.shortfallMinutes = calculateShortfallMinutes(
+          (shiftEndUnix - (startOfDayUnix + shiftStartSeconds)) / 60,
+          (dayoverUnix - attendanceUnix) / 60
+        );
+      }
     }
   }
 

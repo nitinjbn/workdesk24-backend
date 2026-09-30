@@ -47,6 +47,7 @@ interface AttendanceAttributes extends BaseModel {
 
   overtimeAllowed?: number;
   overtimeMinutes?: number;
+  shortfallMinutes?: number;
 
   syncedAt?: number;
 }
@@ -145,6 +146,7 @@ class Attendance
   public lateDayoverMinutes?: number;
   public overtimeAllowed?: number;
   public overtimeMinutes?: number;
+  public shortfallMinutes?: number;
   public createdAt!: number;
   public updatedAt!: number;
   public syncedAt?: number;
@@ -343,6 +345,11 @@ export function initAttendance(sequelize: Sequelize): typeof Attendance {
         allowNull: false,
       },
       overtimeMinutes: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0,
+        allowNull: false,
+      },
+      shortfallMinutes: {
         type: DataTypes.INTEGER,
         defaultValue: 0,
         allowNull: false,
