@@ -188,15 +188,16 @@ export const buildAttendanceShiftMetrics = (
     const dayoverDeltaMinutes = Math.round((dayoverUnix - shiftEndUnix) / 60);
     metrics.earlyDayoverMinutes = Math.max(0, -dayoverDeltaMinutes);
     metrics.lateDayoverMinutes = Math.max(0, dayoverDeltaMinutes);
-  }
 
-  if (shiftStartSeconds !== null && shiftEndSeconds !== null) {
-    metrics.overtimeMinutes = calculateOvertimeMinutes(
-      metrics.earlyAttendanceMinutes,
-      metrics.lateDayoverMinutes,
-      overtimeAllowed === 1,
-      overtimeCalculationType
-    );
+    // Calculate overtime minutes only if both shift start and end times are defined and dayover time is available.
+    if (shiftStartSeconds !== null && shiftEndSeconds !== null) {
+      metrics.overtimeMinutes = calculateOvertimeMinutes(
+        metrics.earlyAttendanceMinutes,
+        metrics.lateDayoverMinutes,
+        overtimeAllowed === 1,
+        overtimeCalculationType
+      );
+    }
   }
 
   return metrics;
