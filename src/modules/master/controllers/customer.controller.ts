@@ -347,6 +347,58 @@ export class CustomerController {
       next(error);
     }
   }
+
+  async updateApprovalStatus(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { hostId, customerId, approvalStatus, approvalReason } = req.body;
+      const approvalByUserId = req.user?.id;
+
+      if (!hostId || !customerId || !approvalStatus) {
+        res.status(400).json({
+          success: false,
+          message: 'hostId, customerId, and approvalStatus are required',
+        } as ApiResponse);
+        return;
+      }
+
+      // Get the existing customer details to check if already approved or not
+      const existingCustomer = await customerService.getCustomerById({
+        hostId,
+        customerId,
+      });
+      if (!existingCustomer || !existingCustomer.data) {
+        res.status(404).json({
+          success: false,
+          message: 'Customer not found',
+        } as ApiResponse);
+        return;
+      }
+
+      if (existingCustomer.data.approvalStatus !== 'PENDING') {
+        res.status(400).json({
+          success: false,
+          message: 'Customer approval is already processed.',
+        } as ApiResponse);
+        return;
+      }
+
+      const result = await customerService.updateApprovalStatus({
+        hostId,
+        customerId,
+        approvalStatus,
+        approvalReason,
+        approvalByUserId,
+      });
+
+      res.json({
+        success: true,
+        message: 'Approval status updated successfully',
+        data: {},
+      } as ApiResponse);
+    } catch (error: any) {
+      next(error);
+    }
+  }
 }
 
 export default new CustomerController();

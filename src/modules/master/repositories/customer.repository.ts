@@ -158,6 +158,34 @@ export class customerRepository {
       if (filter.customerTypeId) {
         where.customerTypeId = filter.customerTypeId;
       }
+
+      // Filter by approval status and created by user type/id
+      if (filter.approvalStatus && filter.approvalStatus != 'ALL') {
+        where.approvalStatus = filter.approvalStatus;
+      }
+
+      if (filter.createdByUserType) {
+        where.createdByUserType = filter.createdByUserType;
+      }
+
+      if (filter.createdByUserId) {
+        where.createdByUserId = filter.createdByUserId;
+      }
+
+      if (filter.approvalAt) {
+        if (filter.approvalAt.from) {
+          where.approvalAt = {
+            ...(where.approvalAt || {}),
+            [Op.gte]: filter.approvalAt.from,
+          };
+        }
+        if (filter.approvalAt.to) {
+          where.approvalAt = {
+            ...(where.approvalAt || {}),
+            [Op.lte]: filter.approvalAt.to,
+          };
+        }
+      }
     }
     const query: FindAndCountOptions<any> = {
       attributes: {

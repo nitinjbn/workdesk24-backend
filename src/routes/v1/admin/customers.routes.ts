@@ -40,5 +40,9 @@ router.post(
   '/customers/deleteCustomer',
   customerController.deleteCustomer.bind(customerController)
 );
+router.post(
+  '/customers/updateApprovalStatus',
+  customerController.updateApprovalStatus.bind(customerController)
+);
 
 export default router;

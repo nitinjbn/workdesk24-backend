@@ -175,6 +175,13 @@ export interface GetCustomersPayload {
     contactPerson?: string;
     email?: string;
     mobile?: string;
+    createdByUserType?: 'ADMIN' | 'USER';
+    createdByUserId?: number;
+    approvalStatus?: 'PENDING' | 'APPROVED' | 'REJECTED' | 'ALL';
+    approvalAt?: {
+      from?: number;
+      to?: number;
+    };
   };
   sort?: {
     by?: string;

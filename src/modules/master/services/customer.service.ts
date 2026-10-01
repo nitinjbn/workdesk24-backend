@@ -455,6 +455,24 @@ export class CustomerService {
     return createCustomerResult?.get({ plain: true }) || createCustomerResult;
   }
 
+  async getCustomerById(payload: any): Promise<any> {
+    const { hostId, customerId } = payload;
+
+    if (!hostId || !customerId) {
+      throw createConfiguredError(
+        'VALIDATION_ERROR',
+        'Missing required fields: hostId and customerId'
+      );
+    }
+
+    const customer = await customerRepository.getCustomerById({
+      hostId,
+      customerId,
+    });
+
+    return customer;
+  }
+
   async updateCustomer(payload: any): Promise<any> {
     const { customerId, customerMedia, customerAttribute, assignedUserIds, ...otherPayload } =
       payload;
@@ -851,6 +869,35 @@ export class CustomerService {
 
     if (!result) {
       throw createConfiguredError('UPDATE_FAILED', 'Failed to update customer type.');
+    }
+
+    return result;
+  }
+
+  async updateApprovalStatus(payload: {
+    hostId: number;
+    customerId: number;
+    approvalStatus: string;
+    approvalReason?: string;
+    approvalByUserId?: number;
+  }): Promise<any> {
+    const { hostId, customerId, approvalStatus, approvalReason, approvalByUserId } = payload;
+
+    const result = await customerRepository.updateCustomer({
+      updatePayload: {
+        approvalStatus,
+        approvalReason,
+        approvalByUserId,
+        approvalAt: DateTimeFormatUtil.getCurrentUnixTime(),
+      },
+      where: {
+        hostId,
+        id: customerId,
+      },
+    });
+
+    if (!result) {
+      throw createConfiguredError('UPDATE_FAILED', 'Failed to update approval status.');
     }
 
     return result;

@@ -46,6 +46,7 @@ router.post(
 router.use(authMiddleware);
 router.use(requireAdminRole);
 router.use(requireAdminCsrfToken);
+// IMPORTANT: req.user contains the authenticated admin user's information
 
 router.use(apiLogRouteContext('admin', 'users'), userRoutes);
 router.use(apiLogRouteContext('admin', 'products'), productRoutes);
