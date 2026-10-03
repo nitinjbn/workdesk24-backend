@@ -496,6 +496,7 @@ export class customerRepository {
 
   async createCustomer(params: any): Promise<any> {
     const {
+      localId,
       hostId,
       customerCode,
       customerName,
@@ -521,6 +522,7 @@ export class customerRepository {
       approvalStatus,
     } = params;
     const newCustomer = await Customer.create({
+      localId,
       hostId,
       customerCode,
       customerName,
@@ -685,6 +687,16 @@ export class customerRepository {
         },
       }
     );
+  }
+
+  async getCustomerByLocalId(localId: string): Promise<any> {
+    return Customer.findOne({
+      where: {
+        localId,
+        isDeleted: 0,
+      },
+      raw: true,
+    });
   }
 }
 

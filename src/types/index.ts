@@ -599,6 +599,7 @@ export interface CustomerTypeAttributes {
 
 export interface CustomerAttributes {
   id?: number;
+  localId?: number;
   hostId: number;
   parentCustomerId?: number;
   customerCode?: string;

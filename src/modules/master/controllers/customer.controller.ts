@@ -6,6 +6,7 @@ import {
   getMediaResourceType,
   uploadBufferToMediaStorage,
 } from '../../../shared/utils/media-storage.util';
+import { createConfiguredError } from '../../../shared/utils/error.util';
 
 export class CustomerController {
   async getCustomerTypes(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
@@ -61,6 +62,7 @@ export class CustomerController {
 
   async createCustomer(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     const {
+      localId,
       hostId,
       customerCode,
       customerName,
@@ -86,7 +88,17 @@ export class CustomerController {
       assignedUserIds = [],
     } = req.body;
     try {
+      // Check duplicate customer by localId
+      const existingCustomer = await customerService.getCustomerByLocalId(localId);
+      if (existingCustomer) {
+        throw createConfiguredError(
+          'VALIDATION_ERROR',
+          `Customer with localId ${localId} already exists`
+        );
+      }
+
       const result = await customerService.createCustomer({
+        localId,
         hostId,
         customerCode,
         customerName,

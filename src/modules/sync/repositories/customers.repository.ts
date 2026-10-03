@@ -31,9 +31,21 @@ export class CustomerRepository {
         hostId: hostId,
         isDeleted: 0,
         isEnabled: 1,
-        [Op.or]: [
-          { '$customerUserAssignments.id$': null },
-          { '$customerUserAssignments.userId$': userId },
+        [Op.and]: [
+          {
+            [Op.or]: [
+              { approvalStatus: 'APPROVED' },
+              {
+                [Op.and]: [{ createdByUserId: userId }, { approvalStatus: 'PENDING' }],
+              },
+            ],
+          },
+          {
+            [Op.or]: [
+              { '$customerUserAssignments.id$': null },
+              { '$customerUserAssignments.userId$': userId },
+            ],
+          },
         ],
       },
       include: [

@@ -4,6 +4,7 @@ import { CustomerAttributes } from '../../types';
 interface CustomerCreationAttributes extends Optional<
   CustomerAttributes,
   | 'id'
+  | 'localId'
   | 'hostId'
   | 'customerCode'
   | 'customerName'
@@ -38,6 +39,7 @@ class Customer
   implements CustomerAttributes
 {
   public id!: number;
+  public localId?: number;
   public hostId!: number;
   public parentCustomerId?: number;
   public customerCode?: string;
@@ -105,6 +107,10 @@ export function initCustomer(sequelize: Sequelize): typeof Customer {
         type: DataTypes.BIGINT,
         autoIncrement: true,
         primaryKey: true,
+      },
+      localId: {
+        type: DataTypes.STRING(100),
+        allowNull: true,
       },
       hostId: {
         type: DataTypes.BIGINT,

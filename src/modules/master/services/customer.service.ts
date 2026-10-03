@@ -365,6 +365,10 @@ export class CustomerService {
     }
   }
 
+  async getCustomerByLocalId(localId: string): Promise<any> {
+    return customerRepository.getCustomerByLocalId(localId);
+  }
+
   async createCustomer(payload: any): Promise<any> {
     const { customerMedia, customerAttribute, assignedUserIds, ...otherPayload } = payload;
     const currentUnixTime = DateTimeFormatUtil.getCurrentUnixTime();
@@ -373,6 +377,7 @@ export class CustomerService {
     this.validateCustomer(payload);
 
     const createCustomerResult = await customerRepository.createCustomer({
+      localId: otherPayload.localId,
       hostId: otherPayload.hostId,
       customerCode: otherPayload.customerCode,
       customerName: otherPayload.customerName,
