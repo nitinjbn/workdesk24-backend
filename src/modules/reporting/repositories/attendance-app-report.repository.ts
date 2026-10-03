@@ -104,13 +104,18 @@ export class AttendanceReportRepository {
 
     const leaveDates = new Set<string>();
     const leaveRows: any[] = [];
+    const holidayRows: any[] = [];
 
     approvedLeaveDays.forEach((day: any) => {
       const dateKey = String(day.leaveDate);
       leaveDates.add(dateKey);
     });
 
+    const holidayDates = await this.getHolidayDates(hostId, userId, fromDateKey, tillDateKey);
+
     for (const dateKey of leaveDates) {
+      holidayDates.delete(dateKey); // approved leave takes precedence over public holiday
+
       const existingAttendance = attendanceByDate.get(dateKey);
 
       if (existingAttendance && existingAttendance.attendanceStatus === 'Present') {
@@ -122,40 +127,130 @@ export class AttendanceReportRepository {
         continue;
       }
 
-      const attendanceTime = this.dateToUnixStart(dateKey);
-      leaveRows.push({
-        attendanceTime,
-        attendanceStatus: 'Leave',
-        vehicleType: null,
-        vehicleCategory: null,
-        attendanceOdometerReading: null,
-        dayoverRemarks: null,
-        dayoverTime: null,
-        autoDayover: 0,
-        workingHours: 0,
-        dayoverOdometerReading: null,
-        attendanceAddress: null,
-        dayoverAddress: null,
-        hostId,
-        userId,
-      });
+      leaveRows.push(this.buildStatusRow(dateKey, 'Leave', hostId, userId));
+    }
+
+    for (const [dateKey, holidayName] of holidayDates) {
+      const existingAttendance = attendanceByDate.get(dateKey);
+
+      if (existingAttendance && existingAttendance.attendanceStatus === 'Present') {
+        continue;
+      }
+
+      if (existingAttendance) {
+        existingAttendance.attendanceStatus = 'Holiday';
+        existingAttendance.holidayName = holidayName;
+        continue;
+      }
+
+      holidayRows.push(this.buildStatusRow(dateKey, 'Holiday', hostId, userId, holidayName));
     }
 
     const finalRows = [...(rows || [])].map((row: any) => {
       const dateKey = this.toDateKey(Number(row.attendanceTime));
-      if (dateKey && leaveDates.has(dateKey) && row.attendanceStatus !== 'Present') {
-        return {
-          ...row,
-          attendanceStatus: 'Leave',
-        };
+      if (dateKey && row.attendanceStatus !== 'Present') {
+        if (leaveDates.has(dateKey)) {
+          return {
+            ...row,
+            attendanceStatus: 'Leave',
+          };
+        }
+        if (holidayDates.has(dateKey)) {
+          return {
+            ...row,
+            attendanceStatus: 'Holiday',
+            holidayName: holidayDates.get(dateKey),
+          };
+        }
       }
       return row;
     });
 
     return {
-      data: [...finalRows, ...leaveRows].sort(
+      data: [...finalRows, ...leaveRows, ...holidayRows].sort(
         (a: any, b: any) => Number(a.attendanceTime) - Number(b.attendanceTime)
       ),
+    };
+  }
+
+  private async getHolidayDates(
+    hostId: number,
+    userId: number | undefined,
+    fromDateKey: string,
+    tillDateKey: string
+  ): Promise<Map<string, string>> {
+    const holidayCalendarId = await this.resolveHolidayCalendarId(hostId, userId);
+    if (!holidayCalendarId) {
+      return new Map<string, string>();
+    }
+
+    const holidays = await db.Holiday.findAll({
+      attributes: ['holidayDate', 'name'],
+      where: {
+        hostId,
+        isEnabled: 1,
+        isDeleted: 0,
+        holidayCalendarId,
+        holidayDate: {
+          [db.Sequelize.Op.between]: [fromDateKey, tillDateKey],
+        },
+      },
+      raw: true,
+    });
+
+    return new Map<string, string>(
+      holidays.map((holiday: any) => [String(holiday.holidayDate), String(holiday.name)])
+    );
+  }
+
+  private async resolveHolidayCalendarId(
+    hostId: number,
+    userId?: number
+  ): Promise<number | undefined> {
+    if (userId) {
+      const user = await db.User.findOne({
+        attributes: ['holidayCalendarId'],
+        where: { id: userId, hostId, isDeleted: 0 },
+        raw: true,
+      });
+      if (user?.holidayCalendarId) {
+        return user.holidayCalendarId;
+      }
+    }
+
+    const defaultHolidayCalendar = await db.HolidayCalendar.findOne({
+      attributes: ['id'],
+      where: { hostId, isDefault: 1, isEnabled: 1, isDeleted: 0 },
+      order: [['id', 'ASC']],
+      raw: true,
+    });
+
+    return defaultHolidayCalendar?.id as number | undefined;
+  }
+
+  private buildStatusRow(
+    dateKey: string,
+    attendanceStatus: 'Leave' | 'Holiday',
+    hostId: number,
+    userId?: number,
+    holidayName?: string
+  ): any {
+    return {
+      attendanceTime: this.dateToUnixStart(dateKey),
+      attendanceStatus,
+      ...(holidayName ? { holidayName } : {}),
+      vehicleType: null,
+      vehicleCategory: null,
+      attendanceOdometerReading: null,
+      dayoverRemarks: null,
+      dayoverTime: null,
+      autoDayover: 0,
+      workingHours: 0,
+      dayoverOdometerReading: null,
+      attendanceAddress: null,
+      dayoverAddress: null,
+      hostId,
+      userId,
     };
   }
 
