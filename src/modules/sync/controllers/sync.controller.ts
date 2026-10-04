@@ -411,6 +411,7 @@ export class SyncController {
       const userId = req.user!.id;
       const {
         hostId,
+        localId,
         customerCode,
         customerName,
         customerTypeId,
@@ -437,6 +438,7 @@ export class SyncController {
 
       const result = await customerService.createCustomer({
         hostId,
+        localId,
         customerCode,
         customerName,
         customerTypeId,
