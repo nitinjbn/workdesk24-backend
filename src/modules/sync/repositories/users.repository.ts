@@ -1,27 +1,24 @@
-import { FindAndCountOptions, Includeable , Op} from 'sequelize';
+import { FindAndCountOptions, Includeable, Op } from 'sequelize';
 import db, { User, UserSettings, Role, Designation, UserDevice } from '../../../models';
 
 export class usersRepository {
-  
-
-
-  async getUserById(params: {hostId: number, userId: number}): Promise<any> {
+  async getUserById(params: { hostId: number; userId: number }): Promise<any> {
     const { hostId, userId } = params;
 
-    const where:any = {
+    const where: any = {
       hostId,
       id: userId,
-      isDeleted:0
-    }
-   
+      isDeleted: 0,
+    };
+
     const query: FindAndCountOptions<any> = {
       attributes: {
         exclude: ['id', 'roleId', 'password', 'reportingManagerId', 'isDeleted', 'deletedAt'],
         include: [
           [db.Sequelize.col('User.id'), 'userId'],
           [db.Sequelize.col('roles.roleName'), 'role'],
-          [db.Sequelize.col('designations.name'), 'designation']
-        ]
+          [db.Sequelize.col('designations.name'), 'designation'],
+        ],
       },
       where,
       include: [
@@ -29,37 +26,37 @@ export class usersRepository {
           attributes: ['settingName', 'settingValue', 'isEnabled'],
           model: UserSettings,
           where: {
-            isDeleted: 0
+            isDeleted: 0,
           },
-          as: "settings",
-          required: false
+          as: 'settings',
+          required: false,
         },
         {
           attributes: [],
           model: Role,
           where: {
-            isDeleted: 0
+            isDeleted: 0,
           },
-          as: "roles",
-          required: true
+          as: 'roles',
+          required: false,
         },
         {
           attributes: [],
           model: Designation,
           where: {
-            isDeleted: 0
+            isDeleted: 0,
           },
-          as: "designations",
-          required: true
+          as: 'designations',
+          required: true,
         },
         {
           attributes: {
-            exclude: ['id', 'hostId',  'userId'],
+            exclude: ['id', 'hostId', 'userId'],
           },
           model: UserDevice,
-          as: "device",
-          required: false
-        }
+          as: 'device',
+          required: false,
+        },
       ],
       subQuery: false,
       raw: false,
@@ -70,19 +67,19 @@ export class usersRepository {
     if (!data) {
       return {};
     }
-    
+
     const jsonData = data.toJSON() as any;
-    if(jsonData.settings && Array.isArray(jsonData.settings)) {
+    if (jsonData.settings && Array.isArray(jsonData.settings)) {
       jsonData.settings = jsonData.settings.map((s: any) => ({
         settingName: s.settingName,
         settingValue: s.settingValue,
-        isEnabled: s.isEnabled
+        isEnabled: s.isEnabled,
       }));
     }
     // Convert devices to plain object (single device per user)
-    if(jsonData.device && typeof jsonData.device.toJSON === 'function') {
+    if (jsonData.device && typeof jsonData.device.toJSON === 'function') {
       jsonData.device = jsonData.device.toJSON();
-    } else if(jsonData.device) {
+    } else if (jsonData.device) {
       jsonData.device = jsonData.device;
     } else {
       jsonData.device = {};
