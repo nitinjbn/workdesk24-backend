@@ -61,6 +61,10 @@ import { initHolidayCalendar } from './schemas/HolidayCalendar';
 import { initAttendanceSite } from './schemas/AttendanceSite';
 import { initUserAttendanceSite } from './schemas/UserAttendanceSite';
 import { initCustomerUserAssignment } from './schemas/CustomerUserAssignment';
+import { initTask } from './schemas/Task';
+import { initTaskLogs } from './schemas/TaskLogs';
+import { initTaskComments } from './schemas/TaskComments';
+import { initTaskAttachments } from './schemas/TaskAttachments';
 
 dotenv.config();
 
@@ -173,6 +177,10 @@ const HolidayCalendar = initHolidayCalendar(sequelize);
 const AttendanceSite = initAttendanceSite(sequelize);
 const UserAttendanceSite = initUserAttendanceSite(sequelize);
 const SubscriptionCycle = initSubscriptionCycle(sequelize);
+const Task = initTask(sequelize);
+const TaskLogs = initTaskLogs(sequelize);
+const TaskComments = initTaskComments(sequelize);
+const TaskAttachments = initTaskAttachments(sequelize);
 // Store models in an object
 const db: any = {
   Host,
@@ -233,6 +241,10 @@ const db: any = {
   AttendanceSite,
   UserAttendanceSite,
   SubscriptionCycle,
+  Task,
+  TaskLogs,
+  TaskComments,
+  TaskAttachments,
 };
 
 // Setup associations
@@ -340,6 +352,10 @@ export {
   AttendanceSite,
   UserAttendanceSite,
   SubscriptionCycle,
+  Task,
+  TaskLogs,
+  TaskComments,
+  TaskAttachments,
 };
 
 export default db;
