@@ -275,7 +275,10 @@ function getCategoryAndModule(endpoint: string): { category: string; module: str
   };
 }
 
-function resolveCategoryAndModule(req: ApiLoggingRequest, endpoint: string): { category: string; module: string } {
+function resolveCategoryAndModule(
+  req: ApiLoggingRequest,
+  endpoint: string
+): { category: string; module: string } {
   if (req.apiLogContext !== undefined) {
     return {
       category: req.apiLogContext.category,
@@ -384,36 +387,39 @@ export function createApiLoggingMiddleware(service: ApiLogService = apiLogServic
       const startTime = process.hrtime.bigint();
       const requestTime = Math.floor(Date.now() / 1000);
       const requestDate = new Date().toISOString().slice(0, 10);
-      const maxBodyBytes = Number.isFinite(DEFAULT_MAX_BODY_BYTES) && DEFAULT_MAX_BODY_BYTES > 0
-        ? DEFAULT_MAX_BODY_BYTES
-        : 32768;
+      const maxBodyBytes =
+        Number.isFinite(DEFAULT_MAX_BODY_BYTES) && DEFAULT_MAX_BODY_BYTES > 0
+          ? DEFAULT_MAX_BODY_BYTES
+          : 32768;
 
       const maskedRequestBody = ensureSizeBound(maskSensitiveData(req.body), maxBodyBytes);
       const requestSize = getRequestSize(req, maskedRequestBody);
 
       const { category, module } = resolveCategoryAndModule(req, endpoint);
 
-      const createLogPromise = service.createProcessingLog({
-        hostId: resolveHostId(req),
-        userId: resolveUserId(req),
-        deviceId: resolveDeviceId(req),
-        source: inferSource(req),
-        category,
-        module,
-        apiEndpoint: `${req.method.toUpperCase()} ${endpoint}`,
-        requestBody: maskedRequestBody,
-        requestSize,
-        requestTime,
-        requestDate,
-        ipAddress: resolveIpAddress(req),
-        userAgent: toStringOrUndefined(req.headers['user-agent']),
-      }).catch((error: unknown) => {
-        logger.error('API logging create failed before controller execution.', {
-          error: error instanceof Error ? error.message : String(error),
-          endpoint,
+      const createLogPromise = service
+        .createProcessingLog({
+          hostId: resolveHostId(req),
+          userId: resolveUserId(req),
+          deviceId: resolveDeviceId(req),
+          source: inferSource(req),
+          category,
+          module,
+          apiEndpoint: `${req.method.toUpperCase()} ${endpoint}`,
+          requestBody: maskedRequestBody,
+          requestSize,
+          requestTime,
+          requestDate,
+          ipAddress: resolveIpAddress(req),
+          userAgent: toStringOrUndefined(req.headers['user-agent']),
+        })
+        .catch((error: unknown) => {
+          logger.error('API logging create failed before controller execution.', {
+            error: error instanceof Error ? error.message : String(error),
+            endpoint,
+          });
+          return null;
         });
-        return null;
-      });
 
       const apiLogId = await withTimeout(createLogPromise, API_LOG_CREATE_TIMEOUT_MS);
       if (apiLogId !== null) {
@@ -446,9 +452,10 @@ export function createApiLoggingMiddleware(service: ApiLogService = apiLogServic
           const durationMilliseconds = getDurationMilliseconds(startTime);
           const responseStatusCode = res.statusCode;
           const status = responseStatusCode < 400 ? 'SUCCESS' : 'FAILED';
-          const maskedResponseBody = capturedResponseBody === undefined
-            ? undefined
-            : ensureSizeBound(maskSensitiveData(capturedResponseBody), maxBodyBytes);
+          const maskedResponseBody =
+            capturedResponseBody === undefined
+              ? undefined
+              : ensureSizeBound(maskSensitiveData(capturedResponseBody), maxBodyBytes);
           const responseSize = getResponseSize(res, maskedResponseBody);
           const locals = res.locals as ApiLoggingLocals;
 
@@ -461,6 +468,10 @@ export function createApiLoggingMiddleware(service: ApiLogService = apiLogServic
             responseTime,
             durationMilliseconds,
             errorMessage: locals.apiLoggingErrorMessage,
+            // Re-resolve at finish time: auth middleware has run by now,
+            // so req.user is available for routes that don't send hostId/userId in the body (e.g. /sync).
+            hostId: resolveHostId(req),
+            userId: resolveUserId(req),
           };
 
           void service.queueFinalizeLog(payload);

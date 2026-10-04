@@ -7,10 +7,7 @@ import { JOB_NAMES } from '../constants/job-names.constant';
 import { PROCESSOR_NAMES } from '../constants/processor-names.constant';
 import type { BackgroundJobEnvelope, JobPayload } from '../interfaces/background-job.interface';
 import type { BaseProcessor } from '../interfaces/processor.interface';
-import {
-  noopBackgroundJobLogger,
-  type BackgroundJobLogger,
-} from '../utils/logger.utils';
+import { noopBackgroundJobLogger, type BackgroundJobLogger } from '../utils/logger.utils';
 
 interface SystemProcessorResult {
   readonly acknowledged: true;
@@ -77,7 +74,12 @@ function parseFinalizePayload(payload: unknown): ApiLogFinalizeJobPayload {
   const responseTime = toFiniteNumber(payload.responseTime);
   const durationMilliseconds = toFiniteNumber(payload.durationMilliseconds);
 
-  if (apiLogId === null || responseStatusCode === null || responseTime === null || durationMilliseconds === null) {
+  if (
+    apiLogId === null ||
+    responseStatusCode === null ||
+    responseTime === null ||
+    durationMilliseconds === null
+  ) {
     throw new Error('API log finalize payload has invalid numeric fields.');
   }
 
@@ -95,6 +97,8 @@ function parseFinalizePayload(payload: unknown): ApiLogFinalizeJobPayload {
     responseTime,
     durationMilliseconds,
     errorMessage: toNullableString(payload.errorMessage),
+    hostId: toFiniteNumber(payload.hostId) ?? undefined,
+    userId: toFiniteNumber(payload.userId) ?? undefined,
   };
 }
 
@@ -103,10 +107,12 @@ export class SystemProcessor implements BaseProcessor<JobPayload, SystemProcesso
 
   public constructor(
     private readonly logger: BackgroundJobLogger = noopBackgroundJobLogger,
-    private readonly logService: ApiLogService = apiLogService,
+    private readonly logService: ApiLogService = apiLogService
   ) {}
 
-  public async process(job: Job<JobPayload, SystemProcessorResult, string>): Promise<SystemProcessorResult> {
+  public async process(
+    job: Job<JobPayload, SystemProcessorResult, string>
+  ): Promise<SystemProcessorResult> {
     const envelope = job.data as BackgroundJobEnvelope<JobPayload>;
     const payload = isRecord(envelope.payload) ? envelope.payload : null;
 

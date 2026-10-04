@@ -1,7 +1,10 @@
 import { logger } from '../../../config/database';
 import db from '../../../models';
 import { QueryTypes } from 'sequelize';
-import { apiLogQueue, ApiLogQueue } from '../../../infrastructure/background-jobs/queues/api-log.queue';
+import {
+  apiLogQueue,
+  ApiLogQueue,
+} from '../../../infrastructure/background-jobs/queues/api-log.queue';
 import { ApiLogRepository, apiLogRepository } from '../repositories/api-log.repository';
 import type {
   ApiLogCreateInput,
@@ -101,7 +104,7 @@ function deriveMonthlyPartitionName(targetMonthStartUtc: Date, existingNames: st
 export class ApiLogService {
   public constructor(
     private readonly repository: ApiLogRepository = apiLogRepository,
-    private readonly queue: ApiLogQueue = apiLogQueue,
+    private readonly queue: ApiLogQueue = apiLogQueue
   ) {}
 
   public async createProcessingLog(input: ApiLogCreateInput): Promise<number | null> {
@@ -126,6 +129,8 @@ export class ApiLogService {
       responseTime: input.responseTime,
       durationMilliseconds: input.durationMilliseconds,
       errorMessage: input.errorMessage ?? null,
+      hostId: input.hostId,
+      userId: input.userId,
     };
 
     try {
@@ -149,12 +154,15 @@ export class ApiLogService {
 
     const nowUtc = new Date();
     const nextMonthStartUtc = toUtcMonthStart(nowUtc.getUTCFullYear(), nowUtc.getUTCMonth() + 1);
-    const nextMonthUpperBoundUtc = toUtcMonthStart(nowUtc.getUTCFullYear(), nowUtc.getUTCMonth() + 2);
+    const nextMonthUpperBoundUtc = toUtcMonthStart(
+      nowUtc.getUTCFullYear(),
+      nowUtc.getUTCMonth() + 2
+    );
     const nextMonthStartDate = formatUtcDate(nextMonthStartUtc);
     const nextMonthUpperBoundDate = formatUtcDate(nextMonthUpperBoundUtc);
 
     try {
-      const lockRows = await db.sequelize.query(
+      const lockRows = (await db.sequelize.query(
         'SELECT GET_LOCK(:lockName, :timeoutSeconds) AS acquired',
         {
           replacements: {
@@ -162,17 +170,20 @@ export class ApiLogService {
             timeoutSeconds: API_LOG_PARTITION_LOCK_TIMEOUT_SECONDS,
           },
           type: QueryTypes.SELECT,
-        },
-      ) as LockRow[];
+        }
+      )) as LockRow[];
 
       const acquiredValue = Number(lockRows[0]?.acquired ?? 0);
       lockAcquired = acquiredValue === 1;
 
       if (!lockAcquired) {
-        logger.info('API log partition maintenance skipped because lock is already held by another worker.', {
-          tableName: API_LOG_TABLE,
-          lockName: API_LOG_PARTITION_LOCK,
-        });
+        logger.info(
+          'API log partition maintenance skipped because lock is already held by another worker.',
+          {
+            tableName: API_LOG_TABLE,
+            lockName: API_LOG_PARTITION_LOCK,
+          }
+        );
         logger.info('No API log partition change was required.', {
           tableName: API_LOG_TABLE,
           reason: 'lock-not-acquired',
@@ -180,7 +191,7 @@ export class ApiLogService {
         return;
       }
 
-      const metadataRows = await db.sequelize.query(
+      const metadataRows = (await db.sequelize.query(
         `SELECT
            PARTITION_METHOD AS partitionMethod,
            PARTITION_EXPRESSION AS partitionExpression
@@ -194,8 +205,8 @@ export class ApiLogService {
             tableName: API_LOG_TABLE,
           },
           type: QueryTypes.SELECT,
-        },
-      ) as PartitionMetadataRow[];
+        }
+      )) as PartitionMetadataRow[];
 
       const metadata = metadataRows[0];
       if (!metadata) {
@@ -212,15 +223,15 @@ export class ApiLogService {
         targetPartitionDescription = nextMonthUpperBoundDate;
         boundarySql = `('${nextMonthUpperBoundDate}')`;
       } else if (partitionMethod === 'RANGE' && partitionExpression.includes('to_days')) {
-        const boundaryRows = await db.sequelize.query(
+        const boundaryRows = (await db.sequelize.query(
           'SELECT TO_DAYS(:upperBoundDate) AS boundaryValue',
           {
             replacements: {
               upperBoundDate: nextMonthUpperBoundDate,
             },
             type: QueryTypes.SELECT,
-          },
-        ) as Array<{ boundaryValue: number | string }>;
+          }
+        )) as Array<{ boundaryValue: number | string }>;
 
         const boundaryValue = Number(boundaryRows[0]?.boundaryValue);
         if (!Number.isFinite(boundaryValue)) {
@@ -233,36 +244,40 @@ export class ApiLogService {
         targetPartitionDescription = nextMonthUpperBoundDate;
         boundarySql = `('${nextMonthUpperBoundDate}')`;
       } else if (partitionMethod === 'RANGE' && partitionExpression.includes('unix_timestamp')) {
-        const boundaryValue = Math.floor(Date.UTC(
-          nextMonthUpperBoundUtc.getUTCFullYear(),
-          nextMonthUpperBoundUtc.getUTCMonth(),
-          nextMonthUpperBoundUtc.getUTCDate(),
-          0,
-          0,
-          0,
-        ) / 1000);
+        const boundaryValue = Math.floor(
+          Date.UTC(
+            nextMonthUpperBoundUtc.getUTCFullYear(),
+            nextMonthUpperBoundUtc.getUTCMonth(),
+            nextMonthUpperBoundUtc.getUTCDate(),
+            0,
+            0,
+            0
+          ) / 1000
+        );
 
         targetPartitionDescription = String(boundaryValue);
         boundarySql = `(${boundaryValue})`;
       } else if (partitionMethod === 'RANGE' && partitionExpression.includes('requesttime')) {
-        const boundaryValue = Math.floor(Date.UTC(
-          nextMonthUpperBoundUtc.getUTCFullYear(),
-          nextMonthUpperBoundUtc.getUTCMonth(),
-          nextMonthUpperBoundUtc.getUTCDate(),
-          0,
-          0,
-          0,
-        ) / 1000);
+        const boundaryValue = Math.floor(
+          Date.UTC(
+            nextMonthUpperBoundUtc.getUTCFullYear(),
+            nextMonthUpperBoundUtc.getUTCMonth(),
+            nextMonthUpperBoundUtc.getUTCDate(),
+            0,
+            0,
+            0
+          ) / 1000
+        );
 
         targetPartitionDescription = String(boundaryValue);
         boundarySql = `(${boundaryValue})`;
       } else {
         throw new Error(
-          `Unsupported partition strategy for ${API_LOG_TABLE}: method=${partitionMethod}, expression=${metadata.partitionExpression ?? 'NULL'}`,
+          `Unsupported partition strategy for ${API_LOG_TABLE}: method=${partitionMethod}, expression=${metadata.partitionExpression ?? 'NULL'}`
         );
       }
 
-      const partitionRows = await db.sequelize.query(
+      const partitionRows = (await db.sequelize.query(
         `SELECT
            PARTITION_NAME AS partitionName,
            PARTITION_DESCRIPTION AS partitionDescription,
@@ -277,15 +292,15 @@ export class ApiLogService {
             tableName: API_LOG_TABLE,
           },
           type: QueryTypes.SELECT,
-        },
-      ) as PartitionStateRow[];
+        }
+      )) as PartitionStateRow[];
 
       if (partitionRows.length === 0) {
         throw new Error(`No partitions found for table ${API_LOG_TABLE}.`);
       }
 
       const targetExists = partitionRows.some(
-        (row) => (row.partitionDescription || '').trim() === targetPartitionDescription,
+        (row) => (row.partitionDescription || '').trim() === targetPartitionDescription
       );
 
       if (targetExists) {
@@ -298,20 +313,20 @@ export class ApiLogService {
         return;
       }
 
-      const maxValuePartition = partitionRows.find((row) => isMaxValuePartition(row.partitionDescription));
+      const maxValuePartition = partitionRows.find((row) =>
+        isMaxValuePartition(row.partitionDescription)
+      );
       const existingNames = partitionRows
         .filter((row) => !isMaxValuePartition(row.partitionDescription))
         .map((row) => row.partitionName);
       const targetPartitionName = deriveMonthlyPartitionName(nextMonthStartUtc, existingNames);
       assertSafeIdentifier(targetPartitionName, 'partition name');
 
-      const nameConflict = partitionRows.some(
-        (row) => row.partitionName === targetPartitionName,
-      );
+      const nameConflict = partitionRows.some((row) => row.partitionName === targetPartitionName);
 
       if (nameConflict) {
         throw new Error(
-          `Partition name conflict for ${API_LOG_TABLE}: ${targetPartitionName} already exists with a different boundary.`,
+          `Partition name conflict for ${API_LOG_TABLE}: ${targetPartitionName} already exists with a different boundary.`
         );
       }
 
@@ -322,12 +337,14 @@ export class ApiLogService {
       if (maxValuePartition) {
         assertSafeIdentifier(maxValuePartition.partitionName, 'MAXVALUE partition name');
 
-        ddlSql = `ALTER TABLE ${quotedTableName} REORGANIZE PARTITION ${quoteIdentifier(maxValuePartition.partitionName)} INTO (`
-          + `PARTITION ${quoteIdentifier(targetPartitionName)} VALUES LESS THAN ${boundarySql}, `
-          + `PARTITION ${quoteIdentifier(maxValuePartition.partitionName)} VALUES LESS THAN MAXVALUE)`;
+        ddlSql =
+          `ALTER TABLE ${quotedTableName} REORGANIZE PARTITION ${quoteIdentifier(maxValuePartition.partitionName)} INTO (` +
+          `PARTITION ${quoteIdentifier(targetPartitionName)} VALUES LESS THAN ${boundarySql}, ` +
+          `PARTITION ${quoteIdentifier(maxValuePartition.partitionName)} VALUES LESS THAN MAXVALUE)`;
       } else {
-        ddlSql = `ALTER TABLE ${quotedTableName} ADD PARTITION (`
-          + `PARTITION ${quoteIdentifier(targetPartitionName)} VALUES LESS THAN ${boundarySql})`;
+        ddlSql =
+          `ALTER TABLE ${quotedTableName} ADD PARTITION (` +
+          `PARTITION ${quoteIdentifier(targetPartitionName)} VALUES LESS THAN ${boundarySql})`;
       }
 
       await db.sequelize.query(ddlSql, {
@@ -357,15 +374,12 @@ export class ApiLogService {
       }
 
       try {
-        await db.sequelize.query(
-          'SELECT RELEASE_LOCK(:lockName) AS released',
-          {
-            replacements: {
-              lockName: API_LOG_PARTITION_LOCK,
-            },
-            type: QueryTypes.SELECT,
+        await db.sequelize.query('SELECT RELEASE_LOCK(:lockName) AS released', {
+          replacements: {
+            lockName: API_LOG_PARTITION_LOCK,
           },
-        );
+          type: QueryTypes.SELECT,
+        });
       } catch (releaseError: unknown) {
         logger.error('Failed to release API log partition maintenance lock.', {
           tableName: API_LOG_TABLE,

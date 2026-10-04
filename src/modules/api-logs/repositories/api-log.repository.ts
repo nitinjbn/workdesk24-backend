@@ -42,22 +42,30 @@ export class ApiLogRepository {
   }
 
   public async finalizeRecord(input: ApiLogFinalizeInput): Promise<void> {
-    await ApiLog.update(
-      {
-        status: input.status,
-        responseStatusCode: input.responseStatusCode,
-        responseBody: toModelJsonObject(input.responseBody),
-        responseSize: input.responseSize,
-        responseTime: input.responseTime,
-        durationMilliseconds: input.durationMilliseconds,
-        errorMessage: input.errorMessage ?? null,
+    const update: Record<string, unknown> = {
+      status: input.status,
+      responseStatusCode: input.responseStatusCode,
+      responseBody: toModelJsonObject(input.responseBody),
+      responseSize: input.responseSize,
+      responseTime: input.responseTime,
+      durationMilliseconds: input.durationMilliseconds,
+      errorMessage: input.errorMessage ?? null,
+    };
+
+    // hostId/userId are re-resolved at finalize time (after auth middleware ran),
+    // so only overwrite when the finalize payload actually resolved them.
+    if (input.hostId !== undefined) {
+      update.hostId = input.hostId;
+    }
+    if (input.userId !== undefined) {
+      update.userId = input.userId;
+    }
+
+    await ApiLog.update(update, {
+      where: {
+        id: input.apiLogId,
       },
-      {
-        where: {
-          id: input.apiLogId,
-        },
-      },
-    );
+    });
   }
 }
 

@@ -36,6 +36,8 @@ export interface ApiLogFinalizeInput {
   readonly responseTime: number;
   readonly durationMilliseconds: number;
   readonly errorMessage?: string | null;
+  readonly hostId?: number;
+  readonly userId?: number;
 }
 
 export interface ApiLogFinalizeJobPayload extends JobPayload {
@@ -47,6 +49,8 @@ export interface ApiLogFinalizeJobPayload extends JobPayload {
   readonly responseTime: number;
   readonly durationMilliseconds: number;
   readonly errorMessage?: string | null;
+  readonly hostId?: number;
+  readonly userId?: number;
 }
 
 export interface AuthenticatedRequestUser {
