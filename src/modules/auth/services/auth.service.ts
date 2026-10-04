@@ -723,6 +723,7 @@ export class AuthService {
 
     const refreshTokenHash = this.hashToken(refreshToken);
 
+    // This sessionId is restricted to this particular deviceId and cannot be reused across different devices. - NOT IMPLEMENTED YET
     const sessionId = crypto.randomUUID();
     if (payload.deviceId) {
       // Update session in UserDevice
