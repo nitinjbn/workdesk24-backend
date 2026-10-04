@@ -179,18 +179,7 @@ export class AuthService {
   }
 
   async login(data: LoginDto): Promise<AuthResponse> {
-    //console.log('################ AuthService.login: Login data received:', data);
     const user = await this.validateCredentials(data);
-
-    // Update user device details
-    if (data.deviceDetails) {
-      await userRepository.updateUserDeviceDetails({
-        hostId: user.hostId,
-        userId: user.id,
-        ...data.deviceDetails,
-      });
-    }
-
     return this.buildAppLoginResponse(user, data.deviceDetails || {});
   }
 
@@ -208,7 +197,6 @@ export class AuthService {
     }
 
     const user = await this.getUserByIdentifier({ identifier });
-    //console.log("################ AuthService.verifyOtp: User found:", user);
     if (user.accountStatus != 'ACTIVE') {
       throw createConfiguredError(
         'ACCOUNT_INACTIVE',
@@ -223,7 +211,6 @@ export class AuthService {
       userId: user.id,
       purpose: CONFIG.OTP.AUTH.PURPOSE_KEY,
     });
-    //console.log("################ AuthService.verifyOtp: OTP entry found:", otpEntry);
 
     if (!otpEntry) {
       throw createConfiguredError('INVALID_OTP', 'Invalid or expired OTP', 400, 'INVALID_OTP');
@@ -275,15 +262,6 @@ export class AuthService {
     const loginUser = await userRepository.findById(user.id);
     if (!loginUser) {
       throw createConfiguredError('USER_NOT_FOUND', 'User not found', 404, 'NOT_FOUND');
-    }
-
-    // Update user device details
-    if (payload.deviceDetails) {
-      await userRepository.updateUserDeviceDetails({
-        hostId: user.hostId,
-        userId: user.id,
-        ...payload.deviceDetails,
-      });
     }
 
     return this.buildAppLoginResponse(loginUser as unknown as LoginUser, payload.deviceDetails);
@@ -356,6 +334,22 @@ export class AuthService {
     // Fetch subscription status for the host
     const subscription = await this.getSubscriptionStatusForHost(user.hostId, 'APP');
 
+    // Update user device details
+    if (deviceDetails) {
+      await userRepository.updateUserDeviceDetails({
+        hostId: user.hostId,
+        userId: user.id,
+        ...deviceDetails,
+      });
+
+      // Unregister other devices except the current one
+      await userRepository.unregisterUserOtherDevices({
+        hostId: user.hostId,
+        userId: user.id,
+        excludeDeviceId: deviceDetails.deviceId,
+      });
+    }
+
     return {
       user: formattedUser,
       accessToken: sessionTokens.accessToken,
@@ -417,9 +411,7 @@ export class AuthService {
     const user = data.hostId
       ? await this.validateHostSpecificCredentials(data)
       : await this.validateCredentials(data);
-    //console.log("#################### user:", user);
 
-    //const isAdmin = await isAdminRole(user.hostId, user.roleId);
     if (!user.isAdminUser) {
       throw createConfiguredError('ADMIN_PORTAL_ACCESS_DENIED');
     }
@@ -456,10 +448,6 @@ export class AuthService {
     const tokenRecord = await userRefreshTokenRepository.findByTokenHash(tokenHash);
 
     if (!tokenRecord) {
-      console.log(
-        '#################### refreshAdminSession: Token record not found for hash:',
-        tokenHash
-      );
       throw createConfiguredError('INVALID_REFRESH_TOKEN');
     }
 
@@ -474,26 +462,12 @@ export class AuthService {
     }
 
     if (tokenRecord.userId !== payload.userId || tokenRecord.tokenFamily !== payload.tokenFamily) {
-      console.log(
-        '#################### refreshAdminSession: Token record userId or tokenFamily mismatch. Expected userId:',
-        payload.userId,
-        'tokenFamily:',
-        payload.tokenFamily,
-        'but got userId:',
-        tokenRecord.userId,
-        'tokenFamily:',
-        tokenRecord.tokenFamily
-      );
       await userRefreshTokenRepository.revokeAllActiveForUser(tokenRecord.userId);
       throw createConfiguredError('INVALID_REFRESH_TOKEN');
     }
 
     const user = await userRepository.findById(payload.userId);
     if (!user) {
-      console.log(
-        '#################### refreshAdminSession: User not found for userId:',
-        payload.userId
-      );
       await userRefreshTokenRepository.revokeAllActiveForUser(payload.userId);
       throw createConfiguredError('INVALID_REFRESH_TOKEN');
     }
@@ -503,11 +477,6 @@ export class AuthService {
       throw createConfiguredError('ACCOUNT_INACTIVE');
     }
 
-    // const isAdmin = await isAdminRole(user.hostId, user.roleId);
-    // if (!isAdmin) {
-    //   await userRefreshTokenRepository.revokeAllActiveForUser(payload.userId);
-    //   throw createConfiguredError('ADMIN_PORTAL_ACCESS_DENIED');
-    // }
     if (!user.isAdminUser) {
       await userRefreshTokenRepository.revokeAllActiveForUser(payload.userId);
       throw createConfiguredError('ADMIN_PORTAL_ACCESS_DENIED');
@@ -581,46 +550,20 @@ export class AuthService {
     const tokenRecord = await userRefreshTokenRepository.findByTokenHash(tokenHash);
 
     if (!tokenRecord) {
-      console.log(
-        '#################### refreshAppSession: Token record not found for hash:',
-        tokenHash
-      );
       throw createConfiguredError('INVALID_REFRESH_TOKEN');
     }
 
     if (tokenRecord.isRevoked === 1) {
-      console.log(
-        '#################### refreshAppSession: Token record is revoked for userId:',
-        tokenRecord.userId
-      );
       await userRefreshTokenRepository.revokeAllActiveForUser(tokenRecord.userId);
       throw createConfiguredError('REFRESH_TOKEN_REUSE_DETECTED');
     }
 
     if (tokenRecord.expiresAt <= now) {
-      console.log(
-        '#################### refreshAppSession: Token record is expired for userId:',
-        tokenRecord.userId,
-        'expiresAt:',
-        tokenRecord.expiresAt,
-        'now:',
-        now
-      );
       await userRefreshTokenRepository.revokeTokenById(tokenRecord.id);
       throw createConfiguredError('REFRESH_TOKEN_EXPIRED');
     }
 
     if (tokenRecord.userId !== payload.userId || tokenRecord.tokenFamily !== payload.tokenFamily) {
-      console.log(
-        '#################### refreshAppSession: Token record userId or tokenFamily mismatch. Expected userId:',
-        payload.userId,
-        'tokenFamily:',
-        payload.tokenFamily,
-        'but got userId:',
-        tokenRecord.userId,
-        'tokenFamily:',
-        tokenRecord.tokenFamily
-      );
       await userRefreshTokenRepository.revokeAllActiveForUser(tokenRecord.userId);
       throw createConfiguredError('INVALID_REFRESH_TOKEN');
     }
@@ -628,10 +571,6 @@ export class AuthService {
     let user = await userRepository.findById(payload.userId);
     user = (user?.get ? user.get({ plain: true }) : user) as unknown as LoginUser;
     if (!user) {
-      console.log(
-        '#################### refreshAppSession: User not found for userId:',
-        payload.userId
-      );
       await userRefreshTokenRepository.revokeAllActiveForUser(payload.userId);
       throw createConfiguredError('INVALID_REFRESH_TOKEN');
     }
@@ -739,12 +678,13 @@ export class AuthService {
 
   private generateAccessToken(
     userId: number,
-    deviceType: 'WEB' | 'ANDROID' | 'IOS' = 'WEB'
+    deviceType: 'WEB' | 'ANDROID' | 'IOS' = 'WEB',
+    sessionId: string
   ): string {
     const secret = getJwtSecret();
     const expiresIn = getJwtExpiresIn(deviceType);
 
-    return jwt.sign({ userId, tokenType: 'access' }, secret, { expiresIn });
+    return jwt.sign({ userId, tokenType: 'access', sessionId }, secret, { expiresIn });
   }
 
   private async createUserSessionTokens(payload: {
@@ -783,6 +723,17 @@ export class AuthService {
 
     const refreshTokenHash = this.hashToken(refreshToken);
 
+    const sessionId = crypto.randomUUID();
+    if (payload.deviceId) {
+      // Update session in UserDevice
+      await userRepository.updateUserDeviceDetails({
+        hostId,
+        userId,
+        deviceId: payload.deviceId,
+        sessionId,
+      });
+    }
+
     await userRefreshTokenRepository.create({
       hostId,
       userId,
@@ -797,7 +748,7 @@ export class AuthService {
     });
 
     return {
-      accessToken: this.generateAccessToken(userId, payload.deviceType || 'WEB'),
+      accessToken: this.generateAccessToken(userId, payload.deviceType || 'WEB', sessionId),
       refreshToken,
       refreshTokenHash,
       tokenFamily: finalTokenFamily,
@@ -1033,7 +984,6 @@ export class AuthService {
     }
 
     const getUsersResult = await this.getUsersByFilter(whereClause);
-    //console.log("################ AuthController.requestOtp: Users fetched by filter:", getUsersResult);
     const users = getUsersResult.users || [];
 
     if (!users || users.length === 0) {
@@ -1061,7 +1011,6 @@ export class AuthService {
   ///////////////////// Super Admin Authentication Methods ///////////////////////
   async superAdminLogin(data: LoginDto): Promise<SuperAdminAuthResponse> {
     const user = await this.validateCredentials(data);
-    //console.log('#################### user:', user);
 
     //const isAdmin = await isAdminRole(user.hostId, user.roleId);
     if (!user.isSuperAdmin) {
@@ -1090,10 +1039,6 @@ export class AuthService {
     const tokenRecord = await userRefreshTokenRepository.findByTokenHash(tokenHash);
 
     if (!tokenRecord) {
-      console.log(
-        '#################### refreshSuperAdminSession: Token record not found for hash:',
-        tokenHash
-      );
       throw createConfiguredError('INVALID_REFRESH_TOKEN');
     }
 
@@ -1108,26 +1053,12 @@ export class AuthService {
     }
 
     if (tokenRecord.userId !== payload.userId || tokenRecord.tokenFamily !== payload.tokenFamily) {
-      console.log(
-        '#################### refreshSuperAdminSession: Token record userId or tokenFamily mismatch. Expected userId:',
-        payload.userId,
-        'tokenFamily:',
-        payload.tokenFamily,
-        'but got userId:',
-        tokenRecord.userId,
-        'tokenFamily:',
-        tokenRecord.tokenFamily
-      );
       await userRefreshTokenRepository.revokeAllActiveForUser(tokenRecord.userId);
       throw createConfiguredError('INVALID_REFRESH_TOKEN');
     }
 
     const user = await userRepository.findById(payload.userId);
     if (!user) {
-      console.log(
-        '#################### refreshSuperAdminSession: User not found for userId:',
-        payload.userId
-      );
       await userRefreshTokenRepository.revokeAllActiveForUser(payload.userId);
       throw createConfiguredError('INVALID_REFRESH_TOKEN');
     }

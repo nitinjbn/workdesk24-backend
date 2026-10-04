@@ -1,7 +1,7 @@
 import { BaseRepository } from '../../../shared/repositories/base.repository';
 import User from '../../../models/schemas/User';
 import UserDevice from '../../../models/schemas/UserDevices';
-import { WhereOptions } from 'sequelize';
+import { Op, WhereOptions } from 'sequelize';
 import { UserOTP, UserAttendanceSite, AttendanceSite } from '../../../models';
 import { DateTimeFormatUtil } from '../../../shared/utils/date-time-format.util';
 import UserOTPDeliveries from '../../../models/schemas/UserOTPDeliveries';
@@ -224,6 +224,43 @@ export class UserRepository extends BaseRepository<typeof User.prototype> {
     );
   }
 
+  async isDeviceRegistered(payload: {
+    hostId: number;
+    userId: number;
+    deviceId: string;
+  }): Promise<boolean> {
+    const { hostId, userId, deviceId } = payload;
+
+    const device = await UserDevice.findOne({
+      where: {
+        hostId,
+        userId,
+        deviceId,
+      },
+    });
+
+    return !!device;
+  }
+
+  async unregisterUserOtherDevices(payload: {
+    hostId: number;
+    userId: number;
+    excludeDeviceId: string;
+  }): Promise<void> {
+    const { hostId, userId, excludeDeviceId } = payload;
+
+    await UserDevice.update(
+      { isActive: 0 },
+      {
+        where: {
+          hostId,
+          userId,
+          deviceId: { [Op.ne]: excludeDeviceId },
+        },
+      }
+    );
+  }
+
   async updateUserDeviceDetails(payload: {
     hostId: number;
     userId: number;
@@ -242,6 +279,8 @@ export class UserRepository extends BaseRepository<typeof User.prototype> {
     storageAvailableBytes?: number | null;
     storageUsedBytes?: number | null;
     fcmToken?: string | null;
+    isActive?: number;
+    sessionId?: string;
     createdAt?: number;
   }): Promise<UserDevice> {
     const { hostId, userId, deviceId, ...deviceData } = payload;

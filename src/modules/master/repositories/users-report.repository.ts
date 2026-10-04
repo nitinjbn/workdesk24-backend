@@ -259,6 +259,9 @@ export class usersRepository {
           },
           model: UserDevice,
           as: 'device',
+          where: {
+            isActive: 1,
+          },
           required: false,
         },
         {
@@ -425,6 +428,9 @@ export class usersRepository {
           },
           model: UserDevice,
           as: 'device',
+          where: {
+            isActive: 1,
+          },
           required: false,
         },
         {
@@ -911,7 +917,10 @@ export class usersRepository {
 
     if (existingDevice) {
       // Update existing record
-      await existingDevice.update(deviceData);
+      await existingDevice.update({
+        ...deviceData,
+        isActive: 1,
+      });
       return existingDevice;
     } else {
       // Create new record

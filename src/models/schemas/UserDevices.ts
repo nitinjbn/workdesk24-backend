@@ -19,16 +19,21 @@ interface UserDeviceAttributes {
   storageAvailableBytes?: number | null;
   storageUsedBytes?: number | null;
   fcmToken?: string | null;
+  isActive: number;
+  sessionId: string;
   createdAt: number;
   updatedAt?: number | null;
 }
 
-interface UserDeviceCreationAttributes
-  extends Optional<UserDeviceAttributes, 'id' | 'createdAt' | 'updatedAt'> {}
+interface UserDeviceCreationAttributes extends Optional<
+  UserDeviceAttributes,
+  'id' | 'createdAt' | 'updatedAt'
+> {}
 
 class UserDevice
   extends Model<UserDeviceAttributes, UserDeviceCreationAttributes>
-  implements UserDeviceAttributes {
+  implements UserDeviceAttributes
+{
   public id!: number;
   public hostId!: number;
   public userId!: number;
@@ -46,6 +51,8 @@ class UserDevice
   public storageTotalBytes?: number | null;
   public storageAvailableBytes?: number | null;
   public storageUsedBytes?: number | null;
+  public isActive!: number;
+  public sessionId!: string;
   public fcmToken?: string | null;
   public createdAt!: number;
   public updatedAt?: number | null;
@@ -135,6 +142,15 @@ export function initUserDevice(sequelize: Sequelize): typeof UserDevice {
         type: DataTypes.BIGINT,
         allowNull: true,
       },
+      isActive: {
+        type: DataTypes.TINYINT,
+        allowNull: false,
+        defaultValue: 1,
+      },
+      sessionId: {
+        type: DataTypes.STRING(100),
+        allowNull: true,
+      },
       fcmToken: {
         type: DataTypes.STRING(255),
         allowNull: true,
@@ -147,7 +163,7 @@ export function initUserDevice(sequelize: Sequelize): typeof UserDevice {
         type: DataTypes.BIGINT,
         allowNull: true,
         defaultValue: null,
-      }
+      },
     },
     {
       sequelize,
@@ -171,8 +187,8 @@ export function initUserDevice(sequelize: Sequelize): typeof UserDevice {
         { fields: ['hostId'] },
         { fields: ['userId'] },
         { unique: true, fields: ['hostId', 'userId', 'deviceId'] },
-        { fields: ['deviceId'] }
-      ]
+        { fields: ['deviceId'] },
+      ],
     }
   );
 
