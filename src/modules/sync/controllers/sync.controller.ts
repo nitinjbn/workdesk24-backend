@@ -477,6 +477,22 @@ export class SyncController {
       next(error);
     }
   }
+
+  async getTodayAttendance(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { hostId, id: userId } = req.user;
+
+      const result = await syncService.getTodayAttendance({ hostId, userId });
+
+      res.json({
+        success: true,
+        message: 'Today attendance retrieved successfully',
+        data: result,
+      } as ApiResponse);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default new SyncController();

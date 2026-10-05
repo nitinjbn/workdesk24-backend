@@ -7,21 +7,28 @@ export class AttendanceRepository extends BaseRepository<typeof Attendance.proto
     super(Attendance as any);
   }
 
-  async findByUserId(userId: number): Promise<typeof Attendance.prototype[]> {
+  async findByUserId(userId: number): Promise<(typeof Attendance.prototype)[]> {
     return this.findAll({
       where: { userId } as WhereOptions<typeof Attendance.prototype>,
       order: [['checkInTime', 'DESC']],
     });
   }
 
-  async findByLocalId(userId: number, localId: string): Promise<typeof Attendance.prototype | null> {
+  async findByLocalId(
+    userId: number,
+    localId: string
+  ): Promise<typeof Attendance.prototype | null> {
     return this.findOne({
       userId,
       localId,
     } as WhereOptions<typeof Attendance.prototype>);
   }
 
-  async findByDateRange(userId: number, startTime: number, endTime: number): Promise<typeof Attendance.prototype[]> {
+  async findByDateRange(
+    userId: number,
+    startTime: number,
+    endTime: number
+  ): Promise<(typeof Attendance.prototype)[]> {
     return this.findAll({
       where: {
         userId,
@@ -38,5 +45,17 @@ export class AttendanceRepository extends BaseRepository<typeof Attendance.proto
       userId,
       status: 'checked_in',
     } as WhereOptions<typeof Attendance.prototype>);
+  }
+
+  async getTodayAttendance(filter: any): Promise<typeof Attendance.prototype | null> {
+    const { hostId, userId, startTime, endTime } = filter;
+    const attendance = await this.findOne({
+      hostId,
+      userId,
+      attendanceTime: {
+        [Op.between]: [startTime, endTime],
+      },
+    } as WhereOptions<typeof Attendance.prototype>);
+    return attendance;
   }
 }

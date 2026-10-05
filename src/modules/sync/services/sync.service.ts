@@ -1553,6 +1553,68 @@ export class SyncService {
     const result = await customerRepository.getCustomerTypes({ hostId });
     return result;
   }
+
+  async getTodayAttendance(payload: { hostId: number; userId: number }): Promise<any> {
+    const { hostId, userId } = payload;
+
+    if (!hostId || !userId) {
+      throw new Error('Host ID and User ID are required.');
+    }
+
+    const userDetails = await this.getUserDetails({ hostId, userId });
+    if (!userDetails) {
+      throw new Error('User not found.');
+    }
+
+    const userTimeZone = userDetails.timezone || CONFIG.REPORTING.TIMEZONE;
+
+    const currentDateInUnix = DateTimeFormatUtil.getCurrentDateRangeInUnix(userTimeZone);
+    const attendance = await attendanceRepository.getTodayAttendance({
+      hostId,
+      userId,
+      startTime: currentDateInUnix.start,
+      endTime: currentDateInUnix.end,
+    });
+
+    if (!attendance) {
+      return null;
+    }
+
+    return {
+      hostId: attendance.hostId,
+      localId: attendance.localId,
+      autoDayover: attendance.autoDayover,
+      dayoverTime: attendance.dayoverTime,
+      vehicleType: attendance.vehicleType,
+      dayoverImage: attendance.dayoverImage,
+      employeeName: userDetails.name,
+      workingHours: attendance.workingHours,
+      attendanceTime: attendance.attendanceTime,
+      dayoverRemarks: attendance.dayoverRemarks,
+      attendanceImage: attendance.attendanceImage,
+      dayoverLatitude: attendance.dayoverLatitude,
+      vehicleCategory: attendance.vehicleCategory,
+      attendanceStatus: attendance.attendanceStatus,
+      dayoverLongitude: attendance.dayoverLongitude,
+      attendanceRemarks: attendance.attendanceRemarks,
+      attendanceLatitude: attendance.attendanceLatitude,
+      attendanceLongitude: attendance.attendanceLongitude,
+      isChargingOnDayover: attendance.isChargingOnDayover,
+      dayoverLocationSpeed: attendance.dayoverLocationSpeed,
+      dayoverOdometerReading: attendance.dayoverOdometerReading,
+      isChargingOnAttendance: attendance.isChargingOnAttendance,
+      attendanceLocationSpeed: attendance.attendanceLocationSpeed,
+      dayoverLocationAccuracy: attendance.dayoverLocationAccuracy,
+      dayoverLocationAltitude: attendance.dayoverLocationAltitude,
+      dayoverLocationProvider: attendance.dayoverLocationProvider,
+      dayoverBatteryPercentage: attendance.dayoverBatteryPercentage,
+      attendanceOdometerReading: attendance.attendanceOdometerReading,
+      attendanceLocationAccuracy: attendance.attendanceLocationAccuracy,
+      attendanceLocationAltitude: attendance.attendanceLocationAltitude,
+      attendanceLocationProvider: attendance.attendanceLocationProvider,
+      attendanceBatteryPercentage: attendance.attendanceBatteryPercentage,
+    };
+  }
 }
 
 export default new SyncService();

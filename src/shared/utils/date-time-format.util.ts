@@ -207,6 +207,13 @@ export class DateTimeFormatUtil {
     const date = moment.utc(String(dateStr).slice(0, 10), 'YYYY-MM-DD', true);
     return date.isValid() ? date.format('dddd') : null;
   }
+
+  static getCurrentDateRangeInUnix(timezone = 'Asia/Kolkata'): { start: number; end: number } {
+    return {
+      start: moment().tz(timezone).startOf('day').unix(),
+      end: moment().tz(timezone).endOf('day').unix(),
+    };
+  }
 }
 
 export const formatDateTimeFieldsBySettings = <T>(
