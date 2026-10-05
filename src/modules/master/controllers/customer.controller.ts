@@ -89,12 +89,14 @@ export class CustomerController {
     } = req.body;
     try {
       // Check duplicate customer by localId
-      const existingCustomer = await customerService.getCustomerByLocalId(localId);
-      if (existingCustomer) {
-        throw createConfiguredError(
-          'VALIDATION_ERROR',
-          `Customer with localId ${localId} already exists`
-        );
+      if (localId) {
+        const existingCustomer = await customerService.getCustomerByLocalId(localId);
+        if (existingCustomer) {
+          throw createConfiguredError(
+            'VALIDATION_ERROR',
+            `Customer with localId ${localId} already exists`
+          );
+        }
       }
 
       const result = await customerService.createCustomer({
