@@ -746,8 +746,9 @@ export interface HostSubscriptionAttributes {
   netAmount: number;
   planStartDate: number;
   planEndDate: number;
-  paymentStatus: 'PENDING' | 'PAID';
+  paymentStatus: 'FREE' | 'PENDING' | 'PAID';
   paymentReference?: string;
+  isTrial?: number;
   remarks?: string;
   isEnabled?: number;
   isDeleted?: number;
