@@ -101,7 +101,8 @@ export const calculateOvertimeMinutes = (
   overtimeAllowed: boolean,
   overtimeCalculationType: OvertimeCalculationType
 ): number => {
-  if (!overtimeAllowed || !Number.isFinite(surplusMinutes) || surplusMinutes <= 0) {
+  // Overtime is calculated even when its not allowed, we can manage on the frontend or later in the logic.
+  if (!Number.isFinite(surplusMinutes) || surplusMinutes <= 0) {
     return 0;
   }
 
