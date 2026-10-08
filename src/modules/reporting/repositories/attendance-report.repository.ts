@@ -214,7 +214,14 @@ export class AttendanceReportRepository {
         ],
       },
       where,
-      include: [userInclude as Includeable],
+      include: [
+        {
+          attributes: [],
+          model: db.User,
+          as: 'user',
+          required: false, // Show report even if the user is not available any more but report exists
+        },
+      ],
       order,
       distinct: true,
       logging: console.log, // Enable logging for debugging
