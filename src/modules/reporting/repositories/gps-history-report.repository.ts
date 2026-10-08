@@ -385,11 +385,12 @@ export class GpsHistoryReportRepository {
         return trailingGpsEndpoint || journey;
       });
 
-      const pointCounts = await Promise.all(
+      const segmentGpsPoints = await Promise.all(
         newJourney.map((journey, index) => {
           const endpoint = journeyEndpoints[index];
 
-          return db.GpsHistory.count({
+          return db.GpsHistory.findAll({
+            attributes: ['latitude', 'longitude'],
             where: {
               hostId,
               userId,
@@ -398,6 +399,8 @@ export class GpsHistoryReportRepository {
                 [Op.between]: [journey.time, endpoint.time],
               },
             },
+            order: [['createdAt', 'ASC']],
+            raw: true,
           });
         })
       );
@@ -407,14 +410,55 @@ export class GpsHistoryReportRepository {
         journey.journeyId = journeyId;
         journeyId++;
         finalJourney.push(journey);
-        const gpsPointCount = pointCounts[index] || 0;
+        const gpsPoints = segmentGpsPoints[index] || [];
+        const gpsPointCount = gpsPoints.length;
         if (gpsPointCount > 0 && endpoint.time >= journey.time) {
-          const distanceKm = this.calculateDistanceKm(
-            journey.latitude,
-            journey.longitude,
-            endpoint.latitude,
-            endpoint.longitude
-          );
+          // Sum the distance between every consecutive GPS point so the actual
+          // travelled path is measured instead of the straight line between anchors
+          // (a round trip back to the start location must not report 0 km).
+          let distanceKm = 0;
+          for (let pointIndex = 0; pointIndex < gpsPoints.length - 1; pointIndex += 1) {
+            const fromLatitude = this.toFiniteNumber(
+              gpsPoints[pointIndex].latitude as number | string
+            );
+            const fromLongitude = this.toFiniteNumber(
+              gpsPoints[pointIndex].longitude as number | string
+            );
+            const toLatitude = this.toFiniteNumber(
+              gpsPoints[pointIndex + 1].latitude as number | string
+            );
+            const toLongitude = this.toFiniteNumber(
+              gpsPoints[pointIndex + 1].longitude as number | string
+            );
+
+            if (
+              fromLatitude === null ||
+              fromLongitude === null ||
+              toLatitude === null ||
+              toLongitude === null
+            ) {
+              continue;
+            }
+
+            distanceKm += this.calculateDistanceKm(
+              fromLatitude,
+              fromLongitude,
+              toLatitude,
+              toLongitude
+            );
+          }
+
+          // Fallback to the straight-line estimate only when the GPS track is
+          // too sparse to derive a path distance.
+          if (distanceKm === 0) {
+            distanceKm = this.calculateDistanceKm(
+              journey.latitude,
+              journey.longitude,
+              endpoint.latitude,
+              endpoint.longitude
+            );
+          }
+
           const durationMinutes = Math.max(0, Math.round((endpoint.time - journey.time) / 60));
 
           finalJourney.push({
