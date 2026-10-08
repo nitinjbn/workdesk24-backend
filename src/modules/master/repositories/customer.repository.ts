@@ -171,7 +171,7 @@ export class customerRepository {
       // If createdByUserId is -1, it indicates an admin user. If -2, it indicates all users. Otherwise, set the createdByUserId in the where clause.
       if (filter.createdByUserId && filter.createdByUserId != -2) {
         if (filter.createdByUserId == -1) {
-          filter.createdByUserType = 'ADMIN';
+          where.createdByUserType = 'ADMIN';
         } else {
           where.createdByUserId = filter.createdByUserId;
         }
