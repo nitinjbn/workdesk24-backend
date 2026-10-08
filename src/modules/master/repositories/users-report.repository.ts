@@ -366,18 +366,22 @@ export class usersRepository {
     }
   }
 
-  async getUserById(params: { hostId: number; userId: number }): Promise<any> {
-    const { hostId, userId } = params;
+  async getUserById(params: {
+    hostId: number;
+    userId: number;
+    ignoreDeletedCheck?: boolean;
+  }): Promise<any> {
+    const { hostId, userId, ignoreDeletedCheck } = params;
 
     const where: any = {
       hostId,
       id: userId,
-      isDeleted: 0,
+      ...(ignoreDeletedCheck ? {} : { isDeleted: 0 }),
     };
 
     const query: FindAndCountOptions<UserInstance> = {
       attributes: {
-        exclude: ['id', 'roleId', 'password', 'reportingManagerId', 'isDeleted', 'deletedAt'],
+        exclude: ['id', 'roleId', 'password', 'reportingManagerId', 'deletedAt'],
         include: [
           [db.Sequelize.col('User.id'), 'userId'],
           [db.Sequelize.literal(ROLE_NAME_SUBQUERY), 'role'],

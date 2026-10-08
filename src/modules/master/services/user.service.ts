@@ -104,6 +104,7 @@ export class UserService {
     const userDetails = await usersRepository.getUserById({
       hostId,
       userId,
+      ignoreDeletedCheck: true, // Ensure that even deleted users are retrieved in case if deleted user have reports in system
     });
 
     // Convert settings array to key-value object
