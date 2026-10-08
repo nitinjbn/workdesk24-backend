@@ -73,7 +73,29 @@ export class AttendanceReportRepository {
     }
 
     const { offset, page, limit } = baseReportHelper.normalizePagination(payload);
-    const userWhere: Record<string, unknown> = { hostId, isDeleted: 0, isFieldAppUser: 1 };
+
+    // Fetch attendance first so users deleted after marking attendance
+    // can still be identified for the selected period
+    const attendance = (await Attendance.findAll({
+      attributes: ['userId', 'attendanceTime', 'attendanceStatus'],
+      where: {
+        hostId,
+        isDeleted: 0,
+        ...(userIds?.length ? { userId: { [Op.in]: userIds } } : {}),
+        attendanceTime: { [Op.gte]: attendanceTime.from, [Op.lt]: attendanceTime.to },
+      },
+      raw: true,
+    })) as Array<{ userId: number; attendanceTime: number; attendanceStatus?: string }>;
+
+    // Users having attendance in the period (includes deleted users)
+    const attendanceUserIds = [...new Set(attendance.map((record) => record.userId))];
+
+    // Active users always appear; deleted users appear only when they have attendance
+    const userWhere: Record<string, unknown> = {
+      hostId,
+      isFieldAppUser: 1,
+      [Op.or]: [{ isDeleted: 0 }, { id: { [Op.in]: attendanceUserIds } }],
+    };
     if (userIds?.length) {
       userWhere.id = { [Op.in]: userIds };
     }
@@ -96,21 +118,7 @@ export class AttendanceReportRepository {
       distinct: true,
     } as any;
 
-    const [{ rows, count }, attendance] = await Promise.all([
-      User.findAndCountAll(userQuery),
-      Attendance.findAll({
-        attributes: ['userId', 'attendanceTime', 'attendanceStatus'],
-        where: {
-          hostId,
-          isDeleted: 0,
-          ...(userIds?.length ? { userId: { [Op.in]: userIds } } : {}),
-          attendanceTime: { [Op.gte]: attendanceTime.from, [Op.lt]: attendanceTime.to },
-        },
-        raw: true,
-      }) as unknown as Promise<
-        Array<{ userId: number; attendanceTime: number; attendanceStatus?: string }>
-      >,
-    ]);
+    const { rows, count } = await User.findAndCountAll(userQuery);
 
     const defaultHolidayCalendar = await db.HolidayCalendar.findOne({
       attributes: ['id'],
