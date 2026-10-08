@@ -230,7 +230,7 @@ export class AttendanceReportRepository {
           attributes: [],
           model: db.User,
           as: 'user',
-          required: false, // Show report even if the user is not available any more but report exists
+          required: true, // isDeleted check is not added to show report even if the user is not available any more but report exists
         },
       ],
       order,

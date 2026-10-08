@@ -89,10 +89,7 @@ export class VisitsReportRepository {
           model: db.User,
           as: 'user',
           attributes: [],
-          required: true,
-          where: {
-            isDeleted: 0,
-          },
+          required: true, // isDeleted check is not added to show report even if the user is not available any more but report exists
         },
       ],
       order: [sortBy && sortOrder ? [sortBy, sortOrder] : ['createdAt', 'DESC']],
