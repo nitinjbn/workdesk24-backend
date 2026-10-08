@@ -213,7 +213,10 @@ export class AttendanceReportRepository {
           [db.Sequelize.col('user.employeeCode'), 'employeeCode'],
         ],
       },
-      where,
+      where: {
+        ...where,
+        hostId,
+      },
       include: [
         {
           attributes: [],
