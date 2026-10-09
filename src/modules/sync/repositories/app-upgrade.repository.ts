@@ -13,7 +13,7 @@ export interface CheckAppVersionPayload {
 }
 
 export interface AppVersionCheckResult {
-  isUpdateRequired: boolean;
+  isUpdateAvailable: boolean;
   latestVersionName: string | null;
   latestVersionCode: number | null;
   forceUpdate: boolean;
@@ -48,7 +48,7 @@ export class AppUpgradeRepository {
 
     if (!release) {
       return {
-        isUpdateRequired: false,
+        isUpdateAvailable: false,
         latestVersionName: versionName,
         latestVersionCode: versionCode,
         forceUpdate: false,
@@ -60,7 +60,7 @@ export class AppUpgradeRepository {
     }
 
     const releaseJson = release.toJSON() as any;
-    const isUpdateRequired = this.isUpdateRequired(
+    const isUpdateAvailable = this.isUpdateAvailable(
       releaseJson.versionCode,
       releaseJson.versionName,
       versionCode,
@@ -68,10 +68,10 @@ export class AppUpgradeRepository {
     );
 
     return {
-      isUpdateRequired,
+      isUpdateAvailable,
       latestVersionName: releaseJson.versionName,
       latestVersionCode: releaseJson.versionCode,
-      forceUpdate: isUpdateRequired && forceUpdate,
+      forceUpdate: isUpdateAvailable && forceUpdate,
       distributionChannel: releaseJson.distributionChannel,
       updateUrl: releaseJson.downloadUrl,
       releaseNotes: releaseJson.releaseNotes,
@@ -120,7 +120,7 @@ export class AppUpgradeRepository {
     return null;
   }
 
-  private isUpdateRequired(
+  private isUpdateAvailable(
     latestVersionCode: number,
     latestVersionName: string,
     currentVersionCode: number | null,
