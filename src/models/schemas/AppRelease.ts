@@ -7,6 +7,7 @@ interface AppReleaseAttributes extends BaseModel {
   versionCode: number;
   distributionChannel: 'WEBSITE' | 'PLAYSTORE';
   downloadUrl: string;
+  apkSha256?: string | null;
   releaseNotes: string;
   isEnabled: boolean;
   createdAt: number;
@@ -23,6 +24,7 @@ class AppRelease
   public versionCode!: number;
   public distributionChannel!: 'WEBSITE' | 'PLAYSTORE';
   public downloadUrl!: string;
+  public apkSha256!: string | null;
   public releaseNotes!: string;
   public isEnabled!: boolean;
   public createdAt!: number;
@@ -62,6 +64,10 @@ export function initAppRelease(sequelize: Sequelize): typeof AppRelease {
       downloadUrl: {
         type: DataTypes.STRING(500),
         allowNull: false,
+      },
+      apkSha256: {
+        type: DataTypes.STRING(64),
+        allowNull: true,
       },
       releaseNotes: {
         type: DataTypes.TEXT,

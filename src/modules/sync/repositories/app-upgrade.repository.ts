@@ -19,6 +19,7 @@ export interface AppVersionCheckResult {
   forceUpdate: boolean;
   distributionChannel: DistributionChannel | null;
   updateUrl: string | null;
+  apkSha256: string | null;
   releaseNotes: string | null;
   message: string | null;
 }
@@ -54,6 +55,7 @@ export class AppUpgradeRepository {
         forceUpdate: false,
         distributionChannel: null,
         updateUrl: null,
+        apkSha256: null,
         releaseNotes: null,
         message: null,
       };
@@ -74,6 +76,7 @@ export class AppUpgradeRepository {
       forceUpdate: isUpdateAvailable && forceUpdate,
       distributionChannel: releaseJson.distributionChannel,
       updateUrl: releaseJson.downloadUrl,
+      apkSha256: releaseJson.apkSha256 ?? null,
       releaseNotes: releaseJson.releaseNotes,
       message,
     };
