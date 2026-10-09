@@ -40,6 +40,17 @@ const toPositiveUnix = (value: unknown): number | null => {
   return Number.isFinite(parsedValue) && parsedValue > 0 ? Math.floor(parsedValue) : null;
 };
 
+/**
+ * Floors a punch to whole minutes so early/late deltas match the `HH:mm` time shown
+ * to the user. Raw-second deltas round the wrong way: 06:37:30 displays as 06:37 but
+ * `Math.round(-22.5)` counts it as 22 minutes early instead of 23. This also keeps
+ * overtime/shortfall consistent, since they derive from the worked-minutes delta.
+ */
+const toMinuteUnix = (value: unknown): number | null => {
+  const unix = toPositiveUnix(value);
+  return unix === null ? null : Math.floor(unix / 60) * 60;
+};
+
 /** Accepts `HH:mm` or `HH:mm:ss` and returns `HH:mm:ss`, or null when not configured. */
 export const normalizeShiftTime = (value: unknown): string | null => {
   if (typeof value !== 'string') {
@@ -167,8 +178,8 @@ export const buildAttendanceShiftMetrics = (
 ): AttendanceShiftMetrics => {
   const { timezone, shiftStartTime, shiftEndTime, overtimeAllowed, overtimeCalculationType } =
     context;
-  const attendanceUnix = toPositiveUnix(attendanceTime);
-  const dayoverUnix = toPositiveUnix(dayoverTime);
+  const attendanceUnix = toMinuteUnix(attendanceTime);
+  const dayoverUnix = toMinuteUnix(dayoverTime);
   const metrics: AttendanceShiftMetrics = {
     shiftStartTime,
     shiftEndTime,
