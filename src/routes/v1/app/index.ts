@@ -13,6 +13,9 @@ const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
 router.use(authMiddleware);
+
+router.post('/version/check', syncController.checkAppVersion.bind(syncController));
+
 router.use('/sync', apiLogRouteContext('app', 'sync'));
 router.use('/reports', apiLogRouteContext('app', 'reports'));
 router.use('/device', apiLogRouteContext('app', 'device'));

@@ -13,7 +13,9 @@ import {
   UserDailySummaryRepository,
   VisitSummaryRepository,
   ActivityLogRepository,
+  AppUpgradeRepository,
 } from '../repositories';
+import { type AppVersionCheckResult } from '../repositories/app-upgrade.repository';
 import type { ActivityLogInput } from '../repositories/activity-log.repository';
 import { ActivityModule, ACTIVITY_DESCRIPTION_KEYS } from '../../../config/activityLog';
 import { User } from '../../../models';
@@ -54,6 +56,7 @@ const productRepository = new ProductRepository();
 const userDailySummaryRepository = new UserDailySummaryRepository();
 const visitSummaryRepository = new VisitSummaryRepository();
 const activityLogRepository = new ActivityLogRepository();
+const appUpgradeRepository = new AppUpgradeRepository();
 
 interface SyncRecord {
   localId?: string;
@@ -1614,6 +1617,34 @@ export class SyncService {
       attendanceLocationProvider: attendance.attendanceLocationProvider,
       attendanceBatteryPercentage: attendance.attendanceBatteryPercentage,
     };
+  }
+
+  async checkAppVersion({
+    hostId,
+    userId,
+    versionCode,
+    versionName,
+    currentVersion,
+    platform,
+  }: {
+    hostId: number;
+    userId: number;
+    versionCode?: number | null;
+    versionName?: string | null;
+    currentVersion?: string;
+    platform?: 'ANDROID';
+  }): Promise<AppVersionCheckResult> {
+    if (!hostId || !userId) {
+      throw new Error('Host ID and User ID are required.');
+    }
+
+    return appUpgradeRepository.checkAppVersion({
+      hostId,
+      userId,
+      versionCode,
+      versionName: versionName ?? currentVersion ?? null,
+      platform,
+    });
   }
 }
 

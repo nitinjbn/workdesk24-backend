@@ -493,6 +493,42 @@ export class SyncController {
       next(error);
     }
   }
+
+  async checkAppVersion(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { hostId, id: userId } = req.user;
+      const { versionCode, versionName, currentVersion, platform } = req.body;
+
+      const resolvedVersionName = versionName ?? currentVersion ?? null;
+      const parsedVersionCode = Number(versionCode);
+      const resolvedVersionCode =
+        Number.isFinite(parsedVersionCode) && parsedVersionCode > 0 ? parsedVersionCode : null;
+
+      if (resolvedVersionCode === null && !resolvedVersionName) {
+        res.status(400).json({
+          success: false,
+          message: 'versionCode or versionName is required',
+        } as ApiResponse);
+        return;
+      }
+
+      const result = await syncService.checkAppVersion({
+        hostId,
+        userId,
+        versionCode: resolvedVersionCode,
+        versionName: resolvedVersionName,
+        platform,
+      });
+
+      res.json({
+        success: true,
+        message: 'App version check completed successfully',
+        data: result,
+      } as ApiResponse);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default new SyncController();

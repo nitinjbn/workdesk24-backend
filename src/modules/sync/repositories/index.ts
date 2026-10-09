@@ -11,3 +11,4 @@ export * from './products.repository';
 export * from './visit.repository';
 export * from './user-daily-summary.repository';
 export * from './visit-summary.repository';
+export * from './app-upgrade.repository';
