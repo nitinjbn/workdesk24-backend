@@ -31,6 +31,7 @@ const REQUIRED_ENV_VARS = ['DB_HOST', 'DB_NAME', 'DB_USER', 'DB_PASSWORD'];
 
 // Runtime state for cleanup on failure/signals.
 let activeChildren = new Set();
+let activeProgress = null;
 let partialPath = null;
 let finished = false;
 
@@ -85,6 +86,7 @@ function parseArgs(argv) {
 }
 
 function fail(message) {
+  stopActiveProgress();
   console.error(`\nERROR: ${message}`);
   cleanupPartial();
   process.exit(1);
@@ -112,6 +114,7 @@ function killChildren() {
 }
 
 function handleSignal(signal) {
+  stopActiveProgress();
   console.error(`\nReceived ${signal}. Aborting backup and removing partial file.`);
   killChildren();
   cleanupPartial();
@@ -120,6 +123,50 @@ function handleSignal(signal) {
 
 process.on('SIGINT', () => handleSignal('SIGINT'));
 process.on('SIGTERM', () => handleSignal('SIGTERM'));
+
+/**
+ * Live progress line for long-running phases. On a TTY it rewrites one line;
+ * when piped/redirected it prints a line every 5 seconds instead.
+ */
+function startProgress(label, getBytes) {
+  const startedAt = Date.now();
+  const isTty = process.stdout.isTTY;
+  let lastPrint = 0;
+
+  const render = (final = false) => {
+    const elapsed = Math.floor((Date.now() - startedAt) / 1000);
+    const line = `  ${label}: ${formatBytes(getBytes())} written, ${elapsed}s elapsed`;
+
+    if (isTty) {
+      process.stdout.write(`\r${line.padEnd(72)}`);
+    } else if (final || Date.now() - lastPrint >= 5000) {
+      lastPrint = Date.now();
+      console.log(line);
+    }
+  };
+
+  render();
+  const timer = setInterval(render, 1000);
+
+  activeProgress = {
+    stop(final = true) {
+      clearInterval(timer);
+      activeProgress = null;
+      if (isTty) {
+        render(final);
+        process.stdout.write('\n');
+      }
+    },
+  };
+
+  return activeProgress.stop;
+}
+
+function stopActiveProgress() {
+  if (activeProgress) {
+    activeProgress.stop(false);
+  }
+}
 
 function loadEnvironment(envFile) {
   if (!fs.existsSync(envFile)) {
@@ -255,6 +302,7 @@ function runBackup(db, dumpOptions, finalPath) {
   });
   const gzip = spawn('gzip', ['-c']);
   const out = fs.createWriteStream(partialPath, { mode: 0o600 });
+  const stopProgress = startProgress('backing up', () => out.bytesWritten);
 
   activeChildren = new Set([dump, gzip]);
   const getDumpStderr = captureStderr(dump);
@@ -282,6 +330,7 @@ function runBackup(db, dumpOptions, finalPath) {
 
   return Promise.all([waitForExit(dump), waitForExit(gzip), writeDone]).then(
     ([dumpResult, gzipResult]) => {
+      stopProgress();
       activeChildren.clear();
 
       if (dumpResult.code !== 0) {
@@ -383,6 +432,7 @@ async function main() {
     fail('Backup file is empty. The partial backup was discarded.');
   }
 
+  console.log('\nVerifying backup integrity (gunzip pass + SQL content check)...');
   let verification;
   try {
     verification = await verifyBackup(partialPath);
