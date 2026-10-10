@@ -376,6 +376,12 @@ export class AuthService {
         );
         delete userData.settings.weeklyOffMask;
       }
+
+      // Ensure autoDayoverEnabled is set to 1 and maxWorkingMinutes is set to 24*60 if not already configured
+      if (userData.settings?.autoDayoverEnabled != 1) {
+        userData.settings.autoDayoverEnabled = 1;
+        userData.settings.maxWorkingMinutes = 24 * 60;
+      }
     }
     return userData;
   }
