@@ -27,3 +27,6 @@ yarn-debug.log*
 yarn-error.log*
 
 src/config/*firebase*.json
+
+# Database backups (contain production data - never commit)
+backups/mysql/
