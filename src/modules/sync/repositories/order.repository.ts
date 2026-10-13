@@ -1,13 +1,13 @@
 import { BaseRepository } from '../../../shared/repositories/base.repository';
 import Order from '../../../models/schemas/Order';
-import { WhereOptions, Op } from 'sequelize';
+import { WhereOptions, Op, Transaction } from 'sequelize';
 
 export class OrderRepository extends BaseRepository<typeof Order.prototype> {
   constructor() {
     super(Order as any);
   }
 
-  async findByUserId(userId: number): Promise<typeof Order.prototype[]> {
+  async findByUserId(userId: number): Promise<(typeof Order.prototype)[]> {
     return this.findAll({
       where: { userId } as WhereOptions<typeof Order.prototype>,
       order: [['orderDate', 'DESC']],
@@ -21,7 +21,11 @@ export class OrderRepository extends BaseRepository<typeof Order.prototype> {
     } as WhereOptions<typeof Order.prototype>);
   }
 
-  async findByDateRange(userId: number, startDate: number, endDate: number): Promise<typeof Order.prototype[]> {
+  async findByDateRange(
+    userId: number,
+    startDate: number,
+    endDate: number
+  ): Promise<(typeof Order.prototype)[]> {
     return this.findAll({
       where: {
         userId,
@@ -31,5 +35,16 @@ export class OrderRepository extends BaseRepository<typeof Order.prototype> {
       } as WhereOptions<typeof Order.prototype>,
       order: [['orderDate', 'DESC']],
     });
+  }
+
+  async findLastOrderNumber(hostId: number, transaction?: Transaction): Promise<string | null> {
+    const order = await (this.model as any).findOne({
+      attributes: ['orderNumber'],
+      where: { hostId, isDeleted: 0 },
+      order: [['id', 'DESC']],
+      transaction,
+    });
+
+    return order?.orderNumber ?? null;
   }
 }

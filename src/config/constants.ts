@@ -14,6 +14,11 @@ export const CONFIG = {
     DATE_TIME_FORMAT: 'DD-MMM-YYYY hh:mm A',
     DEFAUL_MAX_WORKING_HOURS: 12,
   },
+  ORDER: {
+    // Prefix used when generating order numbers server-side during sync.
+    // Override per client via the ORDER_NUMBER_PREFIX env variable.
+    NUMBER_PREFIX: process.env.ORDER_NUMBER_PREFIX || 'ORD-',
+  },
   LOCATION: {
     GOOGLE_GEOCODING_API_KEY: process.env.GOOGLE_GEOCODING_API_KEY || '',
   },

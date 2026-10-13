@@ -64,9 +64,9 @@ interface SyncRecord {
 }
 
 interface SyncResult {
-  success: Array<{ localId?: string; serverId: number }>;
+  success: Array<{ localId?: string; serverId: number; orderNumber?: string }>;
   failed: Array<{ localId?: string; error: string }>;
-  updated: Array<{ localId?: string; serverId: number }>;
+  updated: Array<{ localId?: string; serverId: number; orderNumber?: string }>;
 }
 
 interface SyncTransactionResult {
@@ -807,7 +807,11 @@ export class SyncService {
               throw new Error('visitLocalId or visitId is required');
             }
 
-            const { visitLocalId, ...orderPayload } = orderData;
+            const {
+              visitLocalId,
+              orderNumber: _ignoredClientOrderNumber,
+              ...orderPayload
+            } = orderData;
             const resolvedOrderData: SyncRecord = {
               ...orderPayload,
               visitId,
@@ -816,12 +820,23 @@ export class SyncService {
               ? await orderRepository.findOne({ userId, localId } as any, transaction)
               : null;
             const previousOrder = instance?.toJSON();
+            // The order number is always generated server-side; any value sent
+            // by the app is ignored. Existing orders keep their number.
+            let orderNumber = instance?.orderNumber;
+            if (!orderNumber) {
+              const hostId = this.toPositiveInteger(resolvedOrderData.hostId);
+              if (hostId === null) {
+                throw new Error('hostId is required to generate the order number');
+              }
+              orderNumber = await this.generateNextOrderNumber(hostId, transaction);
+            }
             const order = instance
               ? await orderRepository.update(
                   instance.id,
                   {
                     ...resolvedOrderData,
                     userId,
+                    orderNumber,
                     syncedAt: now,
                   },
                   transaction
@@ -831,6 +846,7 @@ export class SyncService {
                     ...resolvedOrderData,
                     userId,
                     localId,
+                    orderNumber,
                     syncedAt: now,
                   },
                   transaction
@@ -900,9 +916,17 @@ export class SyncService {
         );
 
         if (syncResult.status === 'updated') {
-          results.updated.push({ localId, serverId: syncResult.serverId });
+          results.updated.push({
+            localId,
+            serverId: syncResult.serverId,
+            orderNumber: syncResult.persistedRecord.orderNumber,
+          });
         } else {
-          results.success.push({ localId, serverId: syncResult.serverId });
+          results.success.push({
+            localId,
+            serverId: syncResult.serverId,
+            orderNumber: syncResult.persistedRecord.orderNumber,
+          });
         }
       } catch (error: any) {
         results.failed.push({
@@ -913,6 +937,17 @@ export class SyncService {
     }
 
     return results;
+  }
+
+  private async generateNextOrderNumber(hostId: number, transaction: Transaction): Promise<string> {
+    const prefix = CONFIG.ORDER.NUMBER_PREFIX;
+    const lastOrderNumber = await orderRepository.findLastOrderNumber(hostId, transaction);
+    const lastSequence = lastOrderNumber?.startsWith(prefix)
+      ? Number.parseInt(lastOrderNumber.slice(prefix.length), 10)
+      : Number.NaN;
+    const nextSequence = Number.isFinite(lastSequence) ? lastSequence + 1 : 1;
+
+    return `${prefix}${nextSequence}`;
   }
 
   private async scheduleOrderLocationJobs(
