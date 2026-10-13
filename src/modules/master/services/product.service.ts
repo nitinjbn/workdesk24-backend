@@ -318,7 +318,7 @@ export class ProductService {
       purchasePrice: otherPayload.purchasePrice,
       sellingPrice: otherPayload.sellingPrice,
       mrp: otherPayload.mrp,
-      taxPercentage: otherPayload.taxPercentage,
+      taxPercentage: otherPayload.taxPercentage || 0,
       remarks: otherPayload.remarks,
       isEnabled: otherPayload.isEnabled,
       createdAt: currentUnixTime,
@@ -392,7 +392,7 @@ export class ProductService {
         purchasePrice: otherPayload.purchasePrice,
         sellingPrice: otherPayload.sellingPrice,
         mrp: otherPayload.mrp,
-        taxPercentage: otherPayload.taxPercentage,
+        taxPercentage: otherPayload.taxPercentage || 0,
         isEnabled:
           otherPayload.isEnabled !== undefined
             ? otherPayload.isEnabled
