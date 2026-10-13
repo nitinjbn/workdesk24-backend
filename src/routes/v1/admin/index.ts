@@ -13,6 +13,7 @@ import aiRoutes from './ai.routes';
 import aiInsightsRoutes from './ai-insights.routes';
 import leavesRoutes from './leaves.routes';
 import geoFencingRoutes from './geo-fencing.routes';
+import taskRoutes from './tasks.routes';
 import { apiLogRouteContext } from '../../../modules/api-logs';
 
 const router = Router();
@@ -58,5 +59,6 @@ router.use(apiLogRouteContext('admin', 'ai'), aiRoutes);
 router.use(apiLogRouteContext('admin', 'ai-insights'), aiInsightsRoutes);
 router.use(apiLogRouteContext('admin', 'leaves'), leavesRoutes);
 router.use(apiLogRouteContext('admin', 'geo-fencing'), geoFencingRoutes);
+router.use('/tasks', apiLogRouteContext('admin', 'tasks'), taskRoutes);
 
 export default router;

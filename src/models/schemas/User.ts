@@ -39,8 +39,6 @@ interface UserAttributes extends BaseModel {
   isFieldAppUser?: number;
   isAdminUser?: number;
   isSuperAdmin?: number;
-  employmentStatus?:
-    'ACTIVE' | 'RESIGNED' | 'TERMINATED' | 'RETIRED' | 'CONTRACT_COMPLETED' | 'TRANSFERRED';
 }
 
 interface UserCreationAttributes extends Optional<

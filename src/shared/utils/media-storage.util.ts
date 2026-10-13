@@ -8,6 +8,15 @@ export interface MediaUploadResult {
   raw: unknown;
 }
 
+export interface MediaUploadOptions {
+  accessMode?: 'public' | 'authenticated';
+}
+
+export interface MediaDeleteOptions {
+  resourceType?: 'image' | 'video' | 'raw';
+  accessMode?: 'public' | 'authenticated';
+}
+
 export interface BatchMediaUploadResult {
   successful: MediaUploadResult[];
   failed: Array<{ error: string }>;
@@ -42,13 +51,15 @@ export function getMediaResourceType(mimeType: string): MediaResourceType {
 
 export async function uploadBufferToMediaStorage(
   file: Pick<Express.Multer.File, 'buffer' | 'mimetype'>,
-  folder: string
+  folder: string,
+  options: MediaUploadOptions = {}
 ): Promise<MediaUploadResult> {
   return new Promise<MediaUploadResult>((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
       {
         folder,
         resource_type: getMediaResourceType(file.mimetype),
+        ...(options.accessMode === 'authenticated' ? { type: 'authenticated' } : {}),
       },
       (error: Error | undefined, uploadResult: any) => {
         if (error) {
@@ -61,8 +72,18 @@ export async function uploadBufferToMediaStorage(
           return;
         }
 
+        const url = options.accessMode === 'authenticated'
+          ? cloudinary.url(uploadResult.public_id, {
+              resource_type: uploadResult.resource_type,
+              type: 'authenticated',
+              secure: true,
+              sign_url: true,
+              version: uploadResult.version,
+            })
+          : uploadResult.secure_url;
+
         resolve({
-          url: uploadResult.secure_url,
+          url,
           fileId: uploadResult.public_id,
           raw: uploadResult,
         });
@@ -98,12 +119,17 @@ export async function uploadManyBuffersToMediaStorage(
 }
 
 export async function deleteMediaFromStorage(
-  publicId: string
+  publicId: string,
+  options: MediaDeleteOptions = {}
 ): Promise<MediaDeleteResult> {
   return new Promise<MediaDeleteResult>((resolve, reject) => {
     cloudinary.uploader.destroy(
       publicId,
-      { invalidate: true },
+      {
+        invalidate: true,
+        ...(options.resourceType ? { resource_type: options.resourceType } : {}),
+        ...(options.accessMode ? { type: options.accessMode } : {}),
+      },
       (error: Error | undefined, deleteResult: any) => {
         if (error) {
           reject(error);

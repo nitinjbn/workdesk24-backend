@@ -1,0 +1,312 @@
+{
+  "info": {
+    "name": "WorkDesk24 Task Management APIs",
+    "description": "Task Management endpoints. BASE_URL, TOKEN, ADMIN_TOKEN, and ADMIN_CSRF_TOKEN are resolved from the active Postman environment. Admin requests also require the matching admin CSRF cookie from the admin authentication flow. Run Create Task before requests that use TASK_ID; IDs are saved from successful responses. JSON requests use application/json. Attachment uploads use multipart/form-data so Postman can generate the required boundary.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "workdesk24-task-management-v1"
+  },
+  "item": [
+    {
+      "name": "Admin APIs",
+      "description": "Admin-only routes under /api/v1/admin/tasks. Uses ADMIN_TOKEN and requires admin CSRF validation.",
+      "auth": {
+        "type": "bearer",
+        "bearer": [{ "key": "token", "value": "{{ADMIN_TOKEN}}", "type": "string" }]
+      },
+      "event": [{
+        "listen": "prerequest",
+        "script": {
+          "type": "text/javascript",
+          "exec": [
+            "const csrf = pm.environment.get('ADMIN_CSRF_TOKEN');",
+            "const cookieName = pm.environment.get('ADMIN_CSRF_COOKIE_NAME') || 'wd24_admin_csrf';",
+            "if (csrf) pm.request.headers.upsert({ key: 'Cookie', value: cookieName + '=' + csrf });"
+          ]
+        }
+      }],
+      "item": [
+        {
+          "name": "Create Task",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"Prepare customer proposal\",\n  \"description\": \"Draft and review the proposal\",\n  \"assignedToUserId\": 22,\n  \"priority\": \"HIGH\",\n  \"dueAt\": 1791853200\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/createTask", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "createTask"] },
+            "description": "Creates a PENDING task and its CREATED activity log. Replace assignedToUserId with an active field-app user in this tenant."
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["const result = pm.response.json();", "if (result.success && result.data && result.data.task && result.data.task.id) pm.environment.set('TASK_ID', result.data.task.id);"] } }],
+          "response": []
+        },
+        {
+          "name": "List Tasks",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"filters\": {\n    \"status\": \"PENDING\",\n    \"priority\": \"HIGH\",\n    \"search\": \"proposal\",\n    \"overdueOnly\": false\n  },\n  \"page\": 1,\n  \"limit\": 20,\n  \"sortBy\": \"createdAt\",\n  \"sortOrder\": \"DESC\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/getTasks", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "getTasks"] },
+            "description": "Filters also support assignedToUserId, createdByUserId, customerId, visitId, dueFrom, and dueTo."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Task Details",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"taskId\": {{TASK_ID}}\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/getTaskDetails", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "getTaskDetails"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Task",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"taskId\": {{TASK_ID}},\n  \"title\": \"Prepare revised customer proposal\",\n  \"description\": \"Update the pricing section and review\",\n  \"priority\": \"URGENT\",\n  \"dueAt\": 1791856800\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/updateTask", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "updateTask"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Assign or Reassign Task",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"taskId\": {{TASK_ID}},\n  \"assignedToUserId\": 22\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/assignTask", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "assignTask"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Start Task",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"taskId\": {{TASK_ID}}\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/startTask", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "startTask"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Complete Task",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"taskId\": {{TASK_ID}},\n  \"remarks\": \"Proposal sent to the customer\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/completeTask", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "completeTask"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel Task",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"taskId\": {{TASK_ID}},\n  \"remarks\": \"Customer postponed the request\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/cancelTask", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "cancelTask"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Task Activity",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"taskId\": {{TASK_ID}},\n  \"page\": 1,\n  \"limit\": 20\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/getTaskActivity", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "getTaskActivity"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Add Task Comment",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"taskId\": {{TASK_ID}},\n  \"comment\": \"Please confirm the final pricing before sending.\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/addTaskComment", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "addTaskComment"] }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["const result = pm.response.json();", "if (result.success && result.data && result.data.comment && result.data.comment.id) pm.environment.set('COMMENT_ID', result.data.comment.id);"] } }],
+          "response": []
+        },
+        {
+          "name": "Get Task Comments",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"taskId\": {{TASK_ID}},\n  \"page\": 1,\n  \"limit\": 20\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/getTaskComments", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "getTaskComments"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Upload Task Attachment",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
+            "body": { "mode": "formdata", "formdata": [
+              { "key": "taskId", "value": "{{TASK_ID}}", "type": "text" },
+              { "key": "taskCommentId", "value": "{{COMMENT_ID}}", "type": "text", "disabled": true },
+              { "key": "remarks", "value": "Proposal attachment", "type": "text", "disabled": true },
+              { "key": "file", "type": "file", "src": [] }
+            ] },
+            "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/uploadTaskAttachment", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "uploadTaskAttachment"] },
+            "description": "Choose a JPEG, PNG, WEBP, or PDF file no larger than 10 MB. Postman will set the multipart Content-Type with its boundary."
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["const result = pm.response.json();", "if (result.success && result.data && result.data.attachment && result.data.attachment.id) pm.environment.set('ATTACHMENT_ID', result.data.attachment.id);"] } }],
+          "response": []
+        },
+        {
+          "name": "Get Task Attachments",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"taskId\": {{TASK_ID}},\n  \"page\": 1,\n  \"limit\": 20\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/getTaskAttachments", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "getTaskAttachments"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Task Attachment",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"taskId\": {{TASK_ID}},\n  \"attachmentId\": {{ATTACHMENT_ID}}\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/getTaskAttachment", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "getTaskAttachment"] }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "App APIs",
+      "description": "Employee task routes under /api/v1/app/task. Uses TOKEN from the active Postman environment. Employees can only access tasks assigned to them.",
+      "auth": {
+        "type": "bearer",
+        "bearer": [{ "key": "token", "value": "{{TOKEN}}", "type": "string" }]
+      },
+      "item": [
+        {
+          "name": "List My Tasks",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"filters\": {\n    \"status\": \"PENDING\",\n    \"priority\": \"HIGH\",\n    \"search\": \"proposal\",\n    \"overdueOnly\": false\n  },\n  \"page\": 1,\n  \"limit\": 20,\n  \"sortBy\": \"createdAt\",\n  \"sortOrder\": \"DESC\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{BASE_URL}}/api/v1/app/task/getTasks", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "task", "getTasks"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Get My Task Details",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"taskId\": {{TASK_ID}}\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{BASE_URL}}/api/v1/app/task/getTaskDetails", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "task", "getTaskDetails"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Start My Task",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"taskId\": {{TASK_ID}}\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{BASE_URL}}/api/v1/app/task/startTask", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "task", "startTask"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Complete My Task",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"taskId\": {{TASK_ID}},\n  \"remarks\": \"Completed the customer proposal\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{BASE_URL}}/api/v1/app/task/completeTask", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "task", "completeTask"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel My Task",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"taskId\": {{TASK_ID}},\n  \"remarks\": \"Customer postponed the request\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{BASE_URL}}/api/v1/app/task/cancelTask", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "task", "cancelTask"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Get My Task Activity",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"taskId\": {{TASK_ID}},\n  \"page\": 1,\n  \"limit\": 20\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{BASE_URL}}/api/v1/app/task/getTaskActivity", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "task", "getTaskActivity"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Add My Task Comment",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"taskId\": {{TASK_ID}},\n  \"comment\": \"I have started preparing the proposal.\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{BASE_URL}}/api/v1/app/task/addTaskComment", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "task", "addTaskComment"] }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["const result = pm.response.json();", "if (result.success && result.data && result.data.comment && result.data.comment.id) pm.environment.set('COMMENT_ID', result.data.comment.id);"] } }],
+          "response": []
+        },
+        {
+          "name": "Get My Task Comments",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"taskId\": {{TASK_ID}},\n  \"page\": 1,\n  \"limit\": 20\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{BASE_URL}}/api/v1/app/task/getTaskComments", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "task", "getTaskComments"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Upload My Task Attachment",
+          "request": {
+            "method": "POST",
+            "body": { "mode": "formdata", "formdata": [
+              { "key": "taskId", "value": "{{TASK_ID}}", "type": "text" },
+              { "key": "taskCommentId", "value": "{{COMMENT_ID}}", "type": "text", "disabled": true },
+              { "key": "remarks", "value": "Supporting document", "type": "text", "disabled": true },
+              { "key": "file", "type": "file", "src": [] }
+            ] },
+            "url": { "raw": "{{BASE_URL}}/api/v1/app/task/uploadTaskAttachment", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "task", "uploadTaskAttachment"] },
+            "description": "Choose a JPEG, PNG, WEBP, or PDF file no larger than 10 MB. Postman sets the multipart Content-Type boundary automatically."
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["const result = pm.response.json();", "if (result.success && result.data && result.data.attachment && result.data.attachment.id) pm.environment.set('ATTACHMENT_ID', result.data.attachment.id);"] } }],
+          "response": []
+        },
+        {
+          "name": "Get My Task Attachments",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"taskId\": {{TASK_ID}},\n  \"page\": 1,\n  \"limit\": 20\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{BASE_URL}}/api/v1/app/task/getTaskAttachments", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "task", "getTaskAttachments"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Get My Task Attachment",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"taskId\": {{TASK_ID}},\n  \"attachmentId\": {{ATTACHMENT_ID}}\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{BASE_URL}}/api/v1/app/task/getTaskAttachment", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "task", "getTaskAttachment"] }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
