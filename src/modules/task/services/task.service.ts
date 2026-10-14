@@ -75,7 +75,7 @@ export class TaskService {
   private async getVisibleTask(hostId: number, taskId: number, userId: number, isAdmin: boolean): Promise<any> {
     if (!validId(taskId)) throw taskError('INVALID_TASK_ID', 'A valid taskId is required');
     const task = await this.repository.getTask(hostId, taskId);
-    if (!task || (!isAdmin && Number(task.assignedToUserId) !== userId)) {
+    if (!task || (!isAdmin && Number(task.assignedToUserId) !== Number(userId))) {
       throw taskError('TASK_NOT_FOUND', 'Task not found', 404);
     }
     return task;
@@ -284,7 +284,7 @@ export class TaskService {
       if (!task) throw taskError('TASK_NOT_FOUND', 'Task not found', 404);
       const assignee = await this.repository.findAssignee(payload.hostId, payload.assignedToUserId, transaction);
       if (!assignee) throw taskError('INVALID_TASK_ASSIGNEE', 'Assigned user is not eligible for task assignment', 404);
-      if (Number(task.assignedToUserId) === payload.assignedToUserId) return { task: asPlain(task), changed: false };
+      if (Number(task.assignedToUserId) === Number(payload.assignedToUserId)) return { task: asPlain(task), changed: false };
       const oldAssignee = Number(task.assignedToUserId);
       const now = Math.floor(Date.now() / 1000);
       await this.repository.updateTask(task, { assignedToUserId: payload.assignedToUserId, updatedAt: now }, transaction);
@@ -305,7 +305,7 @@ export class TaskService {
     return this.inTransaction(async (transaction) => {
       const task = await this.repository.getTask(payload.hostId, payload.taskId, transaction, true);
       if (!task) throw taskError('TASK_NOT_FOUND', 'Task not found', 404);
-      if (!payload.isAdmin && Number(task.assignedToUserId) !== payload.userId) {
+      if (!payload.isAdmin && Number(task.assignedToUserId) !== Number(payload.userId)) {
         throw taskError('TASK_NOT_ASSIGNED_TO_USER', 'Task not found', 404);
       }
       const currentStatus = task.status as TaskStatus;
