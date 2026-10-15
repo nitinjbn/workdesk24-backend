@@ -16,6 +16,11 @@
       "key": "TOKEN",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "ADMIN_CSRF_TOKEN",
+      "value": "",
+      "type": "string"
     }
   ],
   "item": [
@@ -349,6 +354,297 @@
                   "path": ["api", "v1", "app", "profile", "password"]
                 },
                 "description": "Change user password"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Task Management",
+          "description": "Admin management operations use /api/v1/admin/tasks and the existing admin role/CSRF middleware. Employee operations use /api/v1/app/task. All API responses use { success, message, data }.",
+          "item": [
+            {
+              "name": "Create Task (Admin)",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
+                "body": { "mode": "raw", "raw": "{\n  \"title\": \"Prepare customer proposal\",\n  \"description\": \"Draft and review proposal\",\n  \"assignedToUserId\": 42,\n  \"customerId\": 12,\n  \"visitId\": 37,\n  \"priority\": \"HIGH\",\n  \"dueAt\": 1791853200\n}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/createTask", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "createTask"] },
+                "description": "Creates a PENDING task and CREATED activity record in one transaction. hostId and creator are derived from the token."
+              },
+              "response": []
+            },
+            {
+              "name": "List Assigned Tasks (Employee)",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"filters\": {\n    \"status\": \"PENDING\",\n    \"priority\": \"HIGH\",\n    \"search\": \"proposal\",\n    \"overdueOnly\": false\n  },\n  \"page\": 1,\n  \"limit\": 20,\n  \"sortBy\": \"createdAt\",\n  \"sortOrder\": \"DESC\"\n}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/app/task/getTasks", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "task", "getTasks"] },
+                "description": "Returns tenant-scoped tasks and pagination metadata. Non-admin users see only their assigned tasks."
+              },
+              "response": []
+            },
+            {
+              "name": "List All Tasks (Admin)",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
+                "body": { "mode": "raw", "raw": "{\n  \"filters\": {\n    \"status\": \"PENDING\"\n  },\n  \"page\": 1,\n  \"limit\": 20\n}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/getTasks", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "getTasks"] },
+                "description": "Admin-only tenant task list. Include the CSRF cookie and matching ADMIN_CSRF_TOKEN header."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Assigned Task Details (Employee)",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"taskId\": 1001\n}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/app/task/getTaskDetails", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "task", "getTaskDetails"] },
+                "description": "Returns task details and up to 10 recent comments, attachments, and activity records."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Task Details (Admin)",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
+                "body": { "mode": "raw", "raw": "{\n  \"taskId\": 1001\n}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/getTaskDetails", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "getTaskDetails"] },
+                "description": "Admin-only tenant task details with bounded related records. Include the CSRF cookie and matching ADMIN_CSRF_TOKEN header."
+              },
+              "response": []
+            },
+            {
+              "name": "Update Task (Admin)",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
+                "body": { "mode": "raw", "raw": "{\n  \"taskId\": 1001,\n  \"title\": \"Prepare updated proposal\",\n  \"priority\": \"URGENT\",\n  \"dueAt\": 1791853200\n}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/updateTask", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "updateTask"] },
+                "description": "Updates editable metadata and writes an UPDATED activity record only when values change. Assignment is handled separately."
+              },
+              "response": []
+            },
+            {
+              "name": "Assign or Reassign Task (Admin)",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
+                "body": { "mode": "raw", "raw": "{\n  \"taskId\": 1001,\n  \"assignedToUserId\": 43\n}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/assignTask", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "assignTask"] },
+                "description": "Validates an active field-app employee and records the old/new assignee in the activity log."
+              },
+              "response": []
+            },
+            {
+              "name": "Start Task (Admin)",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
+                "body": { "mode": "raw", "raw": "{\n  \"taskId\": 1001\n}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/startTask", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "startTask"] },
+                "description": "Admin-authorized start operation. Include the CSRF cookie and matching ADMIN_CSRF_TOKEN header."
+              },
+              "response": []
+            },
+            {
+              "name": "Complete Task (Admin)",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
+                "body": { "mode": "raw", "raw": "{\n  \"taskId\": 1001,\n  \"remarks\": \"Work completed\"\n}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/completeTask", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "completeTask"] },
+                "description": "Admin-authorized completion. Include the CSRF cookie and matching ADMIN_CSRF_TOKEN header."
+              },
+              "response": []
+            },
+            {
+              "name": "Cancel Task (Admin)",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
+                "body": { "mode": "raw", "raw": "{\n  \"taskId\": 1001,\n  \"remarks\": \"Work cancelled\"\n}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/cancelTask", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "cancelTask"] },
+                "description": "Admin-authorized cancellation. Include the CSRF cookie and matching ADMIN_CSRF_TOKEN header."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Task Activity (Admin)",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
+                "body": { "mode": "raw", "raw": "{\n  \"taskId\": 1001,\n  \"page\": 1,\n  \"limit\": 20\n}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/getTaskActivity", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "getTaskActivity"] },
+                "description": "Returns immutable chronological task activity with pagination."
+              },
+              "response": []
+            },
+            {
+              "name": "Add Task Comment (Admin)",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
+                "body": { "mode": "raw", "raw": "{\n  \"taskId\": 1001,\n  \"comment\": \"Review requested\"\n}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/addTaskComment", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "addTaskComment"] },
+                "description": "Adds a task comment as the authenticated admin."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Task Comments (Admin)",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
+                "body": { "mode": "raw", "raw": "{\n  \"taskId\": 1001,\n  \"page\": 1,\n  \"limit\": 20\n}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/getTaskComments", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "getTaskComments"] },
+                "description": "Returns chronological task comments with pagination."
+              },
+              "response": []
+            },
+            {
+              "name": "Upload Task Attachment (Admin)",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
+                "body": { "mode": "formdata", "formdata": [
+                  { "key": "taskId", "value": "1001", "type": "text" },
+                  { "key": "taskCommentId", "value": "5", "type": "text", "disabled": true },
+                  { "key": "remarks", "value": "Reviewed proposal", "type": "text", "disabled": true },
+                  { "key": "file", "type": "file", "src": [] }
+                ] },
+                "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/uploadTaskAttachment", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "uploadTaskAttachment"] },
+                "description": "Multipart upload as admin. Include the CSRF cookie and matching ADMIN_CSRF_TOKEN header."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Task Attachments (Admin)",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
+                "body": { "mode": "raw", "raw": "{\n  \"taskId\": 1001,\n  \"page\": 1,\n  \"limit\": 20\n}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/getTaskAttachments", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "getTaskAttachments"] },
+                "description": "Returns task attachment metadata with pagination."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Task Attachment (Admin)",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
+                "body": { "mode": "raw", "raw": "{\n  \"taskId\": 1001,\n  \"attachmentId\": 9\n}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/getTaskAttachment", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "getTaskAttachment"] },
+                "description": "Returns task attachment metadata after checking admin access to its parent task."
+              },
+              "response": []
+            },
+            {
+              "name": "Start Task",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"taskId\": 1001\n}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/app/task/startTask", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "task", "startTask"] },
+                "description": "Assigned employee or admin starts a PENDING task. Repeated starts are idempotent."
+              },
+              "response": []
+            },
+            {
+              "name": "Complete Task",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"taskId\": 1001,\n  \"remarks\": \"Proposal sent to customer\"\n}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/app/task/completeTask", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "task", "completeTask"] },
+                "description": "Completes an IN_PROGRESS task, stores completedAt, and writes remarks to the activity log."
+              },
+              "response": []
+            },
+            {
+              "name": "Cancel Task",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"taskId\": 1001,\n  \"remarks\": \"Customer postponed the request\"\n}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/app/task/cancelTask", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "task", "cancelTask"] },
+                "description": "Cancels a PENDING or IN_PROGRESS task and stores cancellation remarks in the activity log."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Task Activity",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"taskId\": 1001,\n  \"page\": 1,\n  \"limit\": 20\n}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/app/task/getTaskActivity", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "task", "getTaskActivity"] },
+                "description": "Returns immutable task activity in chronological order with pagination."
+              },
+              "response": []
+            },
+            {
+              "name": "Add Task Comment",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"taskId\": 1001,\n  \"comment\": \"I have started preparing the proposal.\"\n}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/app/task/addTaskComment", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "task", "addTaskComment"] },
+                "description": "Adds a non-empty comment (maximum 5000 characters); author and tenant come from authentication."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Task Comments",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"taskId\": 1001,\n  \"page\": 1,\n  \"limit\": 20\n}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/app/task/getTaskComments", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "task", "getTaskComments"] },
+                "description": "Returns chronological task comments with pagination."
+              },
+              "response": []
+            },
+            {
+              "name": "Upload Task Attachment",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{TOKEN}}" }],
+                "body": { "mode": "formdata", "formdata": [
+                  { "key": "taskId", "value": "1001", "type": "text" },
+                  { "key": "taskCommentId", "value": "5", "type": "text", "disabled": true },
+                  { "key": "remarks", "value": "Proposal draft", "type": "text", "disabled": true },
+                  { "key": "file", "type": "file", "src": [] }
+                ] },
+                "url": { "raw": "{{BASE_URL}}/api/v1/app/task/uploadTaskAttachment", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "task", "uploadTaskAttachment"] },
+                "description": "Multipart upload field `file`; supports JPEG, PNG, WEBP, and PDF up to 10 MB. Optional taskCommentId and remarks fields."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Task Attachments",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"taskId\": 1001,\n  \"page\": 1,\n  \"limit\": 20\n}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/app/task/getTaskAttachments", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "task", "getTaskAttachments"] },
+                "description": "Returns task attachment metadata with pagination."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Task Attachment",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"taskId\": 1001,\n  \"attachmentId\": 9\n}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/app/task/getTaskAttachment", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "task", "getTaskAttachment"] },
+                "description": "Returns metadata only when the authenticated user can access the parent task."
               },
               "response": []
             }
