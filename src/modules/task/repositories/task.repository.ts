@@ -123,7 +123,7 @@ export class TaskRepository {
     return TaskComments.findAndCountAll({
       where: { hostId, taskId },
       include: [{ model: User, as: 'user', required: false, where: { hostId, isDeleted: 0 }, attributes: ['id', 'name'] }],
-      order: [['createdAt', 'ASC'], ['id', 'ASC']],
+      order: [['createdAt', 'DESC'], ['id', 'DESC']],
       limit,
       offset,
     } as any);
@@ -154,7 +154,7 @@ export class TaskRepository {
         { model: User, as: 'uploadedByUser', required: false, where: { hostId, isDeleted: 0 }, attributes: ['id', 'name'] },
         { model: TaskComments, as: 'taskComment', required: false, where: { hostId, taskId }, attributes: ['id', 'userId', 'comment', 'createdAt'] },
       ],
-      order: [['createdAt', 'ASC'], ['id', 'ASC']],
+      order: [['createdAt', 'DESC'], ['id', 'DESC']],
       limit,
       offset,
     } as any);
