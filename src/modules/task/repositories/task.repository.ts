@@ -141,7 +141,7 @@ export class TaskRepository {
         { model: User, as: 'oldAssignedToUser', required: false, where: { hostId, isDeleted: 0 }, attributes: ['id', 'name'] },
         { model: User, as: 'newAssignedToUser', required: false, where: { hostId, isDeleted: 0 }, attributes: ['id', 'name'] },
       ],
-      order: [['createdAt', 'ASC'], ['id', 'ASC']],
+      order: [['createdAt', 'DESC'], ['id', 'DESC']],
       limit,
       offset,
     } as any);
