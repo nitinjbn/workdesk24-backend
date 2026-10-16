@@ -79,6 +79,9 @@ export async function uploadBufferToMediaStorage(
               secure: true,
               sign_url: true,
               version: uploadResult.version,
+              ...(uploadResult.resource_type !== 'raw' && uploadResult.format
+                ? { format: uploadResult.format }
+                : {}),
             })
           : uploadResult.secure_url;
 

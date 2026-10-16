@@ -3,6 +3,8 @@ require('ts-node/register/transpile-only');
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { TaskService } = require('../../src/modules/task/services/task.service');
+const mediaStorage = require('../../src/shared/utils/media-storage.util');
+const cloudinary = require('../../src/config/cloudinary').default;
 const { getTaskTransition, isValidTaskFile, isValidUnixTimestamp } = require('../../src/modules/task/services/task-rules.util');
 
 class FakeTaskRepository {
@@ -232,6 +234,53 @@ test('attachment upload rejects unsupported or mismatched file signatures and co
   const file = { buffer: Buffer.from('%PDF-1.7'), size: 8, mimetype: 'application/pdf', originalname: 'proof.pdf' };
   await assert.rejects(service.uploadAttachment({ hostId: 7, taskId: 101, userId: 22, isAdmin: false, taskCommentId: 77, file }), /Comment not found/);
   await assert.rejects(service.uploadAttachment({ hostId: 7, taskId: 101, userId: 22, isAdmin: false, file: { ...file, mimetype: 'image/png' } }), /Only valid/);
+});
+
+test('attachment upload preserves PDF filenames and sanitizes only unsafe characters', async (context) => {
+  const { service, repository } = makeHarness();
+  repository.task = { id: 101, hostId: 7, assignedToUserId: 22, status: 'PENDING', isDeleted: 0 };
+  repository.createAttachment = async (data) => ({ id: 1, ...data });
+  const upload = context.mock.method(mediaStorage, 'uploadBufferToMediaStorage', async () => ({
+    url: 'https://example.com/proof.pdf', fileId: 'proof', raw: {},
+  }));
+  for (const [originalname, expected] of [
+    ['September-2026-report.pdf', 'September-2026-report.pdf'],
+    ['../folder\\proof\u0000\u001f.pdf', '._folder_proof__.pdf'],
+  ]) {
+    const file = { buffer: Buffer.from('%PDF-1.7'), size: 8, mimetype: 'application/pdf', originalname };
+    const result = await service.uploadAttachment({ ...admin, taskId: 101, file });
+    assert.equal(result.attachment.fileName, expected);
+    assert.equal(result.attachment.fileUrl, 'https://example.com/proof.pdf');
+  }
+  assert.deepEqual(upload.mock.calls[0].arguments.slice(1), ['7/tasks', { accessMode: 'authenticated' }]);
+});
+
+test('authenticated media URLs preserve PDF and image formats without duplicating raw extensions', async (context) => {
+  const buffer = Buffer.from('%PDF-1.7');
+  let uploaded;
+  const upload = context.mock.method(cloudinary.uploader, 'upload_stream', (options, callback) => ({
+    end(received) {
+      assert.equal(received, buffer);
+      callback(undefined, uploaded);
+    },
+  }));
+  for (const [resourceType, format, publicId, mimetype, extension] of [
+    ['image', 'pdf', '7/tasks/proof', 'application/pdf', 'pdf'],
+    ['image', 'png', '7/tasks/photo', 'image/png', 'png'],
+    ['raw', undefined, '7/tasks/document.pdf', 'application/pdf', 'pdf'],
+  ]) {
+    uploaded = { resource_type: resourceType, format, public_id: publicId, version: 123,
+      secure_url: 'https://example.com/uploaded' };
+    const result = await mediaStorage.uploadBufferToMediaStorage({ buffer, mimetype }, '7/tasks', { accessMode: 'authenticated' });
+    const pathname = new URL(result.url).pathname;
+    assert.match(pathname, new RegExp(`/${resourceType}/authenticated/s--[^/]+--/v123/7/tasks/[^/]+\\.${extension}$`));
+    assert.equal(pathname.endsWith('.pdf.pdf'), false);
+    assert.equal(result.fileId, publicId);
+  }
+  assert.equal(upload.mock.calls[0].arguments[0].type, 'authenticated');
+  assert.equal(upload.mock.calls[0].arguments[0].resource_type, 'auto');
+  const publicResult = await mediaStorage.uploadBufferToMediaStorage({ buffer, mimetype: 'application/pdf' }, '7/tasks');
+  assert.equal(publicResult.url, uploaded.secure_url);
 });
 
 test('task rules cover allowed transitions, file signatures, and Unix timestamps', () => {
