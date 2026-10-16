@@ -426,7 +426,7 @@ export class TaskService {
       if (typeof payload.remarks !== 'string') throw taskError('INVALID_TASK_REMARKS', 'remarks must be a string');
       if (payload.remarks.length > 500) throw taskError('INVALID_TASK_REMARKS', 'remarks must not exceed 500 characters');
     }
-    const safeName = file.originalname.replace(/[\\/\\0-\\x1f]/g, '_').replace(/\.{2,}/g, '.').slice(0, 255);
+    const safeName = file.originalname.replace(/[\\/\u0000-\u001f]/g, '_').replace(/\.{2,}/g, '.').slice(0, 255);
     const uploaded = await uploadBufferToMediaStorage(file, `${payload.hostId}/tasks`, { accessMode: 'authenticated' });
     try {
       const attachment = await this.repository.createAttachment({

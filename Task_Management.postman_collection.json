@@ -154,7 +154,7 @@
               { "key": "file", "type": "file", "src": [] }
             ] },
             "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/uploadTaskAttachment", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "uploadTaskAttachment"] },
-            "description": "Choose a JPEG, PNG, WEBP, or PDF file no larger than 10 MB. Postman will set the multipart Content-Type with its boundary."
+            "description": "Choose a JPEG, PNG, WEBP, or PDF file no larger than 10 MB. Postman will set the multipart Content-Type with its boundary. The response data.attachment.fileName preserves normal filename characters and replaces path separators and control characters. Open data.attachment.fileUrl exactly as returned, including its authenticated Cloudinary signature and file extension. Cloudinary must allow PDF delivery in the account security settings."
           },
           "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["const result = pm.response.json();", "if (result.success && result.data && result.data.attachment && result.data.attachment.id) pm.environment.set('ATTACHMENT_ID', result.data.attachment.id);"] } }],
           "response": []
@@ -281,7 +281,7 @@
               { "key": "file", "type": "file", "src": [] }
             ] },
             "url": { "raw": "{{BASE_URL}}/api/v1/app/task/uploadTaskAttachment", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "task", "uploadTaskAttachment"] },
-            "description": "Choose a JPEG, PNG, WEBP, or PDF file no larger than 10 MB. Postman sets the multipart Content-Type boundary automatically."
+            "description": "Choose a JPEG, PNG, WEBP, or PDF file no larger than 10 MB. Postman sets the multipart Content-Type boundary automatically. The response data.attachment.fileName preserves normal filename characters and replaces path separators and control characters. Open data.attachment.fileUrl exactly as returned, including its authenticated Cloudinary signature and file extension. Cloudinary must allow PDF delivery in the account security settings."
           },
           "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["const result = pm.response.json();", "if (result.success && result.data && result.data.attachment && result.data.attachment.id) pm.environment.set('ATTACHMENT_ID', result.data.attachment.id);"] } }],
           "response": []
