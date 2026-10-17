@@ -15,5 +15,7 @@ router.post('/getTaskComments', taskController.getTaskComments);
 router.post('/uploadTaskAttachment', taskUpload.single('file'), taskUploadErrorHandler, taskController.uploadTaskAttachment);
 router.post('/getTaskAttachments', taskController.getTaskAttachments);
 router.post('/getTaskAttachment', taskController.getTaskAttachment);
+router.post('/downloadAttachment', taskController.downloadAttachment);
+
 
 export default router;

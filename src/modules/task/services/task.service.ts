@@ -4,6 +4,8 @@ import { logger } from '../../../config/database';
 import { createConfiguredError } from '../../../shared/utils/error.util';
 import {
   deleteMediaFromStorage,
+  mediaDownloadError,
+  openMediaDownload,
   uploadBufferToMediaStorage,
 } from '../../../shared/utils/media-storage.util';
 import taskRepository, { TaskRepository } from '../repositories/task.repository';
@@ -396,6 +398,50 @@ export class TaskService {
     const attachment = await this.repository.getAttachment(payload.hostId, payload.taskId, payload.attachmentId);
     if (!attachment) throw taskError('TASK_ATTACHMENT_NOT_FOUND', 'Attachment not found', 404);
     return { attachment: asPlain(attachment) };
+  }
+
+  async getDownloadAttachment(payload: {
+    hostId: number; userId: number; isAdmin: boolean; attachmentId: unknown;
+  }): Promise<{ fileUrl: string; fileName: string; fileType: string; hostId: number }> {
+    const value = payload.attachmentId;
+    if (
+      !['number', 'string'].includes(typeof value) ||
+      (typeof value === 'string' && !/^\d+$/.test(value)) ||
+      !validId(value)
+    ) {
+      throw taskError('INVALID_ATTACHMENT_ID', 'A valid positive integer attachmentId is required');
+    }
+    const attachment = await this.repository.getAttachmentById(payload.hostId, Number(value));
+    if (!attachment) throw taskError('TASK_ATTACHMENT_NOT_FOUND', 'Attachment not found', 404);
+    await this.getVisibleTask(payload.hostId, attachment.taskId, payload.userId, payload.isAdmin);
+    if (
+      attachment.taskCommentId != null &&
+      !(await this.repository.findComment(payload.hostId, attachment.taskId, attachment.taskCommentId))
+    ) {
+      throw taskError('TASK_COMMENT_NOT_FOUND', 'Comment not found', 404);
+    }
+    return {
+      fileUrl: attachment.fileUrl,
+      fileName: attachment.fileName,
+      fileType: attachment.fileType,
+      hostId: payload.hostId,
+    };
+  }
+
+  async downloadAttachment(payload: {
+    hostId: number; userId: number; isAdmin: boolean; attachmentId: unknown;
+  }, signal: AbortSignal) {
+    const attachment = await this.getDownloadAttachment(payload);
+    const extension = getMimeExtension(attachment.fileType);
+    if (!extension) throw mediaDownloadError();
+    const stream = await openMediaDownload(attachment.fileUrl, `${attachment.hostId}/tasks`, signal);
+    if (stream.destroyed && !stream.complete) throw mediaDownloadError();
+    const upstreamType = stream.headers['content-type']?.split(';')[0].trim().toLowerCase();
+    if (upstreamType && upstreamType !== attachment.fileType.toLowerCase() && upstreamType !== 'application/octet-stream') {
+      stream.destroy();
+      throw mediaDownloadError();
+    }
+    return { stream, fileName: attachment.fileName, fileType: attachment.fileType.toLowerCase(), extension };
   }
 
   async uploadAttachment(payload: {
