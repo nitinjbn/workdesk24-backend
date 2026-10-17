@@ -1,4 +1,67 @@
 import cloudinary from '../../config/cloudinary';
+import { get } from 'https';
+import { IncomingMessage } from 'http';
+import { createConfiguredError } from './error.util';
+
+export function mediaDownloadError(timeout = false): Error {
+  const code = timeout ? 'TASK_ATTACHMENT_DOWNLOAD_TIMEOUT' : 'TASK_ATTACHMENT_DOWNLOAD_FAILED';
+  return createConfiguredError(code, timeout ? 'Attachment download timed out' : 'Attachment file is unavailable', timeout ? 504 : 502, code);
+}
+
+export async function openMediaDownload(fileUrl: string, folder: string, signal: AbortSignal): Promise<IncomingMessage> {
+  let url: URL;
+  try {
+    url = new URL(fileUrl);
+    const cloudName = cloudinary.config().cloud_name;
+    const segments = url.pathname.split('/');
+    const signed = /^s--[A-Za-z0-9_-]+--$/.test(segments[4] || '');
+    const versionIndex = signed ? 5 : 4;
+    const asset = segments.slice(versionIndex + 1).join('/');
+    if (
+      url.protocol !== 'https:' || url.hostname !== 'res.cloudinary.com' || url.port ||
+      url.username || url.password || (url.search && !/^\?_a=[A-Za-z0-9_-]+$/.test(url.search)) || url.hash || !cloudName ||
+      segments[1] !== cloudName || !['image', 'raw'].includes(segments[2]) ||
+      !['upload', 'authenticated'].includes(segments[3]) ||
+      (segments[3] === 'authenticated' && !signed) ||
+      !/^v[1-9]\d*$/.test(segments[versionIndex] || '') ||
+      !asset.startsWith(`${folder}/`) ||
+      !/^[A-Za-z0-9_-]+(?:\.[A-Za-z0-9]+)?$/.test(asset.slice(folder.length + 1))
+    ) throw mediaDownloadError();
+    url.search = '';
+  } catch {
+    throw mediaDownloadError();
+  }
+
+  return new Promise<IncomingMessage>((resolve, reject) => {
+    let upstream: IncomingMessage | undefined;
+    const request = get(url, { signal, headers: { 'Accept-Encoding': 'identity' } }, (response) => {
+      upstream = response;
+      response.on('error', () => undefined);
+      response.once('close', cleanup);
+      if (
+        response.statusCode !== 200 ||
+        (response.headers['content-encoding'] && response.headers['content-encoding'] !== 'identity')
+      ) {
+        response.destroy();
+        reject(mediaDownloadError());
+        return;
+      }
+      resolve(response);
+    });
+    const deadline = setTimeout(() => request.destroy(mediaDownloadError(true)), 120_000);
+    deadline.unref();
+    function cleanup(): void {
+      clearTimeout(deadline);
+    }
+    request.setTimeout(15_000, () => request.destroy(mediaDownloadError(true)));
+    request.on('error', (error: Error & { statusCode?: number }) => {
+      cleanup();
+      const safeError = mediaDownloadError(error.statusCode === 504);
+      if (upstream) upstream.destroy(safeError);
+      reject(safeError);
+    });
+  });
+}
 
 export type MediaResourceType = 'image' | 'video' | 'auto';
 

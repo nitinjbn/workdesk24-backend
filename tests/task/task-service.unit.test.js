@@ -1,5 +1,10 @@
 require('ts-node/register/transpile-only');
 
+process.env.CLOUDINARY_CLOUD_NAME = 'task-download-test';
+process.env.CLOUDINARY_API_KEY = 'test-key';
+process.env.CLOUDINARY_API_SECRET = 'test-secret';
+process.env.JWT_SECRET = 'task-download-test-signing-secret';
+
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { TaskService } = require('../../src/modules/task/services/task.service');
@@ -291,4 +296,356 @@ test('task rules cover allowed transitions, file signatures, and Unix timestamps
   assert.equal(isValidTaskFile(Buffer.from('not a pdf'), 'application/pdf'), false);
   assert.equal(isValidUnixTimestamp(1791853200), true);
   assert.equal(isValidUnixTimestamp(-1), false);
+});
+
+const express = require('express');
+const http = require('node:http');
+const https = require('node:https');
+const jwt = require('jsonwebtoken');
+const { EventEmitter } = require('node:events');
+const { PassThrough } = require('node:stream');
+const { once } = require('node:events');
+const taskRepository = require('../../src/modules/task/repositories/task.repository').default;
+const userRepository = require('../../src/modules/auth/repositories/user.repository').default;
+const { TaskAttachments } = require('../../src/models');
+const { authMiddleware } = require('../../src/shared/middleware/auth.middleware');
+const { errorHandler } = require('../../src/shared/middleware/error-handler.middleware');
+const serializer = require('../../src/shared/middleware/response-serializer.middleware').default;
+const taskRoutes = require('../../src/routes/v1/app/tasks.routes').default;
+
+async function downloadHarness(context) {
+  context.mock.method(console, 'error', () => undefined);
+  const state = {
+    user: { id: 22, hostId: 7, isAdminUser: 0 },
+    task: { id: 101, hostId: 7, assignedToUserId: 22, isDeleted: 0 },
+    attachment: {
+      id: 123, hostId: 7, taskId: 101, taskCommentId: null, fileName: 'inspection-report.pdf',
+      fileType: 'application/pdf', fileSizeBytes: 999,
+      fileUrl: cloudinary.url('7/tasks/proof', { secure: true, type: 'authenticated', sign_url: true, version: 123, format: 'pdf' }),
+    },
+    comment: null,
+    bytes: Buffer.from('%PDF-1.7\nfixture'),
+    upstreamStatus: 200,
+    upstreamType: 'application/pdf',
+    mode: 'success',
+    requests: [],
+    streams: [],
+    signals: [],
+    errors: [],
+  };
+  context.mock.method(userRepository, 'findById', async () => state.user);
+  const lookup = context.mock.method(TaskAttachments, 'findOne', async ({ where }) => {
+    assert.deepEqual(where, { hostId: 7, id: 123 });
+    return state.attachment?.hostId === where.hostId ? state.attachment : null;
+  });
+  context.mock.method(taskRepository, 'getTask', async (hostId, taskId) =>
+    state.task && state.task.hostId === hostId && state.task.id === taskId && state.task.isDeleted === 0 ? state.task : null);
+  context.mock.method(taskRepository, 'findComment', async (hostId, taskId, id) =>
+    state.comment && state.comment.hostId === hostId && state.comment.taskId === taskId && state.comment.id === id ? state.comment : null);
+  const upstream = context.mock.method(https, 'get', (url, options, callback) => {
+    state.requests.push(url);
+    state.signals.push(options.signal);
+    assert.equal(options.headers['Accept-Encoding'], 'identity');
+    const request = new EventEmitter();
+    let response;
+    request.destroy = (error) => {
+      if (error) request.emit('error', error);
+      else response?.destroy();
+      return request;
+    };
+    request.setTimeout = (milliseconds, callbackTimeout) => {
+      assert.equal(milliseconds, 15000);
+      request.timeout = callbackTimeout;
+    };
+    const onAbort = () => {
+      response?.destroy();
+      const error = new Error('aborted');
+      error.name = 'AbortError';
+      request.emit('error', error);
+    };
+    options.signal.addEventListener('abort', onAbort, { once: true });
+    process.nextTick(() => {
+      if (state.mode === 'timeout') return request.timeout();
+      if (state.mode === 'network-error') return request.emit('error', new Error('https://private-url.invalid/signature'));
+      response = new PassThrough();
+      response.statusCode = state.upstreamStatus;
+      response.headers = { 'content-type': state.upstreamType };
+      if (state.mode === 'length') response.headers['content-length'] = String(state.bytes.length);
+      if (state.mode === 'bad-length') response.headers['content-length'] = '-1';
+      response.complete = false;
+      response.once('close', () => options.signal.removeEventListener('abort', onAbort));
+      state.streams.push(response);
+      callback(response);
+      if (state.mode === 'immediate-error') {
+        response.destroy(new Error('https://private-url.invalid/signature'));
+      } else if (state.mode === 'pre-stream-error') {
+        setImmediate(() => response.destroy(new Error('https://private-url.invalid/signature')));
+      } else if (state.mode === 'paused' || state.mode === 'interrupted' || state.mode === 'mid-timeout') {
+        response.write(state.bytes);
+        if (state.mode === 'interrupted') setImmediate(() => response.destroy(new Error('private upstream failed')));
+        if (state.mode === 'mid-timeout') setImmediate(() => request.timeout());
+      } else {
+        response.complete = true;
+        response.end(state.bytes);
+      }
+    });
+    return request;
+  });
+  const app = express();
+  app.use(express.json());
+  app.use(serializer);
+  app.use('/api/v1/app/task', authMiddleware, taskRoutes);
+  app.use((error, req, res, next) => {
+    state.errors.push(error);
+    errorHandler(error, req, res, next);
+  });
+  const server = app.listen(0, '127.0.0.1');
+  await once(server, 'listening');
+  context.after(async () => {
+    for (const stream of state.streams) stream.destroy();
+    server.closeAllConnections();
+    await new Promise((resolve) => server.close(resolve));
+  });
+  const token = jwt.sign({ userId: 22 }, process.env.JWT_SECRET, { expiresIn: '5m' });
+  const send = (body = { attachmentId: 123 }, options = {}) => new Promise((resolve, reject) => {
+    const request = http.request({
+      hostname: '127.0.0.1', port: server.address().port, method: 'POST',
+      path: '/api/v1/app/task/' + (options.endpoint || 'downloadAttachment'),
+      headers: { 'Content-Type': 'application/json', ...(options.auth === false ? {} : { Authorization: options.auth || `Bearer ${token}` }) },
+    }, (response) => {
+      if (options.onResponse) return options.onResponse(response, resolve);
+      const chunks = [];
+      response.on('data', (chunk) => chunks.push(chunk));
+      response.on('end', () => resolve({ status: response.statusCode, headers: response.headers, bytes: Buffer.concat(chunks) }));
+      response.on('error', reject);
+    });
+    request.on('error', reject);
+    request.end(JSON.stringify(body));
+  });
+  return { state, send, lookup, upstream };
+}
+
+test('attachment download HTTP security and streaming', async (context) => {
+  await context.test('streams PDF bytes with safe headers, not JSON or a redirect', async (context) => {
+    const { state, send } = await downloadHarness(context);
+    state.mode = 'length';
+    const result = await send({ attachmentId: 123, hostId: 999, userId: 999, isAdmin: true, fileUrl: 'http://localhost/' });
+    assert.equal(result.status, 200);
+    assert.deepEqual(result.bytes, state.bytes);
+    assert.equal(result.headers['content-type'], 'application/pdf');
+    assert.equal(result.headers['content-disposition'], 'attachment; filename="inspection-report.pdf"');
+    assert.equal(result.headers['content-length'], String(state.bytes.length));
+    assert.equal(result.headers['cache-control'], 'private, no-store');
+    assert.equal(result.headers['x-content-type-options'], 'nosniff');
+    assert.equal(result.headers.location, undefined);
+    assert.doesNotMatch(JSON.stringify(result.headers) + result.bytes.toString(), /cloudinary|https:/i);
+    assert.equal(state.errors.length, 0);
+  });
+
+  await context.test('streams PNG, JPEG and WEBP with the matching metadata', async (context) => {
+    const { state, send } = await downloadHarness(context);
+    for (const [type, extension] of [['image/png', 'png'], ['image/jpeg', 'jpeg'], ['image/webp', 'webp']]) {
+      state.attachment.fileType = state.upstreamType = type;
+      state.attachment.fileName = `photo.${extension}`;
+      state.bytes = Buffer.from(`binary ${extension}`);
+      const result = await send();
+      assert.equal(result.status, 200);
+      assert.deepEqual(result.bytes, state.bytes);
+      assert.equal(result.headers['content-type'], type);
+      assert.match(result.headers['content-disposition'], new RegExp(`photo\\.${extension}`));
+      assert.equal(result.headers['content-length'], undefined);
+    }
+  });
+
+  await context.test('rejects missing and malformed IDs before database or network access', async (context) => {
+    const { send, lookup, upstream } = await downloadHarness(context);
+    for (const attachmentId of [undefined, null, 0, -1, 1.5, true, [], [123], {}, '1e2', '1.5', ' 123 ', 'no', Number.MAX_SAFE_INTEGER + 1]) {
+      const result = await send({ attachmentId });
+      assert.equal(result.status, 400);
+      assert.equal(JSON.parse(result.bytes).code, 'INVALID_ATTACHMENT_ID');
+    }
+    assert.equal(lookup.mock.callCount(), 0);
+    assert.equal(upstream.mock.callCount(), 0);
+  });
+
+  await context.test('rejects missing, invalid, expired, and unknown-user authentication', async (context) => {
+    const { state, send, lookup } = await downloadHarness(context);
+    for (const auth of [false, 'Bearer invalid', `Bearer ${jwt.sign({ userId: 22 }, process.env.JWT_SECRET, { expiresIn: -1 })}`]) {
+      const result = await send({ attachmentId: 123 }, { auth });
+      assert.equal(result.status, 401);
+      assert.equal(JSON.parse(result.bytes).success, false);
+    }
+    state.user = null;
+    assert.equal((await send()).status, 401);
+    assert.equal(lookup.mock.callCount(), 0);
+  });
+
+  await context.test('hides missing and cross-host attachments, including from admins', async (context) => {
+    const { state, send, upstream } = await downloadHarness(context);
+    state.attachment.hostId = 8;
+    state.user.isAdminUser = 1;
+    assert.equal((await send()).status, 404);
+    state.attachment = null;
+    assert.equal((await send()).status, 404);
+    assert.equal(upstream.mock.callCount(), 0);
+  });
+
+  await context.test('rejects unassigned users, deleted/missing/cross-host tasks and dangling comments', async (context) => {
+    const { state, send, upstream } = await downloadHarness(context);
+    state.task.assignedToUserId = 99;
+    assert.equal((await send({ attachmentId: 123, isAdmin: true })).status, 404);
+    state.task.assignedToUserId = 22;
+    state.task.isDeleted = 1;
+    assert.equal((await send()).status, 404);
+    state.task.isDeleted = 0;
+    state.task.hostId = 8;
+    assert.equal((await send()).status, 404);
+    state.task.hostId = 7;
+    state.attachment.taskCommentId = 77;
+    assert.equal((await send()).status, 404);
+    state.comment = { id: 77, hostId: 8, taskId: 101 };
+    assert.equal((await send()).status, 404);
+    state.comment = { id: 77, hostId: 7, taskId: 999 };
+    assert.equal((await send()).status, 404);
+    state.task = null;
+    assert.equal((await send()).status, 404);
+    assert.equal(upstream.mock.callCount(), 0);
+  });
+
+  await context.test('allows task comments by another author and same-host admin access', async (context) => {
+    const { state, send } = await downloadHarness(context);
+    state.attachment.taskCommentId = 77;
+    state.comment = { id: 77, hostId: 7, taskId: 101, userId: 99 };
+    assert.equal((await send()).status, 200);
+    state.task.assignedToUserId = 99;
+    state.user.isAdminUser = 1;
+    assert.equal((await send()).status, 200);
+  });
+
+  await context.test('rejects untrusted URL destinations, folders and delivery paths without fetching', async (context) => {
+    const { state, send, upstream } = await downloadHarness(context);
+    for (const fileUrl of [
+      'http://127.0.0.1/private', 'https://res.cloudinary.com.evil.test/task-download-test/image/upload/v1/7/tasks/a.pdf',
+      'https://user:secret@res.cloudinary.com/task-download-test/image/upload/v1/7/tasks/a.pdf',
+      'https://res.cloudinary.com/other-cloud/image/upload/v1/7/tasks/a.pdf',
+      'https://res.cloudinary.com/task-download-test/image/upload/v1/8/tasks/a.pdf',
+      'https://res.cloudinary.com/task-download-test/image/authenticated/v1/7/tasks/a.pdf',
+      'https://res.cloudinary.com/task-download-test/image/upload/v1/7/tasks/a.pdf?url=http://localhost',
+      'https://res.cloudinary.com/task-download-test/image/upload/v1/7/tasks/a%2fsecret.pdf',
+      'https://res.cloudinary.com:444/task-download-test/image/upload/v1/7/tasks/a.pdf',
+      'https://res.cloudinary.com/task-download-test/image/upload/w_100/v1/7/tasks/a.pdf',
+    ]) {
+      state.attachment.fileUrl = fileUrl;
+      const result = await send();
+      assert.equal(result.status, 502);
+      assert.doesNotMatch(result.bytes.toString(), /https:|cloudinary|secret/);
+    }
+    assert.equal(upstream.mock.callCount(), 0);
+  });
+
+  await context.test('supports existing public upload and signed raw Cloudinary delivery', async (context) => {
+    const { state, send } = await downloadHarness(context);
+    for (const [resource_type, type, sign_url] of [['image', 'upload', false], ['raw', 'authenticated', true]]) {
+      state.attachment.fileUrl = cloudinary.url('7/tasks/proof.pdf', { secure: true, resource_type, type, sign_url, version: 123 });
+      assert.equal((await send()).status, 200);
+    }
+  });
+
+  await context.test('maps upstream failures and redirects to URL-free JSON errors', async (context) => {
+    const { state, send } = await downloadHarness(context);
+    for (const status of [301, 302, 403, 404, 500]) {
+      state.upstreamStatus = status;
+      const result = await send();
+      assert.equal(result.status, 502);
+      assert.equal(result.headers.location, undefined);
+      assert.equal(JSON.parse(result.bytes).code, 'TASK_ATTACHMENT_DOWNLOAD_FAILED');
+      assert.doesNotMatch(result.bytes.toString(), /https:|cloudinary/i);
+    }
+    state.mode = 'network-error';
+    const result = await send();
+    assert.equal(result.status, 502);
+    assert.doesNotMatch(result.bytes.toString(), /https:|private-url/i);
+  });
+
+  await context.test('maps upstream timeout to 504 and pre-stream errors to one JSON response', async (context) => {
+    const { state, send } = await downloadHarness(context);
+    state.mode = 'timeout';
+    assert.equal((await send()).status, 504);
+    state.mode = 'pre-stream-error';
+    const result = await send();
+    assert.equal(result.status, 502);
+    assert.equal(result.headers['content-disposition'], undefined);
+    assert.equal(result.headers['content-length'], String(result.bytes.length));
+    assert.equal(state.errors.length, 2);
+    state.mode = 'immediate-error';
+    assert.equal((await send()).status, 502);
+    assert.equal(state.errors.length, 3);
+  });
+
+  await context.test('rejects upstream MIME mismatch and ignores invalid content length', async (context) => {
+    const { state, send } = await downloadHarness(context);
+    state.upstreamType = 'text/html';
+    assert.equal((await send()).status, 502);
+    state.upstreamType = 'application/octet-stream';
+    state.mode = 'bad-length';
+    const result = await send();
+    assert.equal(result.status, 200);
+    assert.equal(result.headers['content-type'], 'application/pdf');
+    assert.equal(result.headers['content-length'], undefined);
+  });
+
+  await context.test('sanitizes unsafe filenames, preserves extensions and limits length', async (context) => {
+    const { state, send } = await downloadHarness(context);
+    for (const fileName of ['../folder\\report\r\n".pdf', `${'x'.repeat(300)}.pdf`, 'report.exe', '']) {
+      state.attachment.fileName = fileName;
+      const result = await send();
+      assert.equal(result.status, 200);
+      const disposition = result.headers['content-disposition'];
+      assert.match(disposition, /^attachment; filename="[^"\r\n\\/]+\.pdf"$/);
+      assert.ok(disposition.length < 260);
+    }
+  });
+
+  await context.test('delivers a first chunk before upstream completion and aborts on client disconnect', { timeout: 5000 }, async (context) => {
+    const { state, send } = await downloadHarness(context);
+    state.mode = 'paused';
+    await send(undefined, { onResponse(response, resolve) {
+      response.once('data', (chunk) => {
+        assert.deepEqual(chunk, state.bytes);
+        assert.equal(state.streams[0].complete, false);
+        response.destroy();
+        resolve();
+      });
+    } });
+    if (!state.signals[0].aborted) await once(state.signals[0], 'abort');
+    assert.equal(state.signals[0].aborted, true);
+    assert.equal(state.streams[0].destroyed, true);
+    assert.equal(state.errors.length, 0);
+  });
+
+  await context.test('mid-stream interruption and timeout close the connection without appended JSON', async (context) => {
+    const { state, send } = await downloadHarness(context);
+    for (const mode of ['interrupted', 'mid-timeout']) {
+      state.mode = mode;
+      const result = await send(undefined, { onResponse(response, resolve) {
+        const chunks = [];
+        response.on('data', (chunk) => chunks.push(chunk));
+        response.on('error', () => undefined);
+        response.once('close', () => resolve({ complete: response.complete, bytes: Buffer.concat(chunks) }));
+      } });
+      assert.equal(result.complete, false);
+      assert.deepEqual(result.bytes, state.bytes);
+      assert.equal(state.errors.length, 0);
+    }
+  });
+
+  await context.test('metadata and list attachment endpoints retain their JSON contracts', async (context) => {
+    const { state, send } = await downloadHarness(context);
+    context.mock.method(taskRepository, 'getAttachment', async () => state.attachment);
+    context.mock.method(taskRepository, 'getAttachments', async () => ({ rows: [state.attachment], count: 1 }));
+    const metadata = await send({ taskId: 101, attachmentId: 123 }, { endpoint: 'getTaskAttachment' });
+    assert.equal(JSON.parse(metadata.bytes).data.attachment.id, 123);
+    const list = await send({ taskId: 101 }, { endpoint: 'getTaskAttachments' });
+    assert.equal(JSON.parse(list.bytes).data.attachments[0].id, 123);
+  });
 });

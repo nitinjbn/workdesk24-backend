@@ -164,6 +164,10 @@ export class TaskRepository {
     return TaskAttachments.findOne({ where: { hostId, taskId, id: attachmentId } } as any);
   }
 
+  async getAttachmentById(hostId: number, attachmentId: number): Promise<InstanceType<typeof TaskAttachments> | null> {
+    return TaskAttachments.findOne({ where: { hostId, id: attachmentId } });
+  }
+
   createAttachment(data: Record<string, unknown>): Promise<any> {
     return TaskAttachments.create(data as any);
   }

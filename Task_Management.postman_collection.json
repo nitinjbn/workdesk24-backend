@@ -305,6 +305,22 @@
             "url": { "raw": "{{BASE_URL}}/api/v1/app/task/getTaskAttachment", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "task", "getTaskAttachment"] }
           },
           "response": []
+        },
+        {
+          "name": "Download My Task Attachment",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"attachmentId\": {{ATTACHMENT_ID}}\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{BASE_URL}}/api/v1/app/task/downloadAttachment", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "task", "downloadAttachment"] },
+            "description": "Inherits the app Bearer TOKEN. Use Send and Download: HTTP 200 contains raw PDF/JPEG/PNG/WEBP bytes, not JSON. Requires a same-host, non-deleted task assigned to this user or same-host admin access; a linked comment must exist on that task. Errors use the standard JSON format: 400 invalid ID, 401 invalid authentication, 404 inaccessible/missing attachment/task/comment, 502 unavailable/untrusted upstream asset, 504 upstream timeout. No Cloudinary redirect or URL is returned by this endpoint."
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Download succeeds', () => pm.response.to.have.status(200));",
+            "pm.test('Response is an attachment, not a redirect', () => { pm.expect(pm.response.headers.get('Content-Disposition')).to.match(/^attachment;/); pm.expect(pm.response.headers.has('Location')).to.eql(false); });",
+            "pm.test('Supported file content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/^(application\\/pdf|image\\/(jpeg|png|webp))$/));"
+          ] } }],
+          "response": []
         }
       ]
     }

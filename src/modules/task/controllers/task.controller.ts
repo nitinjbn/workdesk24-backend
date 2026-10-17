@@ -1,6 +1,7 @@
 import { NextFunction, Response } from 'express';
 import { AuthRequest } from '../../../shared/types/auth.types';
 import taskService from '../services/task.service';
+import { mediaDownloadError } from '../../../shared/utils/media-storage.util';
 
 function identity(req: AuthRequest) {
   return {
@@ -141,6 +142,75 @@ export class TaskController {
       next,
       'Task attachment retrieved successfully'
     );
+
+  downloadAttachment = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    const abort = new AbortController();
+    const disconnect = (): void => abort.abort();
+    req.once('aborted', disconnect);
+    res.once('close', disconnect);
+    const cleanup = (): void => {
+      req.off('aborted', disconnect);
+      res.off('close', disconnect);
+    };
+    try {
+      const { stream, fileName, fileType, extension } = await taskService.downloadAttachment({
+        ...identity(req), attachmentId: req.body?.attachmentId,
+      }, abort.signal);
+      if (abort.signal.aborted || res.destroyed) {
+        stream.destroy();
+        cleanup();
+        return;
+      }
+      let name = Array.from(fileName, (character) => {
+        const code = character.charCodeAt(0);
+        return code < 32 || code === 127 ? '_' : character;
+      }).join('').replace(/[\\/"'<>:|?*]/g, '_').replace(/^\.+/, '').trim();
+      const suffix = name.match(/\.(pdf|png|jpe?g|webp)$/i)?.[0];
+      if (suffix && (suffix.slice(1).toLowerCase() === extension || (extension === 'jpg' && suffix.toLowerCase() === '.jpeg'))) {
+        name = `${name.slice(0, -suffix.length).slice(0, 200) || 'attachment'}${suffix}`;
+      } else {
+        name = `${name.slice(0, 200) || 'attachment'}.${extension}`;
+      }
+      res.attachment(name);
+      res.setHeader('Content-Type', fileType);
+      res.setHeader('Cache-Control', 'private, no-store');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      const length = stream.headers['content-length'];
+      if (typeof length === 'string' && /^\d+$/.test(length) && Number.isSafeInteger(Number(length))) {
+        res.setHeader('Content-Length', length);
+      }
+      let failed = false;
+      const fail = (error?: Error & { statusCode?: number }): void => {
+        if (failed) return;
+        failed = true;
+        stream.unpipe(res);
+        cleanup();
+        abort.abort();
+        if (res.destroyed) return;
+        if (res.headersSent) {
+          res.destroy();
+          return;
+        }
+        for (const header of ['Content-Disposition', 'Content-Type', 'Content-Length']) res.removeHeader(header);
+        next(mediaDownloadError(error?.statusCode === 504));
+      };
+      stream.once('error', fail);
+      stream.once('close', () => {
+        if (!stream.complete) fail();
+      });
+      res.once('error', () => {
+        abort.abort();
+        cleanup();
+      });
+      res.once('finish', cleanup);
+      stream.pipe(res);
+    } catch (error) {
+      cleanup();
+      abort.abort();
+      if (!res.destroyed && !res.headersSent) next(error);
+      else if (!res.destroyed) res.destroy();
+    }
+  };
 }
 
 export default new TaskController();
