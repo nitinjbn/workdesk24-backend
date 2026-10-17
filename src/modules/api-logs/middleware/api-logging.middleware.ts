@@ -370,7 +370,26 @@ function errorMessageFromUnknown(error: unknown): string {
   return 'Unhandled API error';
 }
 
+function getSkipHostIds(): ReadonlySet<number> {
+  const configured = process.env.API_LOG_SKIP_HOST_IDS?.trim();
+  if (!configured) return new Set();
+
+  try {
+    const values: unknown = JSON.parse(configured);
+    if (!Array.isArray(values) || values.some((value) => typeof value !== 'number' || !Number.isSafeInteger(value) || value <= 0)) {
+      throw new Error('Invalid host IDs');
+    }
+    return new Set(values);
+  } catch {
+    logger.warn('Invalid API_LOG_SKIP_HOST_IDS; host exclusions disabled. Expected a JSON array of positive integer host IDs.');
+    return new Set();
+  }
+}
+
 export function createApiLoggingMiddleware(service: ApiLogService = apiLogService): RequestHandler {
+  const skipHostIds = getSkipHostIds();
+  const deferLogCreation = skipHostIds.size > 0;
+
   return async (req: ApiLoggingRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       if (req.apiLoggingDisabled === true) {
@@ -397,7 +416,7 @@ export function createApiLoggingMiddleware(service: ApiLogService = apiLogServic
 
       const { category, module } = resolveCategoryAndModule(req, endpoint);
 
-      const createLogPromise = service
+      const createLog = () => service
         .createProcessingLog({
           hostId: resolveHostId(req),
           userId: resolveUserId(req),
@@ -421,9 +440,11 @@ export function createApiLoggingMiddleware(service: ApiLogService = apiLogServic
           return null;
         });
 
-      const apiLogId = await withTimeout(createLogPromise, API_LOG_CREATE_TIMEOUT_MS);
-      if (apiLogId !== null) {
-        req.apiLogId = apiLogId;
+      if (!deferLogCreation) {
+        const apiLogId = await withTimeout(createLog(), API_LOG_CREATE_TIMEOUT_MS);
+        if (apiLogId !== null) {
+          req.apiLogId = apiLogId;
+        }
       }
 
       let capturedResponseBody: unknown;
@@ -442,14 +463,22 @@ export function createApiLoggingMiddleware(service: ApiLogService = apiLogServic
         return originalSend(body);
       }) as typeof res.send;
 
-      res.on('finish', () => {
+      res.on('finish', async () => {
         try {
-          if (req.apiLogId === undefined) {
+          if (req.apiLoggingDisabled === true || skipHostIds.has(resolveHostId(req))) {
             return;
           }
 
           const responseTime = Math.floor(Date.now() / 1000);
           const durationMilliseconds = getDurationMilliseconds(startTime);
+          if (deferLogCreation) {
+            const apiLogId = await createLog();
+            if (apiLogId !== null) req.apiLogId = apiLogId;
+          }
+          if (req.apiLogId === undefined) {
+            return;
+          }
+
           const responseStatusCode = res.statusCode;
           const status = responseStatusCode < 400 ? 'SUCCESS' : 'FAILED';
           const maskedResponseBody =
@@ -474,7 +503,7 @@ export function createApiLoggingMiddleware(service: ApiLogService = apiLogServic
             userId: resolveUserId(req),
           };
 
-          void service.queueFinalizeLog(payload);
+          await service.queueFinalizeLog(payload);
         } catch (error: unknown) {
           logger.error('API logging finalize enqueue failed after response finish.', {
             error: error instanceof Error ? error.message : String(error),
@@ -519,7 +548,7 @@ export function apiLogRouteContext(category: string, module: string): RequestHan
 
 export function createApiLoggingErrorMiddleware(): ErrorRequestHandler {
   return (error: unknown, req: ApiLoggingRequest, res: Response, next: NextFunction): void => {
-    if (req.apiLogId !== undefined) {
+    if (req.apiLoggingDisabled !== true) {
       const locals = res.locals as ApiLoggingLocals;
       locals.apiLoggingErrorMessage = errorMessageFromUnknown(error);
     }

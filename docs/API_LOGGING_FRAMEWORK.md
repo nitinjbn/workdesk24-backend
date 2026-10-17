@@ -122,8 +122,44 @@ Logging is skipped for:
 
 Additional skip patterns can be configured via environment variable and route-level middleware.
 
+### Host Exclusions
+
+Set a JSON array of numeric host IDs in the API process environment:
+
+```dotenv
+API_LOG_SKIP_HOST_IDS=[7,12]
+```
+
+Restart API processes after changing this setting. Requests whose resolved
+host is in this list create neither a `wd_api_logs` record nor a finalize job,
+including failed responses. Existing records and previously queued jobs are
+not deleted by this setting.
+
+The global logging middleware runs before authentication. When the exclusion
+list is nonempty, it defers **all** log creation until response finish, then
+checks the host before performing any database or queue operation. The
+authenticated `req.user.hostId` takes precedence over `x-host-id` and body
+`hostId`; those existing fallbacks apply only when authentication supplies no
+host. An excluded header/body value cannot override a different authenticated
+host. Requests with no resolved host continue to be logged. Public/failed-auth
+requests use the untrusted header/body fallback, so this setting is telemetry
+filtering, not an audit or authorization boundary.
+
+Non-excluded completed requests keep request/response masking and standard
+finalization. With exclusions enabled, there is no pre-controller PROCESSING
+row, so requests interrupted before response finish (including process crashes
+or client disconnects) have no API log record. Empty/unset lists retain the
+existing pre-controller PROCESSING behavior. Invalid configuration warns and
+keeps logging enabled; only arrays of positive safe integer numbers are valid.
+
 ## Environment Configuration
 Optional environment variables:
+- API_LOG_SKIP_HOST_IDS
+  - Default: [] (no host exclusions).
+  - JSON array of positive integer numbers, for example `[7,12]`.
+  - Excludes matching resolved hosts from both record creation and finalization.
+  - Nonempty lists defer persistence until response finish, after authentication.
+
 - API_LOG_BODY_MAX_BYTES
   - Default: 32768
   - Maximum serialized payload bytes before truncation preview is stored.
