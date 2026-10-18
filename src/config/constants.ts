@@ -116,4 +116,8 @@ export const CONFIG = {
     },
   },
   SKIP_LOGGING_PATH_PATTERNS: ['/background-jobs'], // Paths that should skip API logging, e.g., background job routes
+  TASK_SETTINGS: {
+    DEFAULT_TASK_NUMBER_PREFIX: 'TASK-',
+    DEFAULT_NEXT_TASK_NUMBER: 1,
+  },
 };

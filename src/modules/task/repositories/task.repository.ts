@@ -1,7 +1,36 @@
 import { Op, Transaction } from 'sequelize';
-import { Customer, Task, TaskAttachments, TaskComments, TaskLogs, User, Visit } from '../../../models';
+import { Customer, sequelize, Task, TaskAttachments, TaskComments, TaskLogs, TaskSettings, User, Visit } from '../../../models';
+import { CONFIG } from '../../../config/constants';
 
 export class TaskRepository {
+  async lockTaskSettings(hostId: number, now: number, transaction: Transaction): Promise<InstanceType<typeof TaskSettings> | null> {
+    // The unique hostId key serializes initialization, without a missing-row gap lock
+    // or overwriting an existing host's prefix, counter, or timestamps.
+    await sequelize.query(
+      `INSERT INTO wd_task_settings (hostId, taskNumberPrefix, nextTaskNumber, createdAt, updatedAt)
+       VALUES (:hostId, :prefix, :nextTaskNumber, :now, :now)
+       ON DUPLICATE KEY UPDATE hostId = wd_task_settings.hostId`,
+      {
+        replacements: {
+          hostId,
+          prefix: CONFIG.TASK_SETTINGS.DEFAULT_TASK_NUMBER_PREFIX,
+          nextTaskNumber: CONFIG.TASK_SETTINGS.DEFAULT_NEXT_TASK_NUMBER,
+          now,
+        },
+        transaction,
+      }
+    );
+    return TaskSettings.findOne({
+      where: { hostId },
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+  }
+
+  advanceTaskNumber(settings: InstanceType<typeof TaskSettings>, nextTaskNumber: string, now: number, transaction: Transaction): Promise<InstanceType<typeof TaskSettings>> {
+    return settings.update({ nextTaskNumber, updatedAt: now }, { transaction });
+  }
+
   async getTask(hostId: number, taskId: number, transaction?: Transaction, lock = false): Promise<any> {
     return Task.findOne({
       where: { hostId, id: taskId, isDeleted: 0 },

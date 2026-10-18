@@ -2,6 +2,7 @@ import { Model, DataTypes, Sequelize, Optional } from 'sequelize';
 interface TaskAttributes {
   id: number;
   hostId: number;
+  taskNumber?: string;
   title: string;
   description?: string;
   assignedToUserId: number;
@@ -44,6 +45,7 @@ interface TaskCreationAttributes extends Optional<
 class Task extends Model<TaskAttributes, TaskCreationAttributes> implements TaskAttributes {
   public id!: number;
   public hostId!: number;
+  public taskNumber?: string;
   public title: string;
   public description?: string;
   public assignedToUserId: number;
@@ -95,6 +97,10 @@ export function initTask(sequelize: Sequelize): typeof Task {
       hostId: {
         type: DataTypes.BIGINT,
         allowNull: false,
+      },
+      taskNumber: {
+        type: DataTypes.STRING(30),
+        allowNull: true,
       },
       title: {
         type: DataTypes.STRING(100),
@@ -170,6 +176,7 @@ export function initTask(sequelize: Sequelize): typeof Task {
       tableName: 'wd_tasks',
       timestamps: false,
       indexes: [
+        { fields: ['taskNumber'] },
         { fields: ['hostId'] },
         { fields: ['visitId'] },
         { fields: ['customerId'] },

@@ -27,6 +27,28 @@ function taskError(code: string, message: string, statusCode = 400): Error {
   return createConfiguredError(code, message, statusCode, code);
 }
 
+function formatTaskNumber(prefix: string, counter: number | string): { taskNumber: string; nextTaskNumber: string } {
+  if (typeof prefix !== 'string' || !prefix.trim() || prefix !== prefix.trim() || Array.from(prefix).length > 20) {
+    throw taskError('INVALID_TASK_NUMBER_PREFIX', 'Task number prefix must contain 1-20 characters without surrounding whitespace', 500);
+  }
+  if (
+    (typeof counter !== 'string' && typeof counter !== 'number') ||
+    (typeof counter === 'number' && !Number.isSafeInteger(counter)) ||
+    !/^[1-9]\d*$/.test(String(counter))
+  ) {
+    throw taskError('INVALID_TASK_NUMBER_COUNTER', 'Task number counter must be an exact positive integer', 500);
+  }
+  const number = BigInt(counter);
+  if (number >= 9223372036854775807n) {
+    throw taskError('TASK_NUMBER_OVERFLOW', 'Task number counter cannot be incremented within BIGINT range', 500);
+  }
+  const taskNumber = `${prefix}${prefix.endsWith('-') ? '' : '-'}${number}`;
+  if (Array.from(taskNumber).length > 30) {
+    throw taskError('TASK_NUMBER_OVERFLOW', 'Generated task number exceeds 30 characters', 500);
+  }
+  return { taskNumber, nextTaskNumber: String(number + 1n) };
+}
+
 function asPlain(value: any): any {
   return value && typeof value.toJSON === 'function' ? value.toJSON() : value;
 }
@@ -135,8 +157,12 @@ export class TaskService {
       if (!assignee) throw taskError('INVALID_TASK_ASSIGNEE', 'Assigned user is not eligible for task assignment', 404);
       const refs = await this.validateReferences(payload.hostId, payload.customerId, payload.visitId, transaction);
       const now = Math.floor(Date.now() / 1000);
+      const settings = await this.repository.lockTaskSettings(payload.hostId, now, transaction);
+      if (!settings) throw taskError('TASK_SETTINGS_NOT_FOUND', 'Task settings could not be initialized', 500);
+      const { taskNumber, nextTaskNumber } = formatTaskNumber(settings.taskNumberPrefix, settings.nextTaskNumber);
       const task = await this.repository.createTask({
         hostId: payload.hostId,
+        taskNumber,
         title,
         description: payload.description?.trim() || null,
         assignedToUserId: payload.assignedToUserId,
@@ -161,6 +187,7 @@ export class TaskService {
         newAssignedToUserId: payload.assignedToUserId,
         createdAt: now,
       }, transaction);
+      await this.repository.advanceTaskNumber(settings, nextTaskNumber, now, transaction);
       return { task: asPlain(task) };
     });
 
