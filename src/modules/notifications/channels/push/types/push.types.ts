@@ -32,11 +32,13 @@ export enum NotificationType {
     ATTENDANCE = 'ATTENDANCE',
     SYSTEM = 'SYSTEM',
     LOCATION = 'LOCATION',
+    TASK = 'TASK',
 }
 
 export enum NotificationAction {
     VERIFY_OTP = 'VERIFY_OTP',
     REFRESH_USER_SETTINGS = 'REFRESH_USER_SETTINGS',
+    OPEN_TASK_DETAILS = 'OPEN_TASK_DETAILS',
 
     OPEN_ATTENDANCE = 'OPEN_ATTENDANCE',
     OPEN_VISIT = 'OPEN_VISIT',

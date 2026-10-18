@@ -73,11 +73,15 @@ class FakeTaskRepository {
   }
 }
 
-function makeHarness() {
+function makeHarness(taskNotifications) {
   const repository = new FakeTaskRepository();
   const transaction = { committed: false, rolledBack: false, async commit() { this.committed = true; }, async rollback() { this.rolledBack = true; } };
-  const service = new TaskService(repository, async () => transaction);
-  return { service, repository, transaction };
+  const notifications = taskNotifications || {
+    async notifyTaskCreated() {},
+    async notifyTaskReassigned() {},
+  };
+  const service = new TaskService(repository, async () => transaction, notifications);
+  return { service, repository, transaction, notifications };
 }
 
 const admin = { hostId: 7, userId: 9, isAdmin: true };
@@ -95,11 +99,42 @@ test('task creation writes PENDING task and initial assignment log', async () =>
   assert.equal(transaction.committed, true);
 });
 
+test('task creation triggers one notification after commit', async () => {
+  let committedWhenNotified = false;
+  const notifications = {
+    async notifyTaskCreated(task) {
+      assert.equal(task.id, 101);
+      committedWhenNotified = transaction.committed;
+    },
+    async notifyTaskReassigned() {},
+  };
+  const { service, transaction } = makeHarness(notifications);
+  await service.createTask({ ...admin, title: 'Proposal', assignedToUserId: 22 });
+  assert.equal(committedWhenNotified, true);
+});
+
 test('task creation rolls back when initial log insertion fails', async () => {
-  const { service, repository, transaction } = makeHarness();
+  let notificationCount = 0;
+  const notifications = {
+    async notifyTaskCreated() { notificationCount += 1; },
+    async notifyTaskReassigned() {},
+  };
+  const { service, repository, transaction } = makeHarness(notifications);
   repository.failLog = true;
   await assert.rejects(service.createTask({ ...admin, title: 'Proposal', assignedToUserId: 22 }), /log insert failed/);
   assert.equal(transaction.rolledBack, true);
+  assert.equal(notificationCount, 0);
+});
+
+test('task creation remains successful when notification delivery throws', async () => {
+  const notifications = {
+    async notifyTaskCreated() { throw new Error('delivery failed'); },
+    async notifyTaskReassigned() {},
+  };
+  const { service, transaction } = makeHarness(notifications);
+  const result = await service.createTask({ ...admin, title: 'Proposal', assignedToUserId: 22 });
+  assert.equal(result.task.id, 101);
+  assert.equal(transaction.committed, true);
 });
 
 test('task creation rejects users outside the tenant', async () => {
@@ -207,6 +242,37 @@ test('assignment records both assignees while preserving status', async () => {
   assert.equal(repository.logs[0].action, 'REASSIGNED');
   assert.equal(repository.logs[0].oldAssignedToUserId, 21);
   assert.equal(repository.logs[0].newAssignedToUserId, 22);
+});
+
+test('assignment notification is triggered after commit with trusted previous and new assignees', async () => {
+  let notificationArgs = null;
+  let committedWhenNotified = false;
+  const notifications = {
+    async notifyTaskCreated() {},
+    async notifyTaskReassigned(...args) {
+      notificationArgs = args;
+      committedWhenNotified = transaction.committed;
+    },
+  };
+  const { service, repository, transaction } = makeHarness(notifications);
+  repository.task = { id: 101, hostId: 7, assignedToUserId: 21, title: 'Proposal', status: 'PENDING', isDeleted: 0 };
+  await service.assignTask({ ...admin, taskId: 101, assignedToUserId: 22 });
+  assert.equal(committedWhenNotified, true);
+  assert.equal(notificationArgs[0].assignedToUserId, 22);
+  assert.equal(notificationArgs[1], 21);
+  assert.equal(notificationArgs[2], 22);
+});
+
+test('unchanged assignment does not trigger a notification', async () => {
+  let notificationCount = 0;
+  const notifications = {
+    async notifyTaskCreated() {},
+    async notifyTaskReassigned() { notificationCount += 1; },
+  };
+  const { service, repository } = makeHarness(notifications);
+  repository.task = { id: 101, hostId: 7, assignedToUserId: 22, status: 'PENDING', isDeleted: 0 };
+  await service.assignTask({ ...admin, taskId: 101, assignedToUserId: 22 });
+  assert.equal(notificationCount, 0);
 });
 
 test('metadata update with no actual changes does not add a log', async () => {
