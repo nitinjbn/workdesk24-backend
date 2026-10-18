@@ -44,6 +44,12 @@ class FakeTaskRepository {
     return this.task;
   }
 
+  async lockTaskSettings() {
+    return { taskNumberPrefix: 'TASK-', nextTaskNumber: 1 };
+  }
+
+  async advanceTaskNumber() {}
+
   async updateTask(task, data) {
     Object.assign(task, data);
     return task;

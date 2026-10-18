@@ -35,9 +35,9 @@
             ],
             "body": { "mode": "raw", "raw": "{\n  \"title\": \"Prepare customer proposal\",\n  \"description\": \"Draft and review the proposal\",\n  \"assignedToUserId\": 22,\n  \"priority\": \"HIGH\",\n  \"dueAt\": 1791853200\n}", "options": { "raw": { "language": "json" } } },
             "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/createTask", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "createTask"] },
-            "description": "Creates a PENDING task and its CREATED activity log. Replace assignedToUserId with an active field-app user in this tenant."
+            "description": "Creates a PENDING task and its CREATED activity log. Replace assignedToUserId with an active field-app user in this tenant. data.task.taskNumber is generated automatically from the authenticated host's settings (default TASK-1, TASK-2, ...). Do not send hostId or taskNumber. A trailing hyphen in the stored prefix is used as the separator; otherwise a hyphen is added. Task, activity log, and counter advancement commit together; failures do not consume a number. Existing host prefixes and counters are preserved."
           },
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["const result = pm.response.json();", "if (result.success && result.data && result.data.task && result.data.task.id) pm.environment.set('TASK_ID', result.data.task.id);"] } }],
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["const result = pm.response.json();", "if (result.success && result.data && result.data.task && result.data.task.id) pm.environment.set('TASK_ID', result.data.task.id);", "pm.test('Created task includes an automatic task number', function () { pm.expect(result.success).to.eql(true); pm.expect(result.data.task.taskNumber).to.be.a('string').and.match(/.+-[1-9][0-9]*$/); pm.expect(Array.from(result.data.task.taskNumber).length).to.be.at.most(30); });"] } }],
           "response": []
         },
         {
