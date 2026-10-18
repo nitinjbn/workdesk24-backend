@@ -13,7 +13,7 @@ interface TaskNotificationDetails {
   id: number;
   hostId: number;
   title?: string | null;
-  ticketNumber?: string | number | null;
+  taskNumber?: string | number | null;
   assignedToUserId?: number | null;
 }
 
@@ -36,9 +36,9 @@ export class TaskNotificationService {
 
     const title = 'New Task Assigned';
     const taskTitle = this.taskTitle(task);
-    const ticketNumber = this.ticketNumber(task);
-    const body = ticketNumber
-      ? `You have been assigned Task #${ticketNumber}: ${taskTitle}.`
+    const taskNumber = this.taskNumber(task);
+    const body = taskNumber
+      ? `You have been assigned Task #${taskNumber}: ${taskTitle}.`
       : `You have been assigned a task: ${taskTitle}.`;
 
     await this.notifyUser(task, Number(task.assignedToUserId), 'TASK_CREATED', title, body);
@@ -52,8 +52,8 @@ export class TaskNotificationService {
     if (!newAssigneeId || previousAssigneeId === newAssigneeId) return;
 
     const taskTitle = this.taskTitle(task);
-    const ticketNumber = this.ticketNumber(task);
-    const reference = ticketNumber ? `Task #${ticketNumber}: ${taskTitle}` : `Task ${taskTitle}`;
+    const taskNumber = this.taskNumber(task);
+    const reference = taskNumber ? `Task #${taskNumber}: ${taskTitle}` : `Task ${taskTitle}`;
     const deliveries: Promise<void>[] = [];
 
     if (previousAssigneeId) {
@@ -74,8 +74,8 @@ export class TaskNotificationService {
         newAssigneeId,
         'TASK_REASSIGNED',
         'Task Assigned to You',
-        ticketNumber
-          ? `You have been assigned Task #${ticketNumber}: ${taskTitle}.`
+        taskNumber
+          ? `You have been assigned Task #${taskNumber}: ${taskTitle}.`
           : `You have been assigned a task: ${taskTitle}.`
       )
     );
@@ -130,8 +130,8 @@ export class TaskNotificationService {
         body,
         timestamp: DateTimeFormatUtil.getCurrentUnixTime().toString(),
       };
-      const ticketNumber = this.ticketNumber(task);
-      if (ticketNumber) data.ticketNumber = ticketNumber;
+      const taskNumber = this.taskNumber(task);
+      if (taskNumber) data.taskNumber = taskNumber;
 
       await Promise.all(
         Array.from(uniqueDevices.values(), (device) =>
@@ -208,12 +208,12 @@ export class TaskNotificationService {
     return typeof task.title === 'string' && task.title.trim() ? task.title.trim() : 'Untitled task';
   }
 
-  private ticketNumber(task: TaskNotificationDetails): string | null {
-    if (typeof task.ticketNumber === 'number' && Number.isFinite(task.ticketNumber)) {
-      return String(task.ticketNumber);
+  private taskNumber(task: TaskNotificationDetails): string | null {
+    if (typeof task.taskNumber === 'number' && Number.isFinite(task.taskNumber)) {
+      return String(task.taskNumber);
     }
-    if (typeof task.ticketNumber === 'string' && task.ticketNumber.trim()) {
-      return task.ticketNumber.trim();
+    if (typeof task.taskNumber === 'string' && task.taskNumber.trim()) {
+      return task.taskNumber.trim();
     }
     return null;
   }
