@@ -53,7 +53,7 @@ const task = {
   id: 101,
   hostId: 7,
   title: 'Quarterly review',
-  ticketNumber: 'WK-101',
+  taskNumber: 'WK-101',
   assignedToUserId: 22,
 };
 
@@ -68,7 +68,8 @@ test('task creation sends one visible task-details notification to its assignee'
   assert.equal(sent[0].payload.data.action, 'OPEN_TASK_DETAILS');
   assert.equal(sent[0].payload.data.event, 'TASK_CREATED');
   assert.equal(sent[0].payload.data.taskId, '101');
-  assert.equal(sent[0].payload.data.ticketNumber, 'WK-101');
+  assert.equal(sent[0].payload.data.taskNumber, 'WK-101');
+  assert.equal(Object.hasOwn(sent[0].payload.data, 'ticketNumber'), false);
   assert.equal(sent[0].payload.data.title, 'New Task Assigned');
   assert.equal(sent[0].payload.data.body, 'You have been assigned Task #WK-101: Quarterly review.');
   assert.equal(logs[0].notificationType, 'TASK');
@@ -91,6 +92,7 @@ test('reassignment sends distinct old and new assignee events', async () => {
   assert.equal(sent[1].payload.data.body, 'You have been assigned Task #WK-101: Quarterly review.');
   assert.equal(sent[0].payload.data.event, 'TASK_REASSIGNED');
   assert.equal(sent[1].payload.data.event, 'TASK_REASSIGNED');
+  assert.ok(sent.every((request) => request.payload.data.taskNumber === 'WK-101'));
 });
 
 test('initial assignment does not send a previous-assignee notification', async () => {
@@ -138,10 +140,10 @@ test('push and delivery-log failures do not escape notification processing', asy
   assert.equal(logs[0].failureReason, 'Push delivery failed');
 });
 
-test('task payload falls back cleanly when title and ticket number are unavailable', async () => {
+test('task payload falls back cleanly when title and task number are unavailable', async () => {
   const { service, sent } = makeHarness();
-  await service.notifyTaskCreated({ ...task, title: null, ticketNumber: null });
-  assert.equal(sent[0].payload.data.ticketNumber, undefined);
+  await service.notifyTaskCreated({ ...task, title: null, taskNumber: null });
+  assert.equal(sent[0].payload.data.taskNumber, undefined);
   assert.equal(sent[0].payload.data.body, 'You have been assigned a task: Untitled task.');
   assert.ok(Object.values(sent[0].payload.data).every((value) => typeof value === 'string'));
 });
