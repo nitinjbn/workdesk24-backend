@@ -270,6 +270,47 @@
       "description": "Mobile app endpoints - requires authentication",
       "item": [
         {
+          "name": "Get Host Features",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{TOKEN}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hostId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/app/getHostFeatures",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "app", "getHostFeatures"]
+            },
+            "description": "Returns feature keys stored with isEnabled = 1 for the supplied hostId (a positive integer), only when parentFeatureKey is NULL or the parent also has isEnabled = 1 for the same host. Children of disabled or missing parents are excluded. No eligible rows returns data.enabled = []. Invalid hostId returns HTTP 400."
+          },
+          "response": [
+            {
+              "name": "Host features fetched successfully",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Host features fetched successfully\",\n  \"data\": {\n    \"enabled\": [\n      \"ATTENDANCE\",\n      \"LEAVE\",\n      \"LOCATION_TRACKING\",\n      \"VISIT\",\n      \"FEEDBACK\",\n      \"VISIT_IMAGE\",\n      \"TASK_MANAGEMENT\",\n      \"API_LOGS\"\n    ]\n  }\n}"
+            }
+          ]
+        },
+        {
           "name": "Profile",
           "description": "User profile management",
           "item": [

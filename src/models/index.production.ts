@@ -67,6 +67,7 @@ import { initTaskComments } from './schemas/TaskComments';
 import { initTaskAttachments } from './schemas/TaskAttachments';
 import { initAppRelease } from './schemas/AppRelease';
 import { initAppUpgradePolicy } from './schemas/AppUpgradePolicy';
+import { initHostFeatures } from './schemas/HostFeatures';
 
 dotenv.config();
 
@@ -131,6 +132,7 @@ const Role = initRole(sequelize);
 const AppRelease = initAppRelease(sequelize);
 const AppUpgradePolicy = initAppUpgradePolicy(sequelize);
 const Permission = initPermission(sequelize);
+const HostFeatures = initHostFeatures(sequelize);
 const RolePermission = initRolePermission(sequelize);
 const UserPermission = initUserPermission(sequelize);
 const User = initUser(sequelize);
@@ -251,6 +253,7 @@ const db: any = {
   TaskAttachments,
   AppRelease,
   AppUpgradePolicy,
+  HostFeatures,
 };
 
 // Setup associations
@@ -364,6 +367,7 @@ export {
   TaskAttachments,
   AppRelease,
   AppUpgradePolicy,
+  HostFeatures,
 };
 
 export default db;
