@@ -9,6 +9,7 @@ import userController from '../../../modules/master/controllers/user.controller'
 import leaveRoutes from './leaves.routes';
 import taskRoutes from './tasks.routes';
 import { apiLogRouteContext } from '../../../modules/api-logs';
+import hostController from '../../../modules/sync/controllers/host.controller';
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -80,5 +81,7 @@ router.post('/profile/get', (req: AuthRequest, res) => {
     data: req.user,
   });
 });
+
+router.post('/host/getFeatures', hostController.getHostFeatures.bind(hostController));
 
 export default router;
