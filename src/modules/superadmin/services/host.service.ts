@@ -23,6 +23,9 @@ import {
 } from '../../../shared/utils/date-time-format.util';
 import { formatStorageFieldsByConfig } from '../../../shared/utils/storage-format.util';
 import { CONFIG } from '../../../config/constants';
+import { FEATURES } from '../../../config/features';
+import type { CreationAttributes } from 'sequelize';
+import type HostFeatures from '../../../models/schemas/HostFeatures';
 import { sequelize } from '../../../models';
 import hostsRepository from '../repositories/host.repository';
 import { CommonUtil } from '../../../shared/utils/common.util';
@@ -214,6 +217,41 @@ export class HostService {
 
       if (!createHostSettingsResult) {
         throw new Error('Failed to create host settings');
+      }
+
+      // Create host features for the newly created host
+      const features = Object.values(FEATURES.DETAILS).flatMap((feature) => {
+        const records: Array<Omit<CreationAttributes<HostFeatures>, 'hostId' | 'createdAt'>> = [{
+          featureKey: feature.FEATURE_KEY,
+          parentFeatureKey: null,
+          remarks: feature.REMARKS,
+          isEnabled: feature.DEFAULT_ENABLED,
+        }];
+
+        if ('SUB_FEATURES' in feature) {
+          for (const subFeature of Object.values(feature.SUB_FEATURES)) {
+            records.push({
+              featureKey: subFeature.FEATURE_KEY,
+              parentFeatureKey: feature.FEATURE_KEY,
+              remarks: subFeature.REMARKS,
+              isEnabled: subFeature.DEFAULT_ENABLED,
+            });
+          }
+        }
+
+        return records;
+      });
+      const createHostFeaturesResult = await hostsRepository.createHostFeatures(
+        {
+          hostId,
+          features,
+          createdAt: currentUnixTime,
+        },
+        transaction
+      );
+
+      if (!createHostFeaturesResult) {
+        throw new Error('Failed to create host features');
       }
 
       await transaction.commit();

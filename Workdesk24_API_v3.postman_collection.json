@@ -25,6 +25,33 @@
   ],
   "item": [
     {
+      "name": "Superadmin",
+      "item": [
+        {
+          "name": "Create Host",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{SUPERADMIN_TOKEN}}" },
+              { "key": "x-csrf-token", "value": "{{SUPERADMIN_CSRF_TOKEN}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subDomain\": \"example-company\",\n  \"companyName\": \"Example Company\",\n  \"contactPerson\": \"Example Admin\",\n  \"email\": \"admin@example.com\",\n  \"mobile\": \"{{HOST_ADMIN_MOBILE}}\",\n  \"countryIsoCode\": \"IN\",\n  \"password\": \"{{HOST_ADMIN_PASSWORD}}\",\n  \"timezone\": \"Asia/Kolkata\",\n  \"subscription\": {\n    \"licensedUserCount\": 10,\n    \"planStartDate\": 1792252800,\n    \"planEndDate\": 1823788800\n  },\n  \"settings\": {}\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/superadmin/hosts/createHost",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "v1", "superadmin", "hosts", "createHost"]
+            },
+            "description": "Requires superadmin authentication and CSRF protection. Creates all parent features and sub-features from FEATURES.DETAILS in the host-creation transaction. Each row uses its own DEFAULT_ENABLED as isEnabled (including 0), REMARKS, and parentFeatureKey (NULL for parent features). Request features cannot override these defaults. TASK_MANAGEMENT is currently disabled by default."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
       "name": "Health & Monitoring",
       "description": "Health check and monitoring endpoints (no authentication required)",
       "item": [

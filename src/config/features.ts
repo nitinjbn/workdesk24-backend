@@ -54,7 +54,7 @@ export const FEATURES = {
       FEATURE_KEY: 'TASK_MANAGEMENT',
       FEATURE_NAME: 'Task Management',
       REMARKS: 'This feature manages tasks',
-      DEFAULT_ENABLED: 1,
+      DEFAULT_ENABLED: 0, // Disabled by default, can be enabled by super admin if required for host - It needs explicit activation
     },
     API_LOGS: {
       FEATURE_KEY: 'API_LOGS',
@@ -63,4 +63,4 @@ export const FEATURES = {
       DEFAULT_ENABLED: 1,
     },
   }
-};
+} as const;
