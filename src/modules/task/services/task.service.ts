@@ -9,6 +9,7 @@ import {
   uploadBufferToMediaStorage,
 } from '../../../shared/utils/media-storage.util';
 import taskRepository, { TaskRepository } from '../repositories/task.repository';
+import taskNotificationService, { TaskNotificationService } from '../../notifications/task/taskNotificationService';
 import { getTaskTransition, isValidTaskFile, isValidUnixTimestamp } from './task-rules.util';
 
 type TaskStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
@@ -55,7 +56,11 @@ function getMimeExtension(mimeType: string): string | null {
 export class TaskService {
   constructor(
     private readonly repository: TaskRepository = taskRepository,
-    private readonly transactionFactory: () => Promise<Transaction> = () => sequelize.transaction()
+    private readonly transactionFactory: () => Promise<Transaction> = () => sequelize.transaction(),
+    private readonly taskNotifications: Pick<
+      TaskNotificationService,
+      'notifyTaskCreated' | 'notifyTaskReassigned'
+    > = taskNotificationService
   ) {}
 
   private async inTransaction<T>(callback: (transaction: Transaction) => Promise<T>): Promise<T> {
@@ -125,7 +130,7 @@ export class TaskService {
       throw taskError('INVALID_TASK_PRIORITY', 'priority must be LOW, MEDIUM, HIGH, or URGENT');
     }
     const dueAt = payload.dueAt === undefined ? null : validateTimestamp(payload.dueAt, 'dueAt');
-    return this.inTransaction(async (transaction) => {
+    const result = await this.inTransaction(async (transaction) => {
       const assignee = await this.repository.findAssignee(payload.hostId, payload.assignedToUserId, transaction);
       if (!assignee) throw taskError('INVALID_TASK_ASSIGNEE', 'Assigned user is not eligible for task assignment', 404);
       const refs = await this.validateReferences(payload.hostId, payload.customerId, payload.visitId, transaction);
@@ -158,6 +163,19 @@ export class TaskService {
       }, transaction);
       return { task: asPlain(task) };
     });
+
+    if (result.task.assignedToUserId) {
+      try {
+        await this.taskNotifications.notifyTaskCreated(result.task);
+      } catch (_error) {
+        logger.error('Failed to trigger task-created notification', {
+          hostId: result.task.hostId,
+          taskId: result.task.id,
+          recipientUserId: result.task.assignedToUserId,
+        });
+      }
+    }
+    return result;
   }
 
   async listTasks(payload: {
@@ -281,23 +299,43 @@ export class TaskService {
   async assignTask(payload: { hostId: number; taskId: number; userId: number; isAdmin: boolean; assignedToUserId: number }): Promise<any> {
     this.requireAdmin(payload.isAdmin);
     if (!validId(payload.assignedToUserId)) throw taskError('INVALID_ASSIGNEE_ID', 'assignedToUserId is required');
-    return this.inTransaction(async (transaction) => {
+    const transactionResult = await this.inTransaction(async (transaction) => {
       const task = await this.repository.getTask(payload.hostId, payload.taskId, transaction, true);
       if (!task) throw taskError('TASK_NOT_FOUND', 'Task not found', 404);
       const assignee = await this.repository.findAssignee(payload.hostId, payload.assignedToUserId, transaction);
       if (!assignee) throw taskError('INVALID_TASK_ASSIGNEE', 'Assigned user is not eligible for task assignment', 404);
-      if (Number(task.assignedToUserId) === Number(payload.assignedToUserId)) return { task: asPlain(task), changed: false };
-      const oldAssignee = Number(task.assignedToUserId);
+      if (Number(task.assignedToUserId) === Number(payload.assignedToUserId)) {
+        return { result: { task: asPlain(task), changed: false }, oldAssigneeId: null };
+      }
+      const oldAssigneeId = validId(task.assignedToUserId) ? Number(task.assignedToUserId) : null;
       const now = Math.floor(Date.now() / 1000);
       await this.repository.updateTask(task, { assignedToUserId: payload.assignedToUserId, updatedAt: now }, transaction);
       await this.repository.createLog({
         hostId: payload.hostId, taskId: payload.taskId,
-        action: oldAssignee ? 'REASSIGNED' : 'ASSIGNED', performedByUserId: payload.userId,
-        oldStatus: task.status, newStatus: task.status, oldAssignedToUserId: oldAssignee || null,
+        action: oldAssigneeId ? 'REASSIGNED' : 'ASSIGNED', performedByUserId: payload.userId,
+        oldStatus: task.status, newStatus: task.status, oldAssignedToUserId: oldAssigneeId,
         newAssignedToUserId: payload.assignedToUserId, createdAt: now,
       }, transaction);
-      return { task: asPlain(task), changed: true };
+      return { result: { task: asPlain(task), changed: true }, oldAssigneeId };
     });
+
+    if (transactionResult.result.changed) {
+      try {
+        await this.taskNotifications.notifyTaskReassigned(
+          transactionResult.result.task,
+          transactionResult.oldAssigneeId,
+          Number(transactionResult.result.task.assignedToUserId)
+        );
+      } catch (_error) {
+        logger.error('Failed to trigger task-reassignment notification', {
+          hostId: transactionResult.result.task.hostId,
+          taskId: transactionResult.result.task.id,
+          oldAssigneeId: transactionResult.oldAssigneeId,
+          newAssigneeId: transactionResult.result.task.assignedToUserId,
+        });
+      }
+    }
+    return transactionResult.result;
   }
 
   private async transition(payload: {

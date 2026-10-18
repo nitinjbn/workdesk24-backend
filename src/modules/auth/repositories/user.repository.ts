@@ -313,6 +313,19 @@ export class UserRepository extends BaseRepository<typeof User.prototype> {
     }
   }
 
+  async findActiveDevicesByUser(hostId: number, userId: number): Promise<UserDevice[]> {
+    return UserDevice.findAll({
+      where: {
+        hostId,
+        userId,
+        isActive: 1,
+        fcmToken: { [Op.ne]: null },
+      },
+      order: [['id', 'ASC']],
+      logging: console.log,
+    });
+  }
+
   async getLatestDeviceIdByUser(hostId: number, userId: number): Promise<string | null> {
     const device = await UserDevice.findOne({
       where: {
