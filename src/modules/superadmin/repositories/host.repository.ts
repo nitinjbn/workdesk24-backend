@@ -1,8 +1,23 @@
-import { FindAndCountOptions, Op, Transaction } from 'sequelize';
-import db, { Host, HostSettings, HostSubscription, User } from '../../../models';
+import { CreationAttributes, FindAndCountOptions, Op, Transaction } from 'sequelize';
+import db, { Host, HostFeatures, HostSettings, HostSubscription, User } from '../../../models';
+import type HostFeature from '../../../models/schemas/HostFeatures';
 import { ReportResponse } from '../types/master.types';
 
 export class hostRepository {
+  async createHostFeatures(
+    params: {
+      hostId: number;
+      features: Array<Omit<CreationAttributes<HostFeature>, 'hostId' | 'createdAt'>>;
+      createdAt: number;
+    },
+    transaction?: Transaction
+  ): Promise<HostFeature[]> {
+    const { hostId, features, createdAt } = params;
+    const records = features.map(feature => ({ ...feature, hostId, createdAt }));
+
+    return HostFeatures.bulkCreate(records, { transaction });
+  }
+
   async createHost(params: any, transaction?: Transaction): Promise<any> {
     console.log('Creating host with params:', params);
     const createHostResult = await Host.create(
