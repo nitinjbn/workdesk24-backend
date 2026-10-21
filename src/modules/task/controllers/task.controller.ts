@@ -33,6 +33,25 @@ export class TaskController {
       'Task created successfully'
     );
 
+  createTaskWithAttachment = (req: AuthRequest, res: Response, next: NextFunction): Promise<void> =>
+    this.respond(
+      () => taskService.createTaskWithAttachment({
+        ...identity(req),
+        title: req.body.title,
+        description: req.body.description,
+        assignedToUserId: Number(req.body.assignedToUserId),
+        customerId: req.body.customerId === undefined ? undefined : Number(req.body.customerId),
+        visitId: req.body.visitId === undefined ? undefined : Number(req.body.visitId),
+        priority: req.body.priority,
+        dueAt: req.body.dueAt === undefined ? undefined : Number(req.body.dueAt),
+        remarks: req.body.remarks,
+        file: req.file,
+      }),
+      res,
+      next,
+      'Task created with attachment successfully'
+    );
+
   getTasks = (req: AuthRequest, res: Response, next: NextFunction): Promise<void> =>
     this.respond(
       () => taskService.listTasks({ ...req.body, ...identity(req), filters: req.body.filters || req.body }),

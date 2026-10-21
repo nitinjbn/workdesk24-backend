@@ -41,6 +41,31 @@
           "response": []
         },
         {
+          "name": "Create Task With Attachment",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "title", "value": "Prepare customer proposal", "type": "text" },
+                { "key": "description", "value": "Draft and review the proposal", "type": "text" },
+                { "key": "assignedToUserId", "value": "22", "type": "text" },
+                { "key": "priority", "value": "HIGH", "type": "text" },
+                { "key": "dueAt", "value": "1791853200", "type": "text" },
+                { "key": "customerId", "value": "31", "type": "text", "disabled": true },
+                { "key": "visitId", "value": "41", "type": "text", "disabled": true },
+                { "key": "remarks", "value": "Proposal reference", "type": "text" },
+                { "key": "file", "type": "file", "src": "" }
+              ]
+            },
+            "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/createTaskWithAttachment", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "createTaskWithAttachment"] },
+            "description": "Requires the inherited admin bearer token and matching CSRF cookie/header. Send task fields directly as multipart text fields and exactly one required file under file. title and assignedToUserId are required; description, customerId, visitId, priority, dueAt (Unix seconds), and attachment remarks are optional. Omit unused optional fields. Accepts validated JPEG, PNG, WEBP, or PDF files up to 10 MB. Do not set Content-Type manually. Returns { success: true, message, data: { task, attachment } }. The server links the attachment to the newly created task; do not send taskId or taskCommentId. Task, activity, counter, and attachment metadata commit together; failures roll back and attempt uploaded-file cleanup. Notifications run only after commit. The separate creation and upload endpoints remain available."
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["const result = pm.response.json();", "if (result.success && result.data && result.data.task) pm.environment.set('TASK_ID', result.data.task.id);", "if (result.success && result.data && result.data.attachment) pm.environment.set('ATTACHMENT_ID', result.data.attachment.id);", "pm.test('Task and attachment created together', function () { pm.expect(result.success).to.eql(true); pm.expect(String(result.data.attachment.taskId)).to.eql(String(result.data.task.id)); });"] } }],
+          "response": []
+        },
+        {
           "name": "List Tasks",
           "request": {
             "method": "POST",
