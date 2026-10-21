@@ -197,8 +197,8 @@ export class TaskRepository {
     return TaskAttachments.findOne({ where: { hostId, id: attachmentId } });
   }
 
-  createAttachment(data: Record<string, unknown>): Promise<any> {
-    return TaskAttachments.create(data as any);
+  createAttachment(data: Record<string, unknown>, transaction?: Transaction): Promise<any> {
+    return TaskAttachments.create(data as any, { transaction });
   }
 
   async findComment(hostId: number, taskId: number, commentId: number): Promise<any> {

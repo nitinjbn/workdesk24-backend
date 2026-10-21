@@ -443,6 +443,30 @@
               "response": []
             },
             {
+              "name": "Create Task With Attachment (Admin)",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }, { "key": "Cookie", "value": "wd24_admin_csrf={{ADMIN_CSRF_TOKEN}}" }],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    { "key": "title", "value": "Prepare customer proposal", "type": "text" },
+                    { "key": "description", "value": "Draft and review proposal", "type": "text" },
+                    { "key": "assignedToUserId", "value": "42", "type": "text" },
+                    { "key": "customerId", "value": "12", "type": "text", "disabled": true },
+                    { "key": "visitId", "value": "37", "type": "text", "disabled": true },
+                    { "key": "priority", "value": "HIGH", "type": "text" },
+                    { "key": "dueAt", "value": "1791853200", "type": "text" },
+                    { "key": "remarks", "value": "Proposal reference", "type": "text" },
+                    { "key": "file", "type": "file", "src": "" }
+                  ]
+                },
+                "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/createTaskWithAttachment", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "createTaskWithAttachment"] },
+                "description": "Use an admin JWT in TOKEN and the matching admin CSRF cookie/header (adjust the cookie name if configured). Send task fields directly as multipart text fields and one required file under file. title and assignedToUserId are required; description, customerId, visitId, priority, dueAt (Unix seconds), and attachment remarks are optional. Omit unused optional fields. Accepts validated JPEG, PNG, WEBP, or PDF up to 10 MB. Let Postman set the multipart Content-Type boundary. Returns { success: true, message, data: { task, attachment } }. Do not send taskId or taskCommentId. Task, activity, counter, and attachment metadata commit together; failures roll back and attempt uploaded-file cleanup. Notifications run only after commit. Existing standalone creation and upload APIs are unchanged."
+              },
+              "response": []
+            },
+            {
               "name": "List Assigned Tasks (Employee)",
               "request": {
                 "method": "POST",

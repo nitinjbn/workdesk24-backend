@@ -5,6 +5,7 @@ import { taskUpload, taskUploadErrorHandler } from '../../../modules/task/middle
 const router = Router();
 
 router.post('/createTask', taskController.createTask);
+router.post('/createTaskWithAttachment', taskUpload.single('file'), taskUploadErrorHandler, taskController.createTaskWithAttachment);
 router.post('/getTasks', taskController.getTasks);
 router.post('/getTaskDetails', taskController.getTaskDetails);
 router.post('/updateTask', taskController.updateTask);

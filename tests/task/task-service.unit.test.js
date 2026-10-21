@@ -92,6 +92,101 @@ function makeHarness(taskNotifications) {
 
 const admin = { hostId: 7, userId: 9, isAdmin: true };
 
+test('combined task creation saves task and attachment together and notifies after commit', async (context) => {
+  let notificationCount = 0;
+  const { service, repository, transaction } = makeHarness({
+    async notifyTaskCreated(task) {
+      assert.equal(transaction.committed, true);
+      assert.equal(task.id, 101);
+      notificationCount += 1;
+    },
+    async notifyTaskReassigned() {},
+  });
+  repository.createAttachment = async (data, attachmentTransaction) => {
+    assert.equal(attachmentTransaction, transaction);
+    assert.equal(transaction.committed, false);
+    return { id: 123, ...data };
+  };
+  context.mock.method(mediaStorage, 'uploadBufferToMediaStorage', async (file, folder, options) => {
+    assert.equal(folder, '7/tasks');
+    assert.deepEqual(options, { accessMode: 'authenticated' });
+    return { url: 'https://example.com/proof.pdf', fileId: 'proof', raw: {} };
+  });
+  const result = await service.createTaskWithAttachment({
+    ...admin, title: 'Proposal', assignedToUserId: 22, remarks: ' Evidence ',
+    taskId: 999, taskCommentId: 888,
+    file: { buffer: Buffer.from('%PDF-1.7'), size: 8, mimetype: 'application/pdf', originalname: 'proof.pdf' },
+  });
+  assert.equal(result.task.id, 101);
+  assert.equal(result.attachment.taskId, 101);
+  assert.equal(result.attachment.taskCommentId, null);
+  assert.equal(result.attachment.hostId, 7);
+  assert.equal(result.attachment.uploadedByUserId, 9);
+  assert.equal(result.attachment.remarks, 'Evidence');
+  assert.equal(result.attachment.fileName, 'proof.pdf');
+  assert.equal(repository.logs[0].action, 'CREATED');
+  assert.equal(notificationCount, 1);
+});
+
+test('combined task creation validates inputs before uploading or creating a task', async (context) => {
+  const { service, repository } = makeHarness();
+  const upload = context.mock.method(mediaStorage, 'uploadBufferToMediaStorage', async () => {
+    throw new Error('must not upload');
+  });
+  const payload = {
+    ...admin, title: 'Proposal', assignedToUserId: 22,
+    file: { buffer: Buffer.from('%PDF-1.7'), size: 8, mimetype: 'application/pdf', originalname: 'proof.pdf' },
+  };
+  for (const [changes, message] of [
+    [{ file: undefined }, /file upload is required/],
+    [{ isAdmin: false }, /Admin access/],
+    [{ title: '' }, /title must contain/],
+    [{ assignedToUserId: 999 }, /not eligible/],
+    [{ customerId: 32, visitId: 41 }, /does not belong/],
+    [{ file: { ...payload.file, size: 10 * 1024 * 1024 + 1 } }, /1 byte to 10 MB/],
+    [{ file: { ...payload.file, mimetype: 'image/png' } }, /Only valid/],
+    [{ file: { ...payload.file, originalname: 'proof.png' } }, /extension does not match/],
+    [{ remarks: 42 }, /remarks must be a string/],
+  ]) {
+    await assert.rejects(service.createTaskWithAttachment({ ...payload, ...changes }), message);
+  }
+  assert.equal(upload.mock.callCount(), 0);
+  assert.equal(repository.task, null);
+});
+
+test('combined task creation rolls back and cleans uploaded media on persistence or commit failure', async (context) => {
+  for (const failure of ['upload', 'log', 'attachment', 'commit']) {
+    await context.test(failure, async (context) => {
+      let notificationCount = 0;
+      const { service, repository, transaction } = makeHarness({
+        async notifyTaskCreated() { notificationCount += 1; },
+        async notifyTaskReassigned() {},
+      });
+      repository.failLog = failure === 'log';
+      repository.createAttachment = async (data) => {
+        if (failure === 'attachment') throw new Error('attachment failed');
+        return { id: 123, ...data };
+      };
+      if (failure === 'commit') transaction.commit = async () => { throw new Error('commit failed'); };
+      context.mock.method(mediaStorage, 'uploadBufferToMediaStorage', async () => {
+        if (failure === 'upload') throw new Error('upload failed');
+        return { url: 'https://example.com/proof.pdf', fileId: 'proof', raw: { resource_type: 'raw' } };
+      });
+      const cleanup = context.mock.method(mediaStorage, 'deleteMediaFromStorage', async () => ({}));
+      await assert.rejects(service.createTaskWithAttachment({
+        ...admin, title: 'Proposal', assignedToUserId: 22,
+        file: { buffer: Buffer.from('%PDF-1.7'), size: 8, mimetype: 'application/pdf', originalname: 'proof.pdf' },
+      }), /failed/);
+      assert.equal(transaction.rolledBack, true);
+      assert.equal(notificationCount, 0);
+      assert.equal(cleanup.mock.callCount(), failure === 'upload' ? 0 : 1);
+      if (failure !== 'upload') {
+        assert.deepEqual(cleanup.mock.calls[0].arguments, ['proof', { resourceType: 'raw', accessMode: 'authenticated' }]);
+      }
+    });
+  }
+});
+
 test('task creation writes PENDING task and initial assignment log', async () => {
   const { service, repository, transaction } = makeHarness();
   const result = await service.createTask({ ...admin, title: ' Proposal ', assignedToUserId: 22, customerId: 31 });
@@ -384,6 +479,105 @@ const { authMiddleware } = require('../../src/shared/middleware/auth.middleware'
 const { errorHandler } = require('../../src/shared/middleware/error-handler.middleware');
 const serializer = require('../../src/shared/middleware/response-serializer.middleware').default;
 const taskRoutes = require('../../src/routes/v1/app/tasks.routes').default;
+
+test('combined task creation HTTP contract and standalone API compatibility', async (context) => {
+  const cookieParser = require('cookie-parser');
+  const { requireAdminRole } = require('../../src/shared/middleware/auth.middleware');
+  const { requireAdminCsrfToken } = require('../../src/shared/middleware/csrf.middleware');
+  const { getAdminCsrfCookieName } = require('../../src/shared/utils/auth-cookie.util');
+  const adminTaskRoutes = require('../../src/routes/v1/admin/tasks.routes').default;
+  const taskService = require('../../src/modules/task/services/task.service').default;
+  const { service, repository } = makeHarness();
+  let user = { id: 9, hostId: 7, isAdminUser: 1 };
+  context.mock.method(console, 'log', () => undefined);
+  context.mock.method(console, 'error', () => undefined);
+  context.mock.method(userRepository, 'findById', async () => user);
+  const combined = context.mock.method(taskService, 'createTaskWithAttachment', service.createTaskWithAttachment.bind(service));
+  context.mock.method(taskService, 'createTask', service.createTask.bind(service));
+  context.mock.method(taskService, 'uploadAttachment', service.uploadAttachment.bind(service));
+  const upload = context.mock.method(mediaStorage, 'uploadBufferToMediaStorage', async () => ({
+    url: 'https://example.com/proof.pdf', fileId: 'proof', raw: {},
+  }));
+  repository.createAttachment = async (data) => ({ id: 123, ...data });
+  const app = express();
+  app.use(express.json());
+  app.use(cookieParser());
+  app.use(serializer);
+  app.use('/api/v1/admin/tasks', authMiddleware, requireAdminRole, requireAdminCsrfToken, adminTaskRoutes);
+  app.use(errorHandler);
+  const server = app.listen(0, '127.0.0.1');
+  await once(server, 'listening');
+  context.after(async () => {
+    server.closeAllConnections();
+    await new Promise((resolve) => server.close(resolve));
+  });
+  const token = jwt.sign({ userId: 9 }, process.env.JWT_SECRET, { expiresIn: '5m' });
+  const send = async (body, options = {}) => {
+    const response = await fetch(`http://127.0.0.1:${server.address().port}/api/v1/admin/tasks/${options.endpoint || 'createTaskWithAttachment'}`, {
+      method: 'POST',
+      headers: {
+        ...(options.auth === false ? {} : { Authorization: `Bearer ${token}` }),
+        ...(options.csrf === false ? {} : { Cookie: `${getAdminCsrfCookieName()}=test-csrf`, 'x-csrf-token': 'test-csrf' }),
+        ...(options.json ? { 'Content-Type': 'application/json' } : {}),
+      },
+      body: options.json ? JSON.stringify(body) : body,
+    });
+    return { status: response.status, body: await response.json() };
+  };
+  const form = (files = 1, size = 8, field = 'file') => {
+    const body = new FormData();
+    for (const [key, value] of Object.entries({
+      title: 'Proposal', assignedToUserId: '22', customerId: '31', visitId: '41',
+      dueAt: '1791853200', priority: 'HIGH', remarks: 'Evidence',
+      hostId: '999', userId: '999', isAdmin: 'false', taskId: '999', taskCommentId: '888',
+    })) body.set(key, value);
+    for (let index = 0; index < files; index += 1) {
+      body.append(field, new Blob([size === 8 ? Buffer.from('%PDF-1.7') : Buffer.alloc(size)], { type: 'application/pdf' }), 'proof.pdf');
+    }
+    return body;
+  };
+
+  const result = await send(form());
+  assert.equal(result.status, 200);
+  assert.equal(result.body.success, true);
+  assert.equal(result.body.message, 'Task created with attachment successfully');
+  assert.equal(result.body.data.task.id, 101);
+  assert.equal(result.body.data.task.hostId, 7);
+  assert.equal(result.body.data.task.createdByUserId, 9);
+  assert.equal(result.body.data.task.dueAt, 1791853200);
+  assert.equal(result.body.data.attachment.taskId, 101);
+  assert.equal(result.body.data.attachment.taskCommentId, null);
+  assert.equal(combined.mock.calls[0].arguments[0].assignedToUserId, 22);
+  assert.equal(combined.mock.calls[0].arguments[0].customerId, 31);
+  assert.equal(combined.mock.calls[0].arguments[0].visitId, 41);
+
+  assert.equal((await send(form(), { auth: false })).status, 401);
+  assert.equal((await send(form(), { csrf: false })).status, 401);
+  user = { ...user, isAdminUser: 0 };
+  assert.equal((await send(form())).status, 403);
+  user = { ...user, isAdminUser: 1 };
+  assert.equal(combined.mock.callCount(), 1);
+  for (const invalidForm of [form(0), form(2), form(1, 10 * 1024 * 1024 + 1), form(1, 8, 'attachment')]) {
+    const invalid = await send(invalidForm);
+    assert.equal(invalid.status, 400);
+    assert.equal(invalid.body.success, false);
+  }
+  const invalidDetails = form();
+  invalidDetails.set('assignedToUserId', 'not-an-id');
+  assert.equal((await send(invalidDetails)).status, 400);
+  assert.equal(upload.mock.callCount(), 1);
+
+  const standaloneTask = await send({ title: 'Standalone', assignedToUserId: 22 }, { endpoint: 'createTask', json: true });
+  assert.equal(standaloneTask.body.success, true);
+  assert.deepEqual(Object.keys(standaloneTask.body.data), ['task']);
+  const attachmentForm = new FormData();
+  attachmentForm.set('taskId', '101');
+  attachmentForm.set('file', new Blob([Buffer.from('%PDF-1.7')], { type: 'application/pdf' }), 'proof.pdf');
+  const standaloneAttachment = await send(attachmentForm, { endpoint: 'uploadTaskAttachment' });
+  assert.equal(standaloneAttachment.body.success, true);
+  assert.deepEqual(Object.keys(standaloneAttachment.body.data), ['attachment']);
+  assert.equal(standaloneAttachment.body.data.attachment.taskId, 101);
+});
 
 async function downloadHarness(context) {
   context.mock.method(console, 'error', () => undefined);

@@ -4,6 +4,7 @@ import { logger } from '../../../config/database';
 import { createConfiguredError } from '../../../shared/utils/error.util';
 import {
   deleteMediaFromStorage,
+  MediaUploadResult,
   mediaDownloadError,
   openMediaDownload,
   uploadBufferToMediaStorage,
@@ -15,6 +16,17 @@ import { getTaskTransition, isValidTaskFile, isValidUnixTimestamp } from './task
 type TaskStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
 type TaskPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
 type TaskAction = 'CREATED' | 'UPDATED' | 'ASSIGNED' | 'REASSIGNED' | 'STARTED' | 'COMPLETED' | 'CANCELLED';
+
+interface CreateTaskPayload {
+  hostId: number; userId: number; isAdmin: boolean; title: string; description?: string;
+  assignedToUserId: number; customerId?: number | null; visitId?: number | null;
+  priority?: TaskPriority; dueAt?: number | null;
+}
+
+interface TaskAttachmentPayload {
+  hostId: number; taskId: number; userId: number; isAdmin: boolean; taskCommentId?: number;
+  remarks?: string; file?: Express.Multer.File;
+}
 
 const SORT_FIELDS = ['id', 'title', 'priority', 'status', 'dueAt', 'createdAt', 'updatedAt'];
 const TASK_STATUSES: TaskStatus[] = ['PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
@@ -136,11 +148,26 @@ export class TaskService {
     return { customerId: resolvedCustomerId, visitId: resolvedVisitId };
   }
 
-  async createTask(payload: {
-    hostId: number; userId: number; isAdmin: boolean; title: string; description?: string;
-    assignedToUserId: number; customerId?: number | null; visitId?: number | null;
-    priority?: TaskPriority; dueAt?: number | null;
+  async createTask(payload: CreateTaskPayload): Promise<any> {
+    return this.createTaskInternal(payload);
+  }
+
+  async createTaskWithAttachment(payload: CreateTaskPayload & {
+    remarks?: string; file?: Express.Multer.File;
   }): Promise<any> {
+    this.requireAdmin(payload.isAdmin);
+    const attachmentPayload = {
+      hostId: payload.hostId, userId: payload.userId, isAdmin: payload.isAdmin,
+      taskId: 0, remarks: payload.remarks, file: payload.file,
+    };
+    const file = this.validateAttachment(attachmentPayload);
+    return this.createTaskInternal(payload, { ...attachmentPayload, file });
+  }
+
+  private async createTaskInternal(
+    payload: CreateTaskPayload,
+    attachmentPayload?: TaskAttachmentPayload & { file: Express.Multer.File }
+  ): Promise<any> {
     this.requireAdmin(payload.isAdmin);
     const title = typeof payload.title === 'string' ? payload.title.trim() : '';
     if (!title || title.length > 100) throw taskError('INVALID_TASK_TITLE', 'title must contain 1-100 characters');
@@ -152,10 +179,14 @@ export class TaskService {
       throw taskError('INVALID_TASK_PRIORITY', 'priority must be LOW, MEDIUM, HIGH, or URGENT');
     }
     const dueAt = payload.dueAt === undefined ? null : validateTimestamp(payload.dueAt, 'dueAt');
+    let uploaded: MediaUploadResult | undefined;
     const result = await this.inTransaction(async (transaction) => {
       const assignee = await this.repository.findAssignee(payload.hostId, payload.assignedToUserId, transaction);
       if (!assignee) throw taskError('INVALID_TASK_ASSIGNEE', 'Assigned user is not eligible for task assignment', 404);
       const refs = await this.validateReferences(payload.hostId, payload.customerId, payload.visitId, transaction);
+      if (attachmentPayload) {
+        uploaded = await uploadBufferToMediaStorage(attachmentPayload.file, `${payload.hostId}/tasks`, { accessMode: 'authenticated' });
+      }
       const now = Math.floor(Date.now() / 1000);
       const settings = await this.repository.lockTaskSettings(payload.hostId, now, transaction);
       if (!settings) throw taskError('TASK_SETTINGS_NOT_FOUND', 'Task settings could not be initialized', 500);
@@ -188,7 +219,14 @@ export class TaskService {
         createdAt: now,
       }, transaction);
       await this.repository.advanceTaskNumber(settings, nextTaskNumber, now, transaction);
+      if (attachmentPayload && uploaded) {
+        const attachment = await this.persistAttachment({ ...attachmentPayload, taskId: task.id }, uploaded, transaction);
+        return { task: asPlain(task), attachment: asPlain(attachment) };
+      }
       return { task: asPlain(task) };
+    }).catch(async (error: unknown) => {
+      if (uploaded) await this.cleanupAttachment(uploaded);
+      throw error;
     });
 
     if (result.task.assignedToUserId) {
@@ -509,11 +547,7 @@ export class TaskService {
     return { stream, fileName: attachment.fileName, fileType: attachment.fileType.toLowerCase(), extension };
   }
 
-  async uploadAttachment(payload: {
-    hostId: number; taskId: number; userId: number; isAdmin: boolean; taskCommentId?: number;
-    remarks?: string; file?: Express.Multer.File;
-  }): Promise<any> {
-    await this.getVisibleTask(payload.hostId, payload.taskId, payload.userId, payload.isAdmin);
+  private validateAttachment(payload: TaskAttachmentPayload): Express.Multer.File {
     const file = payload.file;
     if (!file || !Buffer.isBuffer(file.buffer)) throw taskError('TASK_ATTACHMENT_REQUIRED', 'A file upload is required');
     if (!Number.isSafeInteger(file.size) || file.size <= 0 || file.size > MAX_FILE_SIZE) {
@@ -528,44 +562,63 @@ export class TaskService {
     if (!originalExtension || !equivalentExtensions[extension].includes(originalExtension)) {
       throw taskError('INVALID_TASK_ATTACHMENT_EXTENSION', 'File extension does not match its content type');
     }
+    if (payload.remarks !== undefined && payload.remarks !== null) {
+      if (typeof payload.remarks !== 'string') throw taskError('INVALID_TASK_REMARKS', 'remarks must be a string');
+      if (payload.remarks.length > 500) throw taskError('INVALID_TASK_REMARKS', 'remarks must not exceed 500 characters');
+    }
+    return file;
+  }
+
+  private persistAttachment(
+    payload: TaskAttachmentPayload & { file: Express.Multer.File },
+    uploaded: MediaUploadResult,
+    transaction?: Transaction
+  ): Promise<unknown> {
+    const file = payload.file;
+    const safeName = file.originalname.replace(/[\\/\u0000-\u001f]/g, '_').replace(/\.{2,}/g, '.').slice(0, 255);
+    return this.repository.createAttachment({
+      hostId: payload.hostId,
+      taskId: payload.taskId,
+      taskCommentId: payload.taskCommentId || null,
+      uploadedByUserId: payload.userId,
+      fileName: safeName,
+      fileType: file.mimetype,
+      fileSizeBytes: file.size,
+      fileUrl: uploaded.url,
+      remarks: typeof payload.remarks === 'string' ? payload.remarks.trim() || null : null,
+      createdAt: Math.floor(Date.now() / 1000),
+    }, transaction);
+  }
+
+  private async cleanupAttachment(uploaded: MediaUploadResult): Promise<void> {
+    try {
+      const resourceType = (uploaded.raw as { resource_type?: string } | undefined)?.resource_type;
+      await deleteMediaFromStorage(uploaded.fileId, {
+        resourceType: resourceType === 'video' || resourceType === 'raw' ? resourceType : 'image',
+        accessMode: 'authenticated',
+      });
+    } catch (cleanupError) {
+      logger.error('Failed to clean up task attachment after persistence failure', {
+        fileId: uploaded.fileId,
+        error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
+      });
+    }
+  }
+
+  async uploadAttachment(payload: TaskAttachmentPayload): Promise<any> {
+    await this.getVisibleTask(payload.hostId, payload.taskId, payload.userId, payload.isAdmin);
+    const file = this.validateAttachment(payload);
     if (payload.taskCommentId !== undefined) {
       if (!validId(payload.taskCommentId) || !(await this.repository.findComment(payload.hostId, payload.taskId, payload.taskCommentId))) {
         throw taskError('TASK_COMMENT_NOT_FOUND', 'Comment not found', 404);
       }
     }
-    if (payload.remarks !== undefined && payload.remarks !== null) {
-      if (typeof payload.remarks !== 'string') throw taskError('INVALID_TASK_REMARKS', 'remarks must be a string');
-      if (payload.remarks.length > 500) throw taskError('INVALID_TASK_REMARKS', 'remarks must not exceed 500 characters');
-    }
-    const safeName = file.originalname.replace(/[\\/\u0000-\u001f]/g, '_').replace(/\.{2,}/g, '.').slice(0, 255);
     const uploaded = await uploadBufferToMediaStorage(file, `${payload.hostId}/tasks`, { accessMode: 'authenticated' });
     try {
-      const attachment = await this.repository.createAttachment({
-        hostId: payload.hostId,
-        taskId: payload.taskId,
-        taskCommentId: payload.taskCommentId || null,
-        uploadedByUserId: payload.userId,
-        fileName: safeName,
-        fileType: file.mimetype,
-        fileSizeBytes: file.size,
-        fileUrl: uploaded.url,
-        remarks: typeof payload.remarks === 'string' ? payload.remarks.trim() || null : null,
-        createdAt: Math.floor(Date.now() / 1000),
-      });
+      const attachment = await this.persistAttachment({ ...payload, file }, uploaded);
       return { attachment: asPlain(attachment) };
     } catch (error) {
-      try {
-        const resourceType = (uploaded.raw as any)?.resource_type;
-        await deleteMediaFromStorage(uploaded.fileId, {
-          resourceType: resourceType === 'video' || resourceType === 'raw' ? resourceType : 'image',
-          accessMode: 'authenticated',
-        });
-      } catch (cleanupError) {
-        logger.error('Failed to clean up task attachment after persistence failure', {
-          fileId: uploaded.fileId,
-          error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
-        });
-      }
+      await this.cleanupAttachment(uploaded);
       throw error;
     }
   }
