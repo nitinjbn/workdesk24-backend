@@ -12,6 +12,8 @@ import {
 import taskRepository, { TaskRepository } from '../repositories/task.repository';
 import taskNotificationService, { TaskNotificationService } from '../../notifications/task/taskNotificationService';
 import { getTaskTransition, isValidTaskFile, isValidUnixTimestamp } from './task-rules.util';
+import { getHostDateTimeSettings } from '../../../shared/utils/host-settings.util';
+import { formatDateTimeFieldsBySettings } from '../../../shared/utils/date-time-format.util';
 
 type TaskStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
 type TaskPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
@@ -291,8 +293,14 @@ export class TaskService {
       sortOrder: sortOrder as 'ASC' | 'DESC',
       now: Math.floor(Date.now() / 1000),
     });
+
+    const dateTimeSettings = await getHostDateTimeSettings(payload.hostId);
+    const plainData = result.rows.map((item: any) =>
+      item && typeof item.toJSON === 'function' ? item.toJSON() : item
+    );
+
     return {
-      tasks: result.rows.map(asPlain),
+      tasks: formatDateTimeFieldsBySettings(plainData, dateTimeSettings),
       pagination: { page, limit, total: result.count, totalPages: Math.ceil(result.count / limit) },
     };
   }
@@ -304,12 +312,15 @@ export class TaskService {
       this.repository.getAttachments(payload.hostId, payload.taskId, 10, 0),
       this.repository.getLogs(payload.hostId, payload.taskId, 10, 0),
     ]);
+
+    const dateTimeSettings = await getHostDateTimeSettings(payload.hostId);
+
     return {
       task: {
-        ...asPlain(task),
-        comments: comments.rows.map(asPlain),
-        attachments: attachments.rows.map(asPlain),
-        activity: logs.rows.map(asPlain),
+        ...formatDateTimeFieldsBySettings([asPlain(task)], dateTimeSettings)[0],
+        comments: formatDateTimeFieldsBySettings(comments.rows.map(asPlain), dateTimeSettings),
+        attachments: formatDateTimeFieldsBySettings(attachments.rows.map(asPlain), dateTimeSettings),
+        activity: formatDateTimeFieldsBySettings(logs.rows.map(asPlain), dateTimeSettings),
       },
     };
   }
