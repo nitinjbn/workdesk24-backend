@@ -13,7 +13,7 @@ import taskRepository, { TaskRepository } from '../repositories/task.repository'
 import taskNotificationService, { TaskNotificationService } from '../../notifications/task/taskNotificationService';
 import { getTaskTransition, isValidTaskFile, isValidUnixTimestamp } from './task-rules.util';
 import { getHostDateTimeSettings } from '../../../shared/utils/host-settings.util';
-import { formatDateTimeFieldsBySettings } from '../../../shared/utils/date-time-format.util';
+import { DateTimeFormatUtil, formatDateTimeFieldsBySettings } from '../../../shared/utils/date-time-format.util';
 
 type TaskStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
 type TaskPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
@@ -259,8 +259,11 @@ export class TaskService {
     for (const key of ['assignedToUserId', 'createdByUserId', 'customerId', 'visitId'] as const) {
       if (filters[key] !== undefined && !validId(filters[key])) throw taskError('INVALID_TASK_FILTER', `${key} must be a valid ID`);
     }
-    const dueFrom = filters.dueFrom === undefined ? undefined : validateTimestamp(filters.dueFrom, 'dueFrom');
-    const dueTo = filters.dueTo === undefined ? undefined : validateTimestamp(filters.dueTo, 'dueTo');
+    if (filters.dueDate !== undefined && (filters.dueFrom !== undefined || filters.dueTo !== undefined)) {
+      throw taskError('INVALID_TASK_DUE_RANGE', 'Use either dueDate or dueFrom/dueTo, not both');
+    }
+    let dueFrom = filters.dueFrom === undefined ? undefined : validateTimestamp(filters.dueFrom, 'dueFrom');
+    let dueTo = filters.dueTo === undefined ? undefined : validateTimestamp(filters.dueTo, 'dueTo');
     if (dueFrom === null || dueTo === null) throw taskError('INVALID_TASK_DUE_RANGE', 'Due date filters must be Unix timestamps');
     if (dueFrom !== undefined && dueTo !== undefined && Number(dueFrom) > Number(dueTo)) {
       throw taskError('INVALID_TASK_DUE_RANGE', 'dueFrom must be less than or equal to dueTo');
@@ -281,7 +284,23 @@ export class TaskService {
     if (!SORT_FIELDS.includes(sortBy) || !['ASC', 'DESC'].includes(sortOrder)) {
       throw taskError('INVALID_TASK_SORT', 'sortBy or sortOrder is invalid');
     }
-    const normalizedFilters = { ...filters, dueFrom, dueTo, overdueOnly: Boolean(filters.overdueOnly) };
+    const dateTimeSettings = await getHostDateTimeSettings(payload.hostId);
+    if (filters.dueDate !== undefined) {
+      const range = DateTimeFormatUtil.getUnixDayRange(filters.dueDate, dateTimeSettings.timeZone);
+      dueFrom = range.fromDate;
+      dueTo = range.tillDate;
+    }
+    const completedRange = filters.completedDate === undefined
+      ? undefined
+      : DateTimeFormatUtil.getUnixDayRange(filters.completedDate, dateTimeSettings.timeZone);
+    const normalizedFilters: Record<string, unknown> = {
+      ...filters, dueFrom, dueTo,
+      completedFrom: completedRange?.fromDate,
+      completedTo: completedRange?.tillDate,
+      overdueOnly: Boolean(filters.overdueOnly),
+    };
+    delete normalizedFilters.dueDate;
+    delete normalizedFilters.completedDate;
     const result = await this.repository.listTasks({
       hostId: payload.hostId,
       userId: payload.userId,
@@ -294,7 +313,6 @@ export class TaskService {
       now: Math.floor(Date.now() / 1000),
     });
 
-    const dateTimeSettings = await getHostDateTimeSettings(payload.hostId);
     const plainData = result.rows.map((item: any) =>
       item && typeof item.toJSON === 'function' ? item.toJSON() : item
     );
