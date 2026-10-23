@@ -30,6 +30,10 @@ interface TaskAttachmentPayload {
   remarks?: string; file?: Express.Multer.File;
 }
 
+interface TaskCommentPayload {
+  hostId: number; taskId: number; userId: number; isAdmin: boolean; comment: string;
+}
+
 const SORT_FIELDS = ['id', 'title', 'priority', 'status', 'dueAt', 'createdAt', 'updatedAt'];
 const TASK_STATUSES: TaskStatus[] = ['PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
 const TASK_PRIORITIES: TaskPriority[] = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'];
@@ -495,12 +499,43 @@ export class TaskService {
     return { page: resolvedPage, limit: resolvedLimit, offset: (resolvedPage - 1) * resolvedLimit };
   }
 
-  async addComment(payload: { hostId: number; taskId: number; userId: number; isAdmin: boolean; comment: string }): Promise<any> {
+  async addComment(payload: TaskCommentPayload): Promise<any> {
+    return this.addCommentInternal(payload);
+  }
+
+  async addTaskCommentWithAttachment(payload: TaskCommentPayload & { remarks?: string; file?: Express.Multer.File }): Promise<any> {
+    const attachmentPayload = {
+      hostId: payload.hostId, taskId: payload.taskId, userId: payload.userId,
+      isAdmin: payload.isAdmin, remarks: payload.remarks, file: payload.file,
+    };
+    const file = this.validateAttachment(attachmentPayload);
+    return this.addCommentInternal(payload, { ...attachmentPayload, file });
+  }
+
+  private async addCommentInternal(
+    payload: TaskCommentPayload,
+    attachmentPayload?: TaskAttachmentPayload & { file: Express.Multer.File }
+  ): Promise<any> {
     await this.getVisibleTask(payload.hostId, payload.taskId, payload.userId, payload.isAdmin);
     const comment = typeof payload.comment === 'string' ? payload.comment.trim() : '';
     if (!comment || comment.length > MAX_COMMENT_LENGTH) throw taskError('INVALID_TASK_COMMENT', `comment must contain 1-${MAX_COMMENT_LENGTH} characters`);
-    const created = await this.repository.createComment({ hostId: payload.hostId, taskId: payload.taskId, userId: payload.userId, comment, createdAt: Math.floor(Date.now() / 1000) });
-    return { comment: asPlain(created) };
+    const commentData = { hostId: payload.hostId, taskId: payload.taskId, userId: payload.userId, comment, createdAt: Math.floor(Date.now() / 1000) };
+    if (!attachmentPayload) {
+      const created = await this.repository.createComment(commentData);
+      return { comment: asPlain(created) };
+    }
+    let uploaded: MediaUploadResult | undefined;
+    try {
+      return await this.inTransaction(async (transaction) => {
+        uploaded = await uploadBufferToMediaStorage(attachmentPayload.file, `${payload.hostId}/tasks`, { accessMode: 'authenticated' });
+        const created = await this.repository.createComment(commentData, transaction);
+        const attachment = await this.persistAttachment({ ...attachmentPayload, taskCommentId: created.id }, uploaded, transaction);
+        return { comment: asPlain(created), attachment: asPlain(attachment) };
+      });
+    } catch (error) {
+      if (uploaded) await this.cleanupAttachment(uploaded);
+      throw error;
+    }
   }
 
   async listComments(payload: { hostId: number; taskId: number; userId: number; isAdmin: boolean; page?: number; limit?: number }): Promise<any> {

@@ -15,6 +15,7 @@ router.post('/completeTask', taskController.completeTask);
 router.post('/cancelTask', taskController.cancelTask);
 router.post('/getTaskActivity', taskController.getTaskActivity);
 router.post('/addTaskComment', taskController.addTaskComment);
+router.post('/addTaskCommentWithAttachment', taskUpload.single('file'), taskUploadErrorHandler, taskController.addTaskCommentWithAttachment);
 router.post('/getTaskComments', taskController.getTaskComments);
 router.post('/uploadTaskAttachment', taskUpload.single('file'), taskUploadErrorHandler, taskController.uploadTaskAttachment);
 router.post('/getTaskAttachments', taskController.getTaskAttachments);
