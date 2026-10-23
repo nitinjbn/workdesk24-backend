@@ -124,6 +124,20 @@ export class TaskController {
       'Task comment added successfully'
     );
 
+  addTaskCommentWithAttachment = (req: AuthRequest, res: Response, next: NextFunction): Promise<void> =>
+    this.respond(
+      () => taskService.addTaskCommentWithAttachment({
+        ...identity(req),
+        taskId: Number(req.body.taskId),
+        comment: req.body.comment,
+        remarks: req.body.remarks,
+        file: req.file,
+      }),
+      res,
+      next,
+      'Task comment added with attachment successfully'
+    );
+
   getTaskComments = (req: AuthRequest, res: Response, next: NextFunction): Promise<void> =>
     this.respond(
       () => taskService.listComments({ ...identity(req), taskId: req.body.taskId, page: req.body.page, limit: req.body.limit }),

@@ -131,6 +131,99 @@ function makeHarness(taskNotifications) {
 
 const admin = { hostId: 7, userId: 9, isAdmin: true };
 
+test('combined task comment links the attachment to the new comment in one transaction', async (context) => {
+  const { service, repository, transaction } = makeHarness();
+  repository.task = { id: 101, hostId: 7, assignedToUserId: 22, isDeleted: 0 };
+  const createComment = repository.createComment.bind(repository);
+  repository.createComment = async (data, commentTransaction) => {
+    assert.equal(commentTransaction, transaction);
+    assert.equal(transaction.committed, false);
+    return createComment(data);
+  };
+  repository.createAttachment = async (data, attachmentTransaction) => {
+    assert.equal(attachmentTransaction, transaction);
+    assert.equal(transaction.committed, false);
+    return { id: 123, ...data };
+  };
+  context.mock.method(mediaStorage, 'uploadBufferToMediaStorage', async (file, folder, options) => {
+    assert.equal(folder, '7/tasks');
+    assert.deepEqual(options, { accessMode: 'authenticated' });
+    return { url: 'https://example.com/proof.pdf', fileId: 'proof', raw: {} };
+  });
+  const result = await service.addTaskCommentWithAttachment({
+    hostId: 7, taskId: 101, userId: 22, isAdmin: false,
+    comment: ' Progress update ', remarks: ' Evidence ', taskCommentId: 888,
+    file: { buffer: Buffer.from('%PDF-1.7'), size: 8, mimetype: 'application/pdf', originalname: 'proof.pdf' },
+  });
+  assert.equal(result.comment.comment, 'Progress update');
+  assert.equal(result.comment.userId, 22);
+  assert.equal(result.attachment.taskCommentId, result.comment.id);
+  assert.equal(result.attachment.taskId, 101);
+  assert.equal(result.attachment.hostId, 7);
+  assert.equal(result.attachment.uploadedByUserId, 22);
+  assert.equal(result.attachment.remarks, 'Evidence');
+  assert.equal(transaction.committed, true);
+});
+
+test('combined task comment validates comment, access and file before writes or upload', async (context) => {
+  const { service, repository } = makeHarness();
+  repository.task = { id: 101, hostId: 7, assignedToUserId: 22, isDeleted: 0 };
+  const upload = context.mock.method(mediaStorage, 'uploadBufferToMediaStorage', async () => {
+    throw new Error('must not upload');
+  });
+  const payload = {
+    ...admin, taskId: 101, comment: 'Update',
+    file: { buffer: Buffer.from('%PDF-1.7'), size: 8, mimetype: 'application/pdf', originalname: 'proof.pdf' },
+  };
+  for (const [changes, message] of [
+    [{ comment: '  ' }, /comment must contain/],
+    [{ comment: 'x'.repeat(5001) }, /comment must contain/],
+    [{ comment: 42 }, /comment must contain/],
+    [{ taskId: 0 }, /valid taskId/],
+    [{ hostId: 8 }, /Task not found/],
+    [{ isAdmin: false }, /Task not found/],
+    [{ file: undefined }, /file upload is required/],
+    [{ file: { ...payload.file, size: 10 * 1024 * 1024 + 1 } }, /1 byte to 10 MB/],
+    [{ file: { ...payload.file, mimetype: 'image/png' } }, /Only valid/],
+    [{ file: { ...payload.file, originalname: 'proof.png' } }, /extension does not match/],
+    [{ remarks: 42 }, /remarks must be a string/],
+    [{ remarks: 'x'.repeat(501) }, /remarks must not exceed/],
+  ]) {
+    await assert.rejects(service.addTaskCommentWithAttachment({ ...payload, ...changes }), message);
+  }
+  assert.equal(upload.mock.callCount(), 0);
+  assert.equal(repository.comments.length, 0);
+});
+
+test('combined task comment rolls back and cleans media on upload, insert or commit failure', async (context) => {
+  for (const failure of ['upload', 'comment', 'attachment', 'commit']) {
+    await context.test(failure, async (context) => {
+      const { service, repository, transaction } = makeHarness();
+      repository.task = { id: 101, hostId: 7, assignedToUserId: 22, isDeleted: 0 };
+      if (failure === 'comment') repository.createComment = async () => { throw new Error('comment failed'); };
+      repository.createAttachment = async (data) => {
+        if (failure === 'attachment') throw new Error('attachment failed');
+        return { id: 123, ...data };
+      };
+      if (failure === 'commit') transaction.commit = async () => { throw new Error('commit failed'); };
+      context.mock.method(mediaStorage, 'uploadBufferToMediaStorage', async () => {
+        if (failure === 'upload') throw new Error('upload failed');
+        return { url: 'https://example.com/proof.pdf', fileId: 'proof', raw: { resource_type: 'raw' } };
+      });
+      const cleanup = context.mock.method(mediaStorage, 'deleteMediaFromStorage', async () => ({}));
+      await assert.rejects(service.addTaskCommentWithAttachment({
+        ...admin, taskId: 101, comment: 'Update',
+        file: { buffer: Buffer.from('%PDF-1.7'), size: 8, mimetype: 'application/pdf', originalname: 'proof.pdf' },
+      }), /failed/);
+      assert.equal(transaction.rolledBack, true);
+      assert.equal(cleanup.mock.callCount(), failure === 'upload' ? 0 : 1);
+      if (failure !== 'upload') {
+        assert.deepEqual(cleanup.mock.calls[0].arguments, ['proof', { resourceType: 'raw', accessMode: 'authenticated' }]);
+      }
+    });
+  }
+});
+
 test('combined task creation saves task and attachment together and notifies after commit', async (context) => {
   let notificationCount = 0;
   const { service, repository, transaction } = makeHarness({
@@ -594,6 +687,8 @@ test('combined task creation HTTP contract and standalone API compatibility', as
   const combined = context.mock.method(taskService, 'createTaskWithAttachment', service.createTaskWithAttachment.bind(service));
   context.mock.method(taskService, 'createTask', service.createTask.bind(service));
   context.mock.method(taskService, 'uploadAttachment', service.uploadAttachment.bind(service));
+  context.mock.method(taskService, 'addComment', service.addComment.bind(service));
+  const combinedComment = context.mock.method(taskService, 'addTaskCommentWithAttachment', service.addTaskCommentWithAttachment.bind(service));
   const upload = context.mock.method(mediaStorage, 'uploadBufferToMediaStorage', async () => ({
     url: 'https://example.com/proof.pdf', fileId: 'proof', raw: {},
   }));
@@ -665,6 +760,46 @@ test('combined task creation HTTP contract and standalone API compatibility', as
   invalidDetails.set('assignedToUserId', 'not-an-id');
   assert.equal((await send(invalidDetails)).status, 400);
   assert.equal(upload.mock.callCount(), 1);
+
+  const commentForm = () => {
+    const body = form();
+    body.set('taskId', '101');
+    body.set('comment', ' Progress update ');
+    return body;
+  };
+  const commentOptions = { endpoint: 'addTaskCommentWithAttachment' };
+  const commentResult = await send(commentForm(), commentOptions);
+  assert.equal(commentResult.status, 200);
+  assert.equal(commentResult.body.success, true);
+  assert.equal(commentResult.body.message, 'Task comment added with attachment successfully');
+  assert.equal(commentResult.body.data.comment.comment, 'Progress update');
+  assert.equal(commentResult.body.data.comment.hostId, 7);
+  assert.equal(commentResult.body.data.comment.userId, 9);
+  assert.equal(commentResult.body.data.attachment.taskId, 101);
+  assert.equal(commentResult.body.data.attachment.taskCommentId, commentResult.body.data.comment.id);
+  assert.equal(commentResult.body.data.attachment.uploadedByUserId, 9);
+  assert.equal(combinedComment.mock.calls[0].arguments[0].taskId, 101);
+  assert.equal(combinedComment.mock.calls[0].arguments[0].taskCommentId, undefined);
+  assert.equal((await send(commentForm(), { ...commentOptions, auth: false })).status, 401);
+  assert.equal((await send(commentForm(), { ...commentOptions, csrf: false })).status, 401);
+  user = { ...user, isAdminUser: 0 };
+  assert.equal((await send(commentForm(), commentOptions)).status, 403);
+  user = { ...user, isAdminUser: 1 };
+  assert.equal(combinedComment.mock.callCount(), 1);
+  for (const invalidForm of [form(0), form(2), form(1, 10 * 1024 * 1024 + 1), form(1, 8, 'attachment')]) {
+    invalidForm.set('taskId', '101');
+    invalidForm.set('comment', 'Update');
+    const invalid = await send(invalidForm, commentOptions);
+    assert.equal(invalid.status, 400);
+    assert.equal(invalid.body.success, false);
+  }
+  const blankComment = commentForm();
+  blankComment.set('comment', ' ');
+  assert.equal((await send(blankComment, commentOptions)).status, 400);
+  assert.equal(upload.mock.callCount(), 2);
+  const standaloneComment = await send({ taskId: 101, comment: 'Standalone update' }, { endpoint: 'addTaskComment', json: true });
+  assert.equal(standaloneComment.body.success, true);
+  assert.deepEqual(Object.keys(standaloneComment.body.data), ['comment']);
 
   const standaloneTask = await send({ title: 'Standalone', assignedToUserId: 22 }, { endpoint: 'createTask', json: true });
   assert.equal(standaloneTask.body.success, true);

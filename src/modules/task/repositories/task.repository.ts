@@ -167,8 +167,8 @@ export class TaskRepository {
     } as any);
   }
 
-  createComment(data: Record<string, unknown>): Promise<any> {
-    return TaskComments.create(data as any);
+  createComment(data: Record<string, unknown>, transaction?: Transaction): Promise<any> {
+    return TaskComments.create(data as any, { transaction });
   }
 
   async getLogs(hostId: number, taskId: number, limit: number, offset: number): Promise<{ rows: any[]; count: number }> {

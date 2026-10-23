@@ -158,6 +158,23 @@
           "response": []
         },
         {
+          "name": "Add Task Comment With Attachment",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
+            "body": { "mode": "formdata", "formdata": [
+              { "key": "taskId", "value": "{{TASK_ID}}", "type": "text" },
+              { "key": "comment", "value": "Please review the attached proposal.", "type": "text" },
+              { "key": "remarks", "value": "Proposal evidence", "type": "text", "disabled": true },
+              { "key": "file", "type": "file", "src": [] }
+            ] },
+            "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/addTaskCommentWithAttachment", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "addTaskCommentWithAttachment"] },
+            "description": "Creates a comment and its linked attachment atomically. Requires taskId, comment (1-5000 characters), and one JPEG, PNG, WEBP, or PDF file up to 10 MB. Optional remarks: up to 500 characters. Uses inherited ADMIN_TOKEN bearer authentication and the matching admin CSRF cookie/header. Postman sets the multipart Content-Type boundary. Success returns { success: true, message: 'Task comment added with attachment successfully', data: { comment, attachment } }; attachment.taskCommentId is the newly created comment ID. Uploaded media is deleted if persistence fails."
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["const result = pm.response.json();", "if (result.success && result.data) {", "  if (result.data.comment && result.data.comment.id) pm.environment.set('COMMENT_ID', result.data.comment.id);", "  if (result.data.attachment && result.data.attachment.id) pm.environment.set('ATTACHMENT_ID', result.data.attachment.id);", "}"] } }],
+          "response": []
+        },
+        {
           "name": "Get Task Comments",
           "request": {
             "method": "POST",
