@@ -1,6 +1,7 @@
 import { HostDateTimeSettings } from './host-settings.util';
 import moment from 'moment-timezone';
 import { CONFIG } from '../../config/constants';
+import { createConfiguredError } from './error.util';
 
 const TIMESTAMP_KEY_PATTERN = /(At|Date|Time|dateOfBirth)$/i;
 
@@ -25,6 +26,24 @@ const DEFAULT_DATE_TIME_SETTINGS: HostDateTimeSettings = {
 };
 
 export class DateTimeFormatUtil {
+  static getUnixDayRange(date: unknown, timeZone: string): { fromDate: number; tillDate: number } {
+    if (typeof timeZone !== 'string' || !moment.tz.zone(timeZone)) {
+      throw createConfiguredError('INVALID_TIME_ZONE', 'A valid IANA timeZone is required', 400, 'INVALID_TIME_ZONE');
+    }
+    if (typeof date !== 'string' || !/^(\d{4}-\d{2}-\d{2}|\d{2}\/\d{2}\/\d{4})$/.test(date)) {
+      throw createConfiguredError('INVALID_DATE_FILTER', 'Date filters must use YYYY-MM-DD or DD/MM/YYYY', 400, 'INVALID_DATE_FILTER');
+    }
+    const dateFormat = date.includes('/') ? 'DD/MM/YYYY' : 'YYYY-MM-DD';
+    const localDate = moment.tz(date, dateFormat, true, timeZone);
+    if (!localDate.isValid() || localDate.format(dateFormat) !== date) {
+      throw createConfiguredError('INVALID_DATE_FILTER', 'Date filter must be a valid calendar date in the selected timezone', 400, 'INVALID_DATE_FILTER');
+    }
+    return {
+      fromDate: localDate.clone().startOf('day').unix(),
+      tillDate: localDate.clone().endOf('day').unix(),
+    };
+  }
+
   private static asUnixMs(value: number | string): number | null {
     const numericValue = Number(value);
     if (!Number.isFinite(numericValue) || numericValue <= 0) {

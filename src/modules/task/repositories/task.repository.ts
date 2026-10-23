@@ -97,6 +97,11 @@ export class TaskRepository {
       if (filters.dueFrom !== undefined) where.dueAt[Op.gte] = filters.dueFrom;
       if (filters.dueTo !== undefined) where.dueAt[Op.lte] = filters.dueTo;
     }
+    if (filters.completedFrom !== undefined || filters.completedTo !== undefined) {
+      where.completedAt = {};
+      if (filters.completedFrom !== undefined) where.completedAt[Op.gte] = filters.completedFrom;
+      if (filters.completedTo !== undefined) where.completedAt[Op.lte] = filters.completedTo;
+    }
     if (filters.overdueOnly) {
       where[Op.and] = [
         { dueAt: { [Op.lt]: now } },
@@ -104,7 +109,11 @@ export class TaskRepository {
       ];
     }
     if (typeof filters.search === 'string' && filters.search.trim()) {
-      where.title = { [Op.like]: `%${filters.search.trim()}%` };
+      const search = `%${filters.search.trim()}%`;
+      where[Op.or] = [
+        { title: { [Op.like]: search } },
+        { taskNumber: { [Op.like]: search } },
+      ];
     }
 
     return Task.findAndCountAll({

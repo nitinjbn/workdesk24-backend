@@ -11,6 +11,45 @@ const { TaskService } = require('../../src/modules/task/services/task.service');
 const mediaStorage = require('../../src/shared/utils/media-storage.util');
 const cloudinary = require('../../src/config/cloudinary').default;
 const { getTaskTransition, isValidTaskFile, isValidUnixTimestamp } = require('../../src/modules/task/services/task-rules.util');
+const { DateTimeFormatUtil } = require('../../src/shared/utils/date-time-format.util');
+const hostSettingsUtil = require('../../src/shared/utils/host-settings.util');
+const { TaskRepository } = require('../../src/modules/task/repositories/task.repository');
+const { Task } = require('../../src/models');
+const { Op } = require('sequelize');
+
+function stubTaskDateSettings(context, timeZone = 'Asia/Kolkata') {
+  return context.mock.method(hostSettingsUtil, 'getHostDateTimeSettings', async (hostId) => {
+    assert.equal(hostId, 7);
+    return { timeZone, dateTimeFormat: 'YYYY-MM-DD HH:mm:ss', dateFormat: 'YYYY-MM-DD', timeFormat: 'HH:mm:ss' };
+  });
+}
+
+test('Unix day range uses local calendar boundaries including daylight saving changes', () => {
+  for (const [date, timeZone, start, end, hours] of [
+    ['2026-10-23', 'Asia/Kolkata', '2026-10-22T18:30:00Z', '2026-10-23T18:29:59Z', 24],
+    ['2026-03-08', 'America/New_York', '2026-03-08T05:00:00Z', '2026-03-09T03:59:59Z', 23],
+    ['2026-11-01', 'America/New_York', '2026-11-01T04:00:00Z', '2026-11-02T04:59:59Z', 25],
+    ['2026-10-23', 'UTC', '2026-10-23T00:00:00Z', '2026-10-23T23:59:59Z', 24],
+    ['23/10/2026', 'Asia/Kolkata', '2026-10-22T18:30:00Z', '2026-10-23T18:29:59Z', 24],
+    ['08/03/2026', 'America/New_York', '2026-03-08T05:00:00Z', '2026-03-09T03:59:59Z', 23],
+    ['01/11/2026', 'America/New_York', '2026-11-01T04:00:00Z', '2026-11-02T04:59:59Z', 25],
+  ]) {
+    const range = DateTimeFormatUtil.getUnixDayRange(date, timeZone);
+    assert.deepEqual(range, { fromDate: Date.parse(start) / 1000, tillDate: Date.parse(end) / 1000 });
+    assert.equal(range.tillDate - range.fromDate + 1, hours * 3600);
+  }
+});
+
+test('Unix day range rejects malformed dates, invalid dates and invalid timezones', () => {
+  for (const date of [null, 1791853200, '', '2026-2-03', '23-10-2026', '2026-02-30', '2026-10-23T00:00:00Z', '30/02/2026', '10/23/2026', '3/02/2026', '23/10/26', {}, []]) {
+    assert.throws(() => DateTimeFormatUtil.getUnixDayRange(date, 'Asia/Kolkata'), { code: 'INVALID_DATE_FILTER', statusCode: 400 });
+  }
+  assert.throws(() => DateTimeFormatUtil.getUnixDayRange('2026-10-23', 'Invalid/Zone'), { code: 'INVALID_TIME_ZONE', statusCode: 400 });
+  assert.throws(() => DateTimeFormatUtil.getUnixDayRange('2011-12-30', 'Pacific/Apia'), { code: 'INVALID_DATE_FILTER', statusCode: 400 });
+  assert.throws(() => DateTimeFormatUtil.getUnixDayRange('30/12/2011', 'Pacific/Apia'), { code: 'INVALID_DATE_FILTER', statusCode: 400 });
+  assert.equal(DateTimeFormatUtil.getUnixDayRange('2024-02-29', 'UTC').tillDate, Date.parse('2024-02-29T23:59:59Z') / 1000);
+  assert.deepEqual(DateTimeFormatUtil.getUnixDayRange('29/02/2024', 'UTC'), DateTimeFormatUtil.getUnixDayRange('2024-02-29', 'UTC'));
+});
 
 class FakeTaskRepository {
   constructor() {
@@ -249,7 +288,8 @@ test('task creation rejects mismatched customer and visit references', async () 
   await assert.rejects(service.createTask({ ...admin, title: 'Proposal', assignedToUserId: 22, customerId: 32, visitId: 41 }), /does not belong/);
 });
 
-test('task listing forces employees to their own assignments and preserves pagination', async () => {
+test('task listing forces employees to their own assignments and preserves pagination', async (context) => {
+  stubTaskDateSettings(context);
   const { service, repository } = makeHarness();
   await service.listTasks({ hostId: 7, userId: 22, isAdmin: false, page: 2, limit: 15, filters: { status: 'PENDING', overdueOnly: true, dueFrom: 1791853000, dueTo: 1791854000 } });
   assert.equal(repository.listParams.userId, 22);
@@ -258,6 +298,65 @@ test('task listing forces employees to their own assignments and preserves pagin
   assert.equal(repository.listParams.limit, 15);
   assert.equal(repository.listParams.filters.overdueOnly, true);
   assert.equal(repository.listParams.filters.dueFrom, 1791853000);
+});
+
+test('task listing converts each date filter using the host timezone without mutating the request', async (context) => {
+  const settings = stubTaskDateSettings(context, 'America/New_York');
+  const { service, repository } = makeHarness();
+  for (const filters of [
+    { dueDate: '2026-03-08' },
+    { completedDate: '2026-11-01' },
+    { dueDate: '2026-03-08', completedDate: '2026-11-01' },
+    { dueDate: '08/03/2026', completedDate: '01/11/2026' },
+    { dueDate: '2026-03-08', completedDate: '01/11/2026' },
+    {},
+  ]) {
+    const originalFilters = { ...filters };
+    await service.listTasks({ ...admin, filters });
+    const normalized = repository.listParams.filters;
+    assert.equal(normalized.dueFrom, filters.dueDate ? Date.parse('2026-03-08T05:00:00Z') / 1000 : undefined);
+    assert.equal(normalized.dueTo, filters.dueDate ? Date.parse('2026-03-09T03:59:59Z') / 1000 : undefined);
+    assert.equal(normalized.completedFrom, filters.completedDate ? Date.parse('2026-11-01T04:00:00Z') / 1000 : undefined);
+    assert.equal(normalized.completedTo, filters.completedDate ? Date.parse('2026-11-02T04:59:59Z') / 1000 : undefined);
+    assert.equal(normalized.dueDate, undefined);
+    assert.equal(normalized.completedDate, undefined);
+    assert.deepEqual(filters, originalFilters);
+  }
+  assert.equal(settings.mock.callCount(), 6);
+});
+
+test('task listing rejects invalid date filters and conflicting due bounds before querying tasks', async (context) => {
+  stubTaskDateSettings(context);
+  const { service, repository } = makeHarness();
+  for (const filters of [
+    { dueDate: '2026-02-30' }, { completedDate: '2026-13-01' },
+    { dueDate: 1791853200 }, { completedDate: null },
+    { dueDate: '2026-10-23', dueFrom: 1791853200 },
+    { dueDate: '2026-10-23', dueTo: 1791853200 },
+  ]) {
+    await assert.rejects(service.listTasks({ ...admin, filters }), (error) => error.statusCode === 400);
+    assert.equal(repository.listParams, null);
+  }
+});
+
+test('task repository compares inclusive numeric date bounds while preserving tenant and employee restrictions', async (context) => {
+  const query = context.mock.method(Task, 'findAndCountAll', async () => ({ rows: [], count: 0 }));
+  const repository = new TaskRepository();
+  const params = {
+    hostId: 7, userId: 22, isAdmin: false, page: 1, limit: 20,
+    sortBy: 'createdAt', sortOrder: 'DESC', now: 1800000000,
+  };
+  await repository.listTasks({ ...params, filters: { dueFrom: 100, dueTo: 200, completedFrom: 300, completedTo: 400, overdueOnly: true } });
+  const { where } = query.mock.calls[0].arguments[0];
+  assert.equal(where.hostId, 7);
+  assert.equal(where.isDeleted, 0);
+  assert.equal(where.assignedToUserId, 22);
+  assert.deepEqual(where.dueAt, { [Op.gte]: 100, [Op.lte]: 200 });
+  assert.deepEqual(where.completedAt, { [Op.gte]: 300, [Op.lte]: 400 });
+  assert.deepEqual(where[Op.and][0], { dueAt: { [Op.lt]: params.now } });
+  await repository.listTasks({ ...params, filters: {} });
+  assert.equal(query.mock.calls[1].arguments[0].where.dueAt, undefined);
+  assert.equal(query.mock.calls[1].arguments[0].where.completedAt, undefined);
 });
 
 test('task listing rejects invalid status, pagination, and sorting', async () => {

@@ -473,7 +473,7 @@
                 "header": [{ "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }],
                 "body": { "mode": "raw", "raw": "{\n  \"filters\": {\n    \"status\": \"PENDING\",\n    \"priority\": \"HIGH\",\n    \"search\": \"proposal\",\n    \"overdueOnly\": false\n  },\n  \"page\": 1,\n  \"limit\": 20,\n  \"sortBy\": \"createdAt\",\n  \"sortOrder\": \"DESC\"\n}" },
                 "url": { "raw": "{{BASE_URL}}/api/v1/app/task/getTasks", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "task", "getTasks"] },
-                "description": "Returns tenant-scoped tasks and pagination metadata. Non-admin users see only their assigned tasks."
+                "description": "Returns { success, message, data: { tasks, pagination } }. Non-admin users see only their assigned tasks. Optional filters.dueDate and filters.completedDate accept YYYY-MM-DD or DD/MM/YYYY strings, for example 2026-10-23 or 23/10/2026. Formats can be mixed in one request. The client's configured host timezone (HostSettings timezone, also used for response formatting) determines inclusive start/end-of-day Unix seconds for dueAt/completedAt comparisons, including DST. Both filters combine with AND; omit unused dates. Invalid dates, timestamps or null return HTTP 400. Legacy dueFrom/dueTo Unix bounds remain supported but cannot be combined with dueDate."
               },
               "response": []
             },
@@ -482,9 +482,9 @@
               "request": {
                 "method": "POST",
                 "header": [{ "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
-                "body": { "mode": "raw", "raw": "{\n  \"filters\": {\n    \"status\": \"PENDING\"\n  },\n  \"page\": 1,\n  \"limit\": 20\n}" },
+                "body": { "mode": "raw", "raw": "{\n  \"filters\": {\n    \"dueDate\": \"2026-10-23\",\n    \"completedDate\": \"23/10/2026\"\n  },\n  \"page\": 1,\n  \"limit\": 20\n}" },
                 "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/getTasks", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "getTasks"] },
-                "description": "Admin-only tenant task list. Include the CSRF cookie and matching ADMIN_CSRF_TOKEN header."
+                "description": "Admin-only tenant task list. Include the CSRF cookie and matching ADMIN_CSRF_TOKEN header. Optional filters.dueDate and filters.completedDate accept YYYY-MM-DD or DD/MM/YYYY strings interpreted in the client's configured host timezone (HostSettings timezone), matching response formatting. Formats can be mixed in one request. Each becomes inclusive local-day Unix-second bounds on dueAt/completedAt, including DST. Both filters combine with AND; omit unused dates. Invalid dates, timestamps and null return HTTP 400. Legacy dueFrom/dueTo Unix bounds remain supported but cannot be combined with dueDate. Success retains { success, message, data: { tasks, pagination } }."
               },
               "response": []
             },
