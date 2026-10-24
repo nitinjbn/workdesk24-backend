@@ -56,13 +56,13 @@
                 { "key": "customerId", "value": "31", "type": "text", "disabled": true },
                 { "key": "visitId", "value": "41", "type": "text", "disabled": true },
                 { "key": "remarks", "value": "Proposal reference", "type": "text" },
-                { "key": "file", "type": "file", "src": "" }
+                { "key": "file", "type": "file", "src": "", "disabled": true }
               ]
             },
             "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/createTaskWithAttachment", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "createTaskWithAttachment"] },
-            "description": "Requires the inherited admin bearer token and matching CSRF cookie/header. Send task fields directly as multipart text fields and exactly one required file under file. title and assignedToUserId are required; description, customerId, visitId, priority, dueAt (Unix seconds), and attachment remarks are optional. Omit unused optional fields. Accepts validated JPEG, PNG, WEBP, or PDF files up to 10 MB. Do not set Content-Type manually. Returns { success: true, message, data: { task, attachment } }. The server links the attachment to the newly created task; do not send taskId or taskCommentId. Task, activity, counter, and attachment metadata commit together; failures roll back and attempt uploaded-file cleanup. Notifications run only after commit. The separate creation and upload endpoints remain available."
+            "description": "Requires the inherited admin bearer token and matching CSRF cookie/header. Send task fields directly as multipart text fields. title and assignedToUserId are required; description, customerId, visitId, priority, dueAt (Unix seconds), attachment remarks, and the file are optional. Omit the file part to create a task without an attachment, or include one validated JPEG, PNG, WEBP, or PDF file up to 10 MB under file. Do not set Content-Type manually. Returns data.task and includes data.attachment only when a file is uploaded. The server links the attachment to the newly created task; do not send taskId or taskCommentId. Task, activity, counter, and attachment metadata commit together; failures roll back and attempt uploaded-file cleanup. Notifications run only after commit. The separate creation and upload endpoints remain available."
           },
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["const result = pm.response.json();", "if (result.success && result.data && result.data.task) pm.environment.set('TASK_ID', result.data.task.id);", "if (result.success && result.data && result.data.attachment) pm.environment.set('ATTACHMENT_ID', result.data.attachment.id);", "pm.test('Task and attachment created together', function () { pm.expect(result.success).to.eql(true); pm.expect(String(result.data.attachment.taskId)).to.eql(String(result.data.task.id)); });"] } }],
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["const result = pm.response.json();", "if (result.success && result.data && result.data.task) pm.environment.set('TASK_ID', result.data.task.id);", "if (result.success && result.data && result.data.attachment) pm.environment.set('ATTACHMENT_ID', result.data.attachment.id);", "pm.test('Task is created and attachment is optional', function () { pm.expect(result.success).to.eql(true); pm.expect(result.data.task).to.be.an('object'); if (result.data.attachment) pm.expect(String(result.data.attachment.taskId)).to.eql(String(result.data.task.id)); });"] } }],
           "response": []
         },
         {
@@ -82,7 +82,8 @@
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
             "body": { "mode": "raw", "raw": "{\n  \"taskId\": {{TASK_ID}}\n}", "options": { "raw": { "language": "json" } } },
-            "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/getTaskDetails", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "getTaskDetails"] }
+            "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/getTaskDetails", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "getTaskDetails"] },
+            "description": "Returns task details with up to 10 recent comments, attachments, and activity records. Each comment includes an attachments array containing attachments linked to that comment; task-level attachments remain in task.attachments."
           },
           "response": []
         },
@@ -166,10 +167,10 @@
               { "key": "taskId", "value": "{{TASK_ID}}", "type": "text" },
               { "key": "comment", "value": "Please review the attached proposal.", "type": "text" },
               { "key": "remarks", "value": "Proposal evidence", "type": "text", "disabled": true },
-              { "key": "file", "type": "file", "src": [] }
+              { "key": "file", "type": "file", "src": [], "disabled": true }
             ] },
             "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/addTaskCommentWithAttachment", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "addTaskCommentWithAttachment"] },
-            "description": "Creates a comment and its linked attachment atomically. Requires taskId, comment (1-5000 characters), and one JPEG, PNG, WEBP, or PDF file up to 10 MB. Optional remarks: up to 500 characters. Uses inherited ADMIN_TOKEN bearer authentication and the matching admin CSRF cookie/header. Postman sets the multipart Content-Type boundary. Success returns { success: true, message: 'Task comment added with attachment successfully', data: { comment, attachment } }; attachment.taskCommentId is the newly created comment ID. Uploaded media is deleted if persistence fails."
+            "description": "Creates a task comment and optionally its linked attachment atomically. Requires taskId and comment (1-5000 characters). Omit the file part to add a comment without an attachment, or include one JPEG, PNG, WEBP, or PDF file up to 10 MB. Optional remarks: up to 500 characters. Uses inherited ADMIN_TOKEN bearer authentication and the matching admin CSRF cookie/header. Postman sets the multipart Content-Type boundary. Success always returns data.comment and includes data.attachment only when a file is uploaded; attachment.taskCommentId is the newly created comment ID. Uploaded media is deleted if persistence fails."
           },
           "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["const result = pm.response.json();", "if (result.success && result.data) {", "  if (result.data.comment && result.data.comment.id) pm.environment.set('COMMENT_ID', result.data.comment.id);", "  if (result.data.attachment && result.data.attachment.id) pm.environment.set('ATTACHMENT_ID', result.data.attachment.id);", "}"] } }],
           "response": []
@@ -248,7 +249,8 @@
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": { "mode": "raw", "raw": "{\n  \"taskId\": {{TASK_ID}}\n}", "options": { "raw": { "language": "json" } } },
-            "url": { "raw": "{{BASE_URL}}/api/v1/app/task/getTaskDetails", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "task", "getTaskDetails"] }
+            "url": { "raw": "{{BASE_URL}}/api/v1/app/task/getTaskDetails", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "task", "getTaskDetails"] },
+            "description": "Returns task details with up to 10 recent comments, attachments, and activity records. Each comment includes an attachments array containing attachments linked to that comment; task-level attachments remain in task.attachments."
           },
           "response": []
         },

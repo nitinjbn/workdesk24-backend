@@ -182,7 +182,6 @@ test('combined task comment validates comment, access and file before writes or 
     [{ taskId: 0 }, /valid taskId/],
     [{ hostId: 8 }, /Task not found/],
     [{ isAdmin: false }, /Task not found/],
-    [{ file: undefined }, /file upload is required/],
     [{ file: { ...payload.file, size: 10 * 1024 * 1024 + 1 } }, /1 byte to 10 MB/],
     [{ file: { ...payload.file, mimetype: 'image/png' } }, /Only valid/],
     [{ file: { ...payload.file, originalname: 'proof.png' } }, /extension does not match/],
@@ -193,6 +192,23 @@ test('combined task comment validates comment, access and file before writes or 
   }
   assert.equal(upload.mock.callCount(), 0);
   assert.equal(repository.comments.length, 0);
+});
+
+test('combined task comment creates a comment without an attachment when no file is supplied', async (context) => {
+  const { service, repository } = makeHarness();
+  repository.task = { id: 101, hostId: 7, assignedToUserId: 22, isDeleted: 0 };
+  const upload = context.mock.method(mediaStorage, 'uploadBufferToMediaStorage', async () => {
+    throw new Error('must not upload');
+  });
+
+  const result = await service.addTaskCommentWithAttachment({
+    hostId: 7, taskId: 101, userId: 22, isAdmin: false, comment: ' Progress update ',
+  });
+
+  assert.deepEqual(Object.keys(result), ['comment']);
+  assert.equal(result.comment.comment, 'Progress update');
+  assert.equal(upload.mock.callCount(), 0);
+  assert.equal(repository.comments.length, 1);
 });
 
 test('combined task comment rolls back and cleans media on upload, insert or commit failure', async (context) => {
@@ -270,7 +286,6 @@ test('combined task creation validates inputs before uploading or creating a tas
     file: { buffer: Buffer.from('%PDF-1.7'), size: 8, mimetype: 'application/pdf', originalname: 'proof.pdf' },
   };
   for (const [changes, message] of [
-    [{ file: undefined }, /file upload is required/],
     [{ isAdmin: false }, /Admin access/],
     [{ title: '' }, /title must contain/],
     [{ assignedToUserId: 999 }, /not eligible/],
@@ -284,6 +299,23 @@ test('combined task creation validates inputs before uploading or creating a tas
   }
   assert.equal(upload.mock.callCount(), 0);
   assert.equal(repository.task, null);
+});
+
+test('combined task creation creates a task without an attachment when no file is supplied', async (context) => {
+  const { service, repository, transaction } = makeHarness();
+  const upload = context.mock.method(mediaStorage, 'uploadBufferToMediaStorage', async () => {
+    throw new Error('must not upload');
+  });
+
+  const result = await service.createTaskWithAttachment({
+    ...admin, title: 'Proposal', assignedToUserId: 22,
+  });
+
+  assert.deepEqual(Object.keys(result), ['task']);
+  assert.equal(result.task.id, 101);
+  assert.equal(repository.task.id, 101);
+  assert.equal(transaction.committed, true);
+  assert.equal(upload.mock.callCount(), 0);
 });
 
 test('combined task creation rolls back and cleans uploaded media on persistence or commit failure', async (context) => {
@@ -462,6 +494,30 @@ test('task listing rejects invalid status, pagination, and sorting', async () =>
 test('details hide tasks that cannot be found within the authenticated tenant', async () => {
   const { service } = makeHarness();
   await assert.rejects(service.getTaskDetails({ hostId: 8, taskId: 101, userId: 9, isAdmin: true }), /Task not found/);
+});
+
+test('task details include each comment attachment as well as the task attachment list', async (context) => {
+  const { service, repository } = makeHarness();
+  repository.task = { id: 101, hostId: 7, assignedToUserId: 22, isDeleted: 0 };
+  repository.comments = [
+    { id: 12, hostId: 7, taskId: 101, comment: 'Second' },
+    { id: 11, hostId: 7, taskId: 101, comment: 'First' },
+  ];
+  const commentAttachment = {
+    id: 123, hostId: 7, taskId: 101, taskCommentId: 11, fileName: 'proof.pdf',
+  };
+  const taskAttachment = {
+    id: 124, hostId: 7, taskId: 101, taskCommentId: null, fileName: 'task.pdf',
+  };
+  repository.getAttachments = async () => ({ rows: [commentAttachment, taskAttachment], count: 2 });
+  stubTaskDateSettings(context);
+
+  const result = await service.getTaskDetails({ ...admin, taskId: 101 });
+  const [secondComment, firstComment] = result.task.comments;
+
+  assert.deepEqual(secondComment.attachments, []);
+  assert.deepEqual(firstComment.attachments, [commentAttachment]);
+  assert.deepEqual(result.task.attachments, [commentAttachment, taskAttachment]);
 });
 
 test('soft-deleted tasks are not visible', async () => {
@@ -745,13 +801,20 @@ test('combined task creation HTTP contract and standalone API compatibility', as
   assert.equal(combined.mock.calls[0].arguments[0].customerId, 31);
   assert.equal(combined.mock.calls[0].arguments[0].visitId, 41);
 
+  const taskWithoutFile = await send(form(0));
+  assert.equal(taskWithoutFile.status, 200);
+  assert.equal(taskWithoutFile.body.success, true);
+  assert.equal(taskWithoutFile.body.message, 'Task created successfully');
+  assert.deepEqual(Object.keys(taskWithoutFile.body.data), ['task']);
+  assert.equal(combined.mock.calls[1].arguments[0].file, undefined);
+
   assert.equal((await send(form(), { auth: false })).status, 401);
   assert.equal((await send(form(), { csrf: false })).status, 401);
   user = { ...user, isAdminUser: 0 };
   assert.equal((await send(form())).status, 403);
   user = { ...user, isAdminUser: 1 };
-  assert.equal(combined.mock.callCount(), 1);
-  for (const invalidForm of [form(0), form(2), form(1, 10 * 1024 * 1024 + 1), form(1, 8, 'attachment')]) {
+  assert.equal(combined.mock.callCount(), 2);
+  for (const invalidForm of [form(2), form(1, 10 * 1024 * 1024 + 1), form(1, 8, 'attachment')]) {
     const invalid = await send(invalidForm);
     assert.equal(invalid.status, 400);
     assert.equal(invalid.body.success, false);
@@ -780,13 +843,21 @@ test('combined task creation HTTP contract and standalone API compatibility', as
   assert.equal(commentResult.body.data.attachment.uploadedByUserId, 9);
   assert.equal(combinedComment.mock.calls[0].arguments[0].taskId, 101);
   assert.equal(combinedComment.mock.calls[0].arguments[0].taskCommentId, undefined);
+  const commentWithoutFile = commentForm();
+  commentWithoutFile.delete('file');
+  const commentWithoutAttachment = await send(commentWithoutFile, commentOptions);
+  assert.equal(commentWithoutAttachment.status, 200);
+  assert.equal(commentWithoutAttachment.body.success, true);
+  assert.equal(commentWithoutAttachment.body.message, 'Task comment added successfully');
+  assert.deepEqual(Object.keys(commentWithoutAttachment.body.data), ['comment']);
+  assert.equal(combinedComment.mock.calls[1].arguments[0].file, undefined);
   assert.equal((await send(commentForm(), { ...commentOptions, auth: false })).status, 401);
   assert.equal((await send(commentForm(), { ...commentOptions, csrf: false })).status, 401);
   user = { ...user, isAdminUser: 0 };
   assert.equal((await send(commentForm(), commentOptions)).status, 403);
   user = { ...user, isAdminUser: 1 };
-  assert.equal(combinedComment.mock.callCount(), 1);
-  for (const invalidForm of [form(0), form(2), form(1, 10 * 1024 * 1024 + 1), form(1, 8, 'attachment')]) {
+  assert.equal(combinedComment.mock.callCount(), 2);
+  for (const invalidForm of [form(2), form(1, 10 * 1024 * 1024 + 1), form(1, 8, 'attachment')]) {
     invalidForm.set('taskId', '101');
     invalidForm.set('comment', 'Update');
     const invalid = await send(invalidForm, commentOptions);

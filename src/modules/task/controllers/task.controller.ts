@@ -49,7 +49,7 @@ export class TaskController {
       }),
       res,
       next,
-      'Task created with attachment successfully'
+      req.file ? 'Task created with attachment successfully' : 'Task created successfully'
     );
 
   getTasks = (req: AuthRequest, res: Response, next: NextFunction): Promise<void> =>
@@ -135,7 +135,7 @@ export class TaskController {
       }),
       res,
       next,
-      'Task comment added with attachment successfully'
+      req.file ? 'Task comment added with attachment successfully' : 'Task comment added successfully'
     );
 
   getTaskComments = (req: AuthRequest, res: Response, next: NextFunction): Promise<void> =>
