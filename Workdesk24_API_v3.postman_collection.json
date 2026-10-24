@@ -506,7 +506,7 @@
                 "header": [{ "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
                 "body": { "mode": "raw", "raw": "{\n  \"taskId\": 1001\n}" },
                 "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/getTaskDetails", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "getTaskDetails"] },
-                "description": "Admin-only tenant task details with bounded related records. Include the CSRF cookie and matching ADMIN_CSRF_TOKEN header."
+                "description": "Admin-only tenant task details with up to 10 recent comments, attachments, and activity records. Each comment includes an attachments array containing attachments linked to that comment; task-level attachments remain in task.attachments. Include the CSRF cookie and matching ADMIN_CSRF_TOKEN header."
               },
               "response": []
             },

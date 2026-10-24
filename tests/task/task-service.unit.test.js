@@ -496,6 +496,30 @@ test('details hide tasks that cannot be found within the authenticated tenant', 
   await assert.rejects(service.getTaskDetails({ hostId: 8, taskId: 101, userId: 9, isAdmin: true }), /Task not found/);
 });
 
+test('task details include each comment attachment as well as the task attachment list', async (context) => {
+  const { service, repository } = makeHarness();
+  repository.task = { id: 101, hostId: 7, assignedToUserId: 22, isDeleted: 0 };
+  repository.comments = [
+    { id: 12, hostId: 7, taskId: 101, comment: 'Second' },
+    { id: 11, hostId: 7, taskId: 101, comment: 'First' },
+  ];
+  const commentAttachment = {
+    id: 123, hostId: 7, taskId: 101, taskCommentId: 11, fileName: 'proof.pdf',
+  };
+  const taskAttachment = {
+    id: 124, hostId: 7, taskId: 101, taskCommentId: null, fileName: 'task.pdf',
+  };
+  repository.getAttachments = async () => ({ rows: [commentAttachment, taskAttachment], count: 2 });
+  stubTaskDateSettings(context);
+
+  const result = await service.getTaskDetails({ ...admin, taskId: 101 });
+  const [secondComment, firstComment] = result.task.comments;
+
+  assert.deepEqual(secondComment.attachments, []);
+  assert.deepEqual(firstComment.attachments, [commentAttachment]);
+  assert.deepEqual(result.task.attachments, [commentAttachment, taskAttachment]);
+});
+
 test('soft-deleted tasks are not visible', async () => {
   const { service, repository } = makeHarness();
   repository.task = { id: 101, hostId: 7, assignedToUserId: 22, status: 'PENDING', isDeleted: 1 };

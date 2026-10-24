@@ -82,7 +82,8 @@
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
             "body": { "mode": "raw", "raw": "{\n  \"taskId\": {{TASK_ID}}\n}", "options": { "raw": { "language": "json" } } },
-            "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/getTaskDetails", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "getTaskDetails"] }
+            "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/getTaskDetails", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "getTaskDetails"] },
+            "description": "Returns task details with up to 10 recent comments, attachments, and activity records. Each comment includes an attachments array containing attachments linked to that comment; task-level attachments remain in task.attachments."
           },
           "response": []
         },
@@ -248,7 +249,8 @@
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": { "mode": "raw", "raw": "{\n  \"taskId\": {{TASK_ID}}\n}", "options": { "raw": { "language": "json" } } },
-            "url": { "raw": "{{BASE_URL}}/api/v1/app/task/getTaskDetails", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "task", "getTaskDetails"] }
+            "url": { "raw": "{{BASE_URL}}/api/v1/app/task/getTaskDetails", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "task", "getTaskDetails"] },
+            "description": "Returns task details with up to 10 recent comments, attachments, and activity records. Each comment includes an attachments array containing attachments linked to that comment; task-level attachments remain in task.attachments."
           },
           "response": []
         },

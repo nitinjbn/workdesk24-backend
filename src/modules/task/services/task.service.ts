@@ -336,12 +336,22 @@ export class TaskService {
     ]);
 
     const dateTimeSettings = await getHostDateTimeSettings(payload.hostId);
+    const plainAttachments = attachments.rows.map(asPlain);
+    const commentsWithAttachments = comments.rows.map((row) => {
+      const comment = asPlain(row);
+      return {
+        ...comment,
+        attachments: plainAttachments.filter((attachment: { taskCommentId?: number | null }) =>
+          attachment.taskCommentId != null && Number(attachment.taskCommentId) === Number(comment.id)
+        ),
+      };
+    });
 
     return {
       task: {
         ...formatDateTimeFieldsBySettings([asPlain(task)], dateTimeSettings)[0],
-        comments: formatDateTimeFieldsBySettings(comments.rows.map(asPlain), dateTimeSettings),
-        attachments: formatDateTimeFieldsBySettings(attachments.rows.map(asPlain), dateTimeSettings),
+        comments: formatDateTimeFieldsBySettings(commentsWithAttachments, dateTimeSettings),
+        attachments: formatDateTimeFieldsBySettings(plainAttachments, dateTimeSettings),
         activity: formatDateTimeFieldsBySettings(logs.rows.map(asPlain), dateTimeSettings),
       },
     };
