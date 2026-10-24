@@ -166,8 +166,8 @@ export class TaskService {
       hostId: payload.hostId, userId: payload.userId, isAdmin: payload.isAdmin,
       taskId: 0, remarks: payload.remarks, file: payload.file,
     };
-    const file = this.validateAttachment(attachmentPayload);
-    return this.createTaskInternal(payload, { ...attachmentPayload, file });
+    const file = payload.file ? this.validateAttachment(attachmentPayload) : undefined;
+    return this.createTaskInternal(payload, file ? { ...attachmentPayload, file } : undefined);
   }
 
   private async createTaskInternal(
@@ -508,8 +508,8 @@ export class TaskService {
       hostId: payload.hostId, taskId: payload.taskId, userId: payload.userId,
       isAdmin: payload.isAdmin, remarks: payload.remarks, file: payload.file,
     };
-    const file = this.validateAttachment(attachmentPayload);
-    return this.addCommentInternal(payload, { ...attachmentPayload, file });
+    const file = payload.file ? this.validateAttachment(attachmentPayload) : undefined;
+    return this.addCommentInternal(payload, file ? { ...attachmentPayload, file } : undefined);
   }
 
   private async addCommentInternal(
