@@ -16,6 +16,7 @@ const FIELD_FORMAT_CONFIG: Record<string, 'date' | 'datetime'> = {
   updatedAt: 'datetime',
   accountStatusUpdatedAt: 'datetime',
   deletedAt: 'datetime',
+  dueAt: 'date'
 };
 
 const DEFAULT_DATE_TIME_SETTINGS: HostDateTimeSettings = {
