@@ -2,6 +2,7 @@ import { NextFunction, Response } from 'express';
 import { AuthRequest } from '../../../shared/types/auth.types';
 import taskService from '../services/task.service';
 import { mediaDownloadError } from '../../../shared/utils/media-storage.util';
+import { createConfiguredError } from '../../../shared/utils/error.util';
 
 function identity(req: AuthRequest) {
   return {
@@ -11,7 +12,45 @@ function identity(req: AuthRequest) {
   };
 }
 
+function hostScopedIdentity(req: AuthRequest) {
+  const hostId: unknown = req.body?.hostId;
+  if (
+    (typeof hostId !== 'number' && typeof hostId !== 'string') ||
+    (typeof hostId === 'string' && !/^\d+$/.test(hostId)) ||
+    !Number.isSafeInteger(Number(hostId)) || Number(hostId) <= 0
+  ) {
+    throw createConfiguredError('INVALID_HOST_ID', 'A valid positive integer hostId is required', 400, 'INVALID_HOST_ID');
+  }
+  const authenticatedIdentity = identity(req);
+  // Temporarily skip payload host matching; queries still use the authenticated host.
+  // if (Number(hostId) !== Number(authenticatedIdentity.hostId)) {
+  //   throw createConfiguredError('HOST_ACCESS_DENIED', 'hostId must match the authenticated host', 403, 'HOST_ACCESS_DENIED');
+  // }
+  return authenticatedIdentity;
+}
+
 export class TaskController {
+  kanbanBoard = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      res.json(await taskService.getKanbanBoard({
+        ...hostScopedIdentity(req),
+        filters: req.body?.filters ?? req.body ?? {},
+        sortBy: req.body?.sortBy,
+        sortOrder: req.body?.sortOrder,
+      }));
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  dashboardStats = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      res.json(await taskService.getDashboardStats(hostScopedIdentity(req)));
+    } catch (error) {
+      next(error);
+    }
+  };
+
   private async respond(
     operation: () => Promise<any>,
     res: Response,

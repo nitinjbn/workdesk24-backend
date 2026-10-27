@@ -1,4 +1,5 @@
 import { Transaction } from 'sequelize';
+import moment from 'moment-timezone';
 import { sequelize } from '../../../models';
 import { logger } from '../../../config/database';
 import { createConfiguredError } from '../../../shared/utils/error.util';
@@ -12,7 +13,7 @@ import {
 import taskRepository, { TaskRepository } from '../repositories/task.repository';
 import taskNotificationService, { TaskNotificationService } from '../../notifications/task/taskNotificationService';
 import { getTaskTransition, isValidTaskFile, isValidUnixTimestamp } from './task-rules.util';
-import { getHostDateTimeSettings } from '../../../shared/utils/host-settings.util';
+import { getHostDateTimeSettings, HostDateTimeSettings } from '../../../shared/utils/host-settings.util';
 import { DateTimeFormatUtil, formatDateTimeFieldsBySettings } from '../../../shared/utils/date-time-format.util';
 
 type TaskStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
@@ -32,6 +33,11 @@ interface TaskAttachmentPayload {
 
 interface TaskCommentPayload {
   hostId: number; taskId: number; userId: number; isAdmin: boolean; comment: string;
+}
+
+interface TaskListPayload {
+  hostId: number; userId: number; isAdmin: boolean; filters?: Record<string, unknown>;
+  page?: number; limit?: number; sortBy?: string; sortOrder?: string;
 }
 
 const SORT_FIELDS = ['id', 'title', 'priority', 'status', 'dueAt', 'createdAt', 'updatedAt'];
@@ -117,6 +123,69 @@ export class TaskService {
 
   private requireAdmin(isAdmin: boolean): void {
     if (!isAdmin) throw taskError('TASK_ADMIN_REQUIRED', 'Admin access is required for this operation', 403);
+  }
+
+  async getDashboardStats(payload: { hostId: number; isAdmin: boolean }) {
+    this.requireAdmin(payload.isAdmin);
+    const now = Math.floor(Date.now() / 1000);
+    const [users, settings] = await Promise.all([
+      this.repository.getDashboardStats(payload.hostId, now),
+      getHostDateTimeSettings(payload.hostId),
+    ]);
+    if (!moment.tz.zone(settings.timeZone)) {
+      throw taskError('INVALID_TIME_ZONE', 'Host timezone must be a valid IANA timezone', 500);
+    }
+    const totals = users.reduce((result, user) => ({
+      totalTasks: result.totalTasks + user.assignedCount,
+      pending: result.pending + user.pendingCount,
+      inProgress: result.inProgress + user.inProgressCount,
+      completed: result.completed + user.completedCount,
+      overdue: result.overdue + user.overdueCount,
+      high: result.high + user.highCount,
+      medium: result.medium + user.mediumCount,
+      low: result.low + user.lowCount,
+      urgent: result.urgent + user.urgentCount,
+    }), { totalTasks: 0, pending: 0, inProgress: 0, completed: 0, overdue: 0, high: 0, medium: 0, low: 0, urgent: 0 });
+    const percentage = (count: number): number =>
+      totals.totalTasks === 0 ? 0 : Number((count / totals.totalTasks * 100).toFixed(2));
+
+    return {
+      status: 'success',
+      timestamp: moment.unix(now).tz(settings.timeZone).format('YYYY-MM-DD hh:mm A'),
+      data: {
+        summary: {
+          totalTasks: totals.totalTasks,
+          inProgress: totals.inProgress,
+          completed: totals.completed,
+          overdue: totals.overdue,
+          completionPercentage: percentage(totals.completed),
+          pendingPercentage: percentage(totals.pending),
+          inProgressPercentage: percentage(totals.inProgress),
+        },
+        statusDistribution: [
+          { status: 'TODO', label: 'To Do', count: totals.pending, color: '#94a3b8' },
+          { status: 'IN_PROGRESS', label: 'In Progress', count: totals.inProgress, color: '#3b82f6' },
+          { status: 'COMPLETED', label: 'Completed', count: totals.completed, color: '#10b981' },
+          { status: 'OVERDUE', label: 'Overdue', count: totals.overdue, color: '#ef4444' },
+        ],
+        priorityDistribution: [
+          { priority: 'HIGH', label: 'High', count: totals.high, color: '#f97316' },
+          { priority: 'MEDIUM', label: 'Medium', count: totals.medium, color: '#3b82f6' },
+          { priority: 'LOW', label: 'Low', count: totals.low, color: '#94a3b8' },
+          { priority: 'URGENT', label: 'Urgent', count: totals.urgent, color: '#ef4444' },
+        ],
+        userTasksMetrics: users.map((user) => ({
+          userId: user.userId,
+          name: user.name,
+          profileImageUrl: user.profileImageUrl,
+          assignedCount: user.assignedCount,
+          completedCount: user.completedCount,
+          overdueCount: user.overdueCount,
+          efficiencyRate: user.assignedCount === 0
+            ? 0 : Number((user.completedCount / user.assignedCount * 100).toFixed(1)),
+        })),
+      },
+    };
   }
 
   private async getVisibleTask(hostId: number, taskId: number, userId: number, isAdmin: boolean): Promise<any> {
@@ -249,25 +318,30 @@ export class TaskService {
     return result;
   }
 
-  async listTasks(payload: {
-    hostId: number; userId: number; isAdmin: boolean; filters?: Record<string, unknown>;
-    page?: number; limit?: number; sortBy?: string; sortOrder?: string;
-  }): Promise<any> {
-    const filters = payload.filters || {};
+  private validateTaskFilters(filters: Record<string, unknown>) {
+    if (!filters || typeof filters !== 'object' || Array.isArray(filters)) {
+      throw taskError('INVALID_TASK_FILTER', 'filters must be an object');
+    }
     if (filters.status !== undefined && !TASK_STATUSES.includes(filters.status as TaskStatus)) {
       throw taskError('INVALID_TASK_STATUS', 'status is invalid');
     }
     if (filters.priority !== undefined && !TASK_PRIORITIES.includes(filters.priority as TaskPriority)) {
       throw taskError('INVALID_TASK_PRIORITY', 'priority is invalid');
     }
-    for (const key of ['assignedToUserId', 'createdByUserId', 'customerId', 'visitId'] as const) {
+    if (filters.assignedToUserId !== undefined) {
+      const ids = Array.isArray(filters.assignedToUserId) ? filters.assignedToUserId : [filters.assignedToUserId];
+      if (ids.some((id) => !['number', 'string'].includes(typeof id) || !validId(id))) {
+        throw taskError('INVALID_TASK_FILTER', 'assignedToUserId must be a valid ID or an array of valid IDs');
+      }
+    }
+    for (const key of ['createdByUserId', 'customerId', 'visitId'] as const) {
       if (filters[key] !== undefined && !validId(filters[key])) throw taskError('INVALID_TASK_FILTER', `${key} must be a valid ID`);
     }
     if (filters.dueDate !== undefined && (filters.dueFrom !== undefined || filters.dueTo !== undefined)) {
       throw taskError('INVALID_TASK_DUE_RANGE', 'Use either dueDate or dueFrom/dueTo, not both');
     }
-    let dueFrom = filters.dueFrom === undefined ? undefined : validateTimestamp(filters.dueFrom, 'dueFrom');
-    let dueTo = filters.dueTo === undefined ? undefined : validateTimestamp(filters.dueTo, 'dueTo');
+    const dueFrom = filters.dueFrom === undefined ? undefined : validateTimestamp(filters.dueFrom, 'dueFrom');
+    const dueTo = filters.dueTo === undefined ? undefined : validateTimestamp(filters.dueTo, 'dueTo');
     if (dueFrom === null || dueTo === null) throw taskError('INVALID_TASK_DUE_RANGE', 'Due date filters must be Unix timestamps');
     if (dueFrom !== undefined && dueTo !== undefined && Number(dueFrom) > Number(dueTo)) {
       throw taskError('INVALID_TASK_DUE_RANGE', 'dueFrom must be less than or equal to dueTo');
@@ -278,6 +352,82 @@ export class TaskService {
     if (filters.search !== undefined && (typeof filters.search !== 'string' || filters.search.length > 100)) {
       throw taskError('INVALID_TASK_SEARCH', 'search must be a string of at most 100 characters');
     }
+    return { dueFrom, dueTo };
+  }
+
+  private normalizeTaskFilters(
+    filters: Record<string, unknown>,
+    bounds: { dueFrom?: number; dueTo?: number },
+    settings: HostDateTimeSettings
+  ): Record<string, unknown> {
+    let { dueFrom, dueTo } = bounds;
+    if (filters.dueDate !== undefined) {
+      const range = DateTimeFormatUtil.getUnixDayRange(filters.dueDate, settings.timeZone);
+      dueFrom = range.fromDate;
+      dueTo = range.tillDate;
+    }
+    const completedRange = filters.completedDate === undefined
+      ? undefined
+      : DateTimeFormatUtil.getUnixDayRange(filters.completedDate, settings.timeZone);
+    const normalizedFilters: Record<string, unknown> = {
+      ...filters, dueFrom, dueTo,
+      completedFrom: completedRange?.fromDate,
+      completedTo: completedRange?.tillDate,
+      overdueOnly: Boolean(filters.overdueOnly),
+    };
+    delete normalizedFilters.dueDate;
+    delete normalizedFilters.completedDate;
+    if (Array.isArray(filters.assignedToUserId)) {
+      if (filters.assignedToUserId.length === 0) delete normalizedFilters.assignedToUserId;
+      else normalizedFilters.assignedToUserId = [...new Set(filters.assignedToUserId.map(Number))];
+    }
+    return normalizedFilters;
+  }
+
+  async getKanbanBoard(payload: TaskListPayload) {
+    this.requireAdmin(payload.isAdmin);
+    const filters = payload.filters ?? {};
+    const bounds = this.validateTaskFilters(filters);
+    const sortBy = payload.sortBy || 'createdAt';
+    const sortOrder = String(payload.sortOrder || 'DESC').toUpperCase();
+    if (!SORT_FIELDS.includes(sortBy) || !['ASC', 'DESC'].includes(sortOrder)) {
+      throw taskError('INVALID_TASK_SORT', 'sortBy or sortOrder is invalid');
+    }
+    const now = Math.floor(Date.now() / 1000);
+    const settings = await getHostDateTimeSettings(payload.hostId);
+    if (!moment.tz.zone(settings.timeZone)) {
+      throw taskError('INVALID_TIME_ZONE', 'Host timezone must be a valid IANA timezone', 500);
+    }
+    const rows = await this.repository.getKanbanTasks({
+      hostId: payload.hostId, userId: payload.userId, isAdmin: payload.isAdmin,
+      filters: this.normalizeTaskFilters(filters, bounds, settings),
+      sortBy, sortOrder: sortOrder as 'ASC' | 'DESC', now,
+    });
+    const columns = [
+      { columnId: 'col_todo', title: 'To Do', statusKey: 'TODO' },
+      { columnId: 'col_in_progress', title: 'In Progress', statusKey: 'IN_PROGRESS' },
+      { columnId: 'col_completed', title: 'Completed', statusKey: 'COMPLETED' },
+      { columnId: 'col_overdue', title: 'Overdue', statusKey: 'OVERDUE' },
+    ].map((column) => ({ ...column, taskCount: 0, tasks: [] as Record<string, unknown>[] }));
+    for (const row of rows) {
+      const overdue = (row.status === 'PENDING' || row.status === 'IN_PROGRESS')
+        && row.dueAt != null && Number(row.dueAt) < now;
+      const key = overdue ? 'OVERDUE' : row.status === 'PENDING' ? 'TODO' : row.status;
+      const column = columns.find((item) => item.statusKey === key);
+      if (!column) throw taskError('INVALID_TASK_STATUS', 'Task has an unsupported Kanban status', 500);
+      column.tasks.push(formatDateTimeFieldsBySettings({ ...row.toJSON() }, settings));
+      column.taskCount += 1;
+    }
+    return {
+      status: 'success',
+      timestamp: moment.unix(now).tz(settings.timeZone).format('YYYY-MM-DD hh:mm A'),
+      data: { columns },
+    };
+  }
+
+  async listTasks(payload: TaskListPayload): Promise<any> {
+    const filters = payload.filters || {};
+    const bounds = this.validateTaskFilters(filters);
     const page = payload.page === undefined ? 1 : Number(payload.page);
     const limit = payload.limit === undefined ? 20 : Number(payload.limit);
     const sortBy = payload.sortBy || 'createdAt';
@@ -289,22 +439,7 @@ export class TaskService {
       throw taskError('INVALID_TASK_SORT', 'sortBy or sortOrder is invalid');
     }
     const dateTimeSettings = await getHostDateTimeSettings(payload.hostId);
-    if (filters.dueDate !== undefined) {
-      const range = DateTimeFormatUtil.getUnixDayRange(filters.dueDate, dateTimeSettings.timeZone);
-      dueFrom = range.fromDate;
-      dueTo = range.tillDate;
-    }
-    const completedRange = filters.completedDate === undefined
-      ? undefined
-      : DateTimeFormatUtil.getUnixDayRange(filters.completedDate, dateTimeSettings.timeZone);
-    const normalizedFilters: Record<string, unknown> = {
-      ...filters, dueFrom, dueTo,
-      completedFrom: completedRange?.fromDate,
-      completedTo: completedRange?.tillDate,
-      overdueOnly: Boolean(filters.overdueOnly),
-    };
-    delete normalizedFilters.dueDate;
-    delete normalizedFilters.completedDate;
+    const normalizedFilters = this.normalizeTaskFilters(filters, bounds, dateTimeSettings);
     const result = await this.repository.listTasks({
       hostId: payload.hostId,
       userId: payload.userId,
