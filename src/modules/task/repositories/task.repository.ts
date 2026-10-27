@@ -32,8 +32,8 @@ export class TaskRepository {
     const rows = await sequelize.query<TaskDashboardUserRow>(
       `SELECT t.assignedToUserId AS userId, u.name, u.profileImageUrl,
               COUNT(*) AS assignedCount,
-              SUM(CASE WHEN t.status = 'PENDING' AND (t.dueAt IS NULL OR t.dueAt >= :now) THEN 1 ELSE 0 END) AS pendingCount,
-              SUM(CASE WHEN t.status = 'IN_PROGRESS' AND (t.dueAt IS NULL OR t.dueAt >= :now) THEN 1 ELSE 0 END) AS inProgressCount,
+              SUM(CASE WHEN               t.status = 'PENDING' THEN 1 ELSE 0 END) AS pendingCount,
+                            SUM(CASE WHEN t.status = 'IN_PROGRESS' THEN 1 ELSE 0 END) AS inProgressCount,
               SUM(CASE WHEN t.status = 'COMPLETED' THEN 1 ELSE 0 END) AS completedCount,
               SUM(CASE WHEN t.status IN ('PENDING', 'IN_PROGRESS') AND t.dueAt < :now THEN 1 ELSE 0 END) AS overdueCount,
               SUM(CASE WHEN t.priority = 'HIGH' THEN 1 ELSE 0 END) AS highCount,

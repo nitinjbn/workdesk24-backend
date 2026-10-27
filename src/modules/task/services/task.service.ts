@@ -163,10 +163,10 @@ export class TaskService {
           overduePercentage: percentage(totals.overdue),
         },
         statusDistribution: [
-          { status: 'TODO', label: 'To Do', count: totals.pending, color: '#94a3b8' },
-          { status: 'IN_PROGRESS', label: 'In Progress', count: totals.inProgress, color: '#3b82f6' },
-          { status: 'COMPLETED', label: 'Completed', count: totals.completed, color: '#10b981' },
-          { status: 'OVERDUE', label: 'Overdue', count: totals.overdue, color: '#ef4444' },
+          { status: 'TODO', label: 'To Do', count: totals.pending, percentage: percentage(totals.pending), color: '#94a3b8' },
+          { status: 'IN_PROGRESS', label: 'In Progress', count: totals.inProgress, percentage: percentage(totals.inProgress), color: '#3b82f6' },
+          { status: 'COMPLETED', label: 'Completed', count: totals.completed, percentage: percentage(totals.completed), color: '#10b981' },
+          { status: 'OVERDUE', label: 'Overdue', count: totals.overdue, percentage: percentage(totals.overdue), color: '#ef4444' },
         ],
         priorityDistribution: [
           { priority: 'HIGH', label: 'High', count: totals.high, color: '#f97316' },
