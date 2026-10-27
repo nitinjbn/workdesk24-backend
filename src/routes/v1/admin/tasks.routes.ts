@@ -4,6 +4,8 @@ import { taskUpload, taskUploadErrorHandler } from '../../../modules/task/middle
 
 const router = Router();
 
+router.post('/dashboard-stats', taskController.dashboardStats);
+router.post('/kanban-board', taskController.kanbanBoard);
 router.post('/createTask', taskController.createTask);
 router.post('/createTaskWithAttachment', taskUpload.single('file'), taskUploadErrorHandler, taskController.createTaskWithAttachment);
 router.post('/getTasks', taskController.getTasks);

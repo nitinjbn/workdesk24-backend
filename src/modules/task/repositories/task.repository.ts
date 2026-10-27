@@ -1,8 +1,68 @@
-import { Op, Transaction } from 'sequelize';
+import { Op, QueryTypes, Transaction } from 'sequelize';
 import { Customer, sequelize, Task, TaskAttachments, TaskComments, TaskLogs, TaskSettings, User, Visit } from '../../../models';
 import { CONFIG } from '../../../config/constants';
 
+interface TaskDashboardUserRow {
+  userId: number | string;
+  name: string | null;
+  profileImageUrl: string | null;
+  assignedCount: number | string;
+  pendingCount: number | string;
+  inProgressCount: number | string;
+  completedCount: number | string;
+  overdueCount: number | string;
+  highCount: number | string;
+  mediumCount: number | string;
+  lowCount: number | string;
+  urgentCount: number | string;
+}
+
+interface TaskListScope {
+  hostId: number;
+  userId: number;
+  isAdmin: boolean;
+  filters: Record<string, unknown>;
+  sortBy: string;
+  sortOrder: 'ASC' | 'DESC';
+  now: number;
+}
+
 export class TaskRepository {
+  async getDashboardStats(hostId: number, now: number) {
+    const rows = await sequelize.query<TaskDashboardUserRow>(
+      `SELECT t.assignedToUserId AS userId, u.name, u.profileImageUrl,
+              COUNT(*) AS assignedCount,
+              SUM(CASE WHEN t.status = 'PENDING' AND (t.dueAt IS NULL OR t.dueAt >= :now) THEN 1 ELSE 0 END) AS pendingCount,
+              SUM(CASE WHEN t.status = 'IN_PROGRESS' AND (t.dueAt IS NULL OR t.dueAt >= :now) THEN 1 ELSE 0 END) AS inProgressCount,
+              SUM(CASE WHEN t.status = 'COMPLETED' THEN 1 ELSE 0 END) AS completedCount,
+              SUM(CASE WHEN t.status IN ('PENDING', 'IN_PROGRESS') AND t.dueAt < :now THEN 1 ELSE 0 END) AS overdueCount,
+              SUM(CASE WHEN t.priority = 'HIGH' THEN 1 ELSE 0 END) AS highCount,
+              SUM(CASE WHEN t.priority = 'MEDIUM' THEN 1 ELSE 0 END) AS mediumCount,
+              SUM(CASE WHEN t.priority = 'LOW' THEN 1 ELSE 0 END) AS lowCount,
+              SUM(CASE WHEN t.priority = 'URGENT' THEN 1 ELSE 0 END) AS urgentCount
+       FROM wd_tasks t
+       LEFT JOIN wd_users u ON u.id = t.assignedToUserId AND u.hostId = t.hostId AND u.isDeleted = 0
+       WHERE t.hostId = :hostId AND t.isDeleted = 0 AND t.status <> 'CANCELLED'
+       GROUP BY t.assignedToUserId, u.name, u.profileImageUrl
+       ORDER BY assignedCount DESC, t.assignedToUserId ASC`,
+      { replacements: { hostId, now }, type: QueryTypes.SELECT }
+    );
+    return rows.map((row) => ({
+      userId: Number(row.userId),
+      name: row.name,
+      profileImageUrl: row.profileImageUrl,
+      assignedCount: Number(row.assignedCount),
+      pendingCount: Number(row.pendingCount),
+      inProgressCount: Number(row.inProgressCount),
+      completedCount: Number(row.completedCount),
+      overdueCount: Number(row.overdueCount),
+      highCount: Number(row.highCount),
+      mediumCount: Number(row.mediumCount),
+      lowCount: Number(row.lowCount),
+      urgentCount: Number(row.urgentCount),
+    }));
+  }
+
   async lockTaskSettings(hostId: number, now: number, transaction: Transaction): Promise<InstanceType<typeof TaskSettings> | null> {
     // The unique hostId key serializes initialization, without a missing-row gap lock
     // or overwriting an existing host's prefix, counter, or timestamps.
@@ -69,25 +129,19 @@ export class TaskRepository {
     } as any);
   }
 
-  async listTasks(params: {
-    hostId: number;
-    userId: number;
-    isAdmin: boolean;
-    filters: Record<string, unknown>;
-    page: number;
-    limit: number;
-    sortBy: string;
-    sortOrder: 'ASC' | 'DESC';
-    now: number;
-  }): Promise<{ rows: any[]; count: number }> {
-    const { hostId, userId, isAdmin, filters, page, limit, sortBy, sortOrder, now } = params;
-    const where: any = { hostId, isDeleted: 0 };
+  private taskListOptions(params: TaskListScope) {
+    const { hostId, userId, isAdmin, filters, sortBy, sortOrder, now } = params;
+    const where: Record<string | symbol, unknown> = { hostId, isDeleted: 0 };
 
     if (!isAdmin) where.assignedToUserId = userId;
     if (filters.status) where.status = filters.status;
     if (filters.priority) where.priority = filters.priority;
     if (filters.assignedToUserId !== undefined && isAdmin) {
-      where.assignedToUserId = filters.assignedToUserId;
+      if (Array.isArray(filters.assignedToUserId)) {
+        if (filters.assignedToUserId.length > 0) where.assignedToUserId = { [Op.in]: filters.assignedToUserId };
+      } else {
+        where.assignedToUserId = filters.assignedToUserId;
+      }
     }
     if (filters.createdByUserId !== undefined) where.createdByUserId = filters.createdByUserId;
     if (filters.customerId !== undefined) where.customerId = filters.customerId;
@@ -116,17 +170,31 @@ export class TaskRepository {
       ];
     }
 
-    return Task.findAndCountAll({
+    return {
       where,
       include: [
         { model: User, as: 'assignedToUser', required: false, where: { hostId, isDeleted: 0 }, attributes: ['id', 'name'] },
         { model: User, as: 'createdByUser', required: false, where: { hostId, isDeleted: 0 }, attributes: ['id', 'name'] },
       ],
-      order: [[sortBy, sortOrder], ['id', 'ASC']],
-      limit,
-      offset: (page - 1) * limit,
+      order: [[sortBy, sortOrder], ['id', 'ASC']] as [string, string][],
+    };
+  }
+
+  async listTasks(params: TaskListScope & { page: number; limit: number }): Promise<{ rows: any[]; count: number }> {
+    return Task.findAndCountAll({
+      ...this.taskListOptions(params),
+      limit: params.limit,
+      offset: (params.page - 1) * params.limit,
       distinct: true,
-    } as any);
+    });
+  }
+
+  async getKanbanTasks(params: TaskListScope) {
+    const options = this.taskListOptions(params);
+    return Task.findAll({
+      ...options,
+      where: { [Op.and]: [options.where, { status: { [Op.ne]: 'CANCELLED' } }] },
+    });
   }
 
   async findUser(hostId: number, userId: number, transaction?: Transaction): Promise<any> {

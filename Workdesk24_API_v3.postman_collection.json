@@ -429,8 +429,40 @@
         },
         {
           "name": "Task Management",
-          "description": "Admin management operations use /api/v1/admin/tasks and the existing admin role/CSRF middleware. Employee operations use /api/v1/app/task. All API responses use { success, message, data }.",
+          "description": "Admin management operations use /api/v1/admin/tasks and the existing admin role/CSRF middleware. Employee operations use /api/v1/app/task. Task responses use { success, message, data }, except dashboard-stats and kanban-board which return { status, timestamp, data }.",
           "item": [
+            {
+              "name": "Kanban Board (Admin)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{ADMIN_TOKEN}}" },
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" },
+                  { "key": "Cookie", "value": "wd24_admin_csrf={{ADMIN_CSRF_TOKEN}}" }
+                ],
+                "body": { "mode": "raw", "raw": "{\n  \"hostId\": 7,\n  \"filters\": {\n    \"assignedToUserId\": [\n      47,\n      48\n    ],\n    \"status\": \"COMPLETED\",\n    \"priority\": \"HIGH\",\n    \"search\": \"proposal\",\n    \"completedDate\": \"23/10/2026\",\n    \"dueDate\": \"22/10/2026\",\n    \"overdueOnly\": false\n  },\n  \"sortBy\": \"createdAt\",\n  \"sortOrder\": \"DESC\"\n}", "options": { "raw": { "language": "json" } } },
+                "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/kanban-board", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "kanban-board"] },
+                "description": "Returns { status: 'success', timestamp: 'YYYY-MM-DD hh:mm A', data: { columns } }. Same optional filters and sorting as getTasks: assignedToUserId (employee), search (task number OR title), status (database enum), priority, createdByUserId, customerId, visitId, dueDate, completedDate, dueFrom/dueTo and overdueOnly. Nested filters take precedence over top-level filters. Use { hostId: 7 } for all tasks in host 7. All matching tasks are returned without pagination, with four fixed columns TODO/IN_PROGRESS/COMPLETED/OVERDUE and taskCount equal to tasks.length. Deleted/CANCELLED tasks are excluded. Overdue pending/in-progress tasks (dueAt < current Unix second) appear only in OVERDUE, not TODO/IN_PROGRESS. Cards preserve database status and the full getTasks fields/user associations. Card dates use host formats; top-level timestamp uses the host timezone and fixed format above. Empty columns remain present with tasks: []. See Task_Management.postman_collection.json for detailed rules and response assertions. assignedToUserId accepts a single positive ID or an array of positive IDs (for example [47, 48]); array values match ANY selected employee, while all other filters combine with AND. An empty array [] means no employee filter. Duplicate IDs are deduplicated; invalid IDs or array entries return HTTP 400. Required top-level hostId must be a positive safe integer (or digit-only numeric string). Payload/authenticated host matching is temporarily disabled; a different valid payload hostId is accepted but does not change the query scope. Missing/invalid hostId returns HTTP 400 INVALID_HOST_ID. Queries always use the authenticated host, never an untrusted payload scope."
+              },
+              "response": []
+            },
+            {
+              "name": "Dashboard Stats (Admin)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{ADMIN_TOKEN}}" },
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" },
+                  { "key": "Cookie", "value": "wd24_admin_csrf={{ADMIN_CSRF_TOKEN}}" }
+                ],
+                "body": { "mode": "raw", "raw": "{\n  \"hostId\": 7\n}", "options": { "raw": { "language": "json" } } },
+                "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/dashboard-stats", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "dashboard-stats"] },
+                "description": "All-time statistics for the authenticated admin's host; a top-level hostId is required and no filters are supported. Returns { status: 'success', timestamp: 'YYYY-MM-DD hh:mm A', data: { summary, statusDistribution, priorityDistribution, userTasksMetrics } } with host-local timestamp. Excludes deleted/CANCELLED tasks. PENDING maps to TODO. Overdue pending/in-progress tasks (dueAt < current Unix second) count only in OVERDUE, never TODO/IN_PROGRESS. Summary percentages = distribution count / totalTasks * 100 (2 decimals); user efficiency = completedCount / assignedCount * 100 (1 decimal). The three summary percentages omit overdue, so need not sum to 100. Users with included assigned tasks only, ordered by assignedCount descending then userId ascending; inactive users remain included, deleted/missing profiles return null name/profileImageUrl without dropping their tasks. Empty hosts return zeros and an empty userTasksMetrics array. See Task_Management.postman_collection.json for response assertions. priorityDistribution always contains HIGH, MEDIUM, LOW, URGENT in that order, each with { priority, label, count, color }. Colors: HIGH #f97316, MEDIUM #3b82f6, LOW #94a3b8, URGENT #ef4444. Counts cover the same tasks as totalTasks (including overdue and completed, excluding cancelled/deleted); they sum to totalTasks. Empty priorities return count 0. Required top-level hostId must be a positive safe integer (or digit-only numeric string). Payload/authenticated host matching is temporarily disabled; a different valid payload hostId is accepted but does not change the query scope. Missing/invalid hostId returns HTTP 400 INVALID_HOST_ID. Queries always use the authenticated host, never an untrusted payload scope."
+              },
+              "response": []
+            },
             {
               "name": "Create Task (Admin)",
               "request": {
@@ -484,7 +516,7 @@
                 "header": [{ "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
                 "body": { "mode": "raw", "raw": "{\n  \"filters\": {\n    \"dueDate\": \"2026-10-23\",\n    \"completedDate\": \"23/10/2026\"\n  },\n  \"page\": 1,\n  \"limit\": 20\n}" },
                 "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/getTasks", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "getTasks"] },
-                "description": "Admin-only tenant task list. Include the CSRF cookie and matching ADMIN_CSRF_TOKEN header. Optional filters.dueDate and filters.completedDate accept YYYY-MM-DD or DD/MM/YYYY strings interpreted in the client's configured host timezone (HostSettings timezone), matching response formatting. Formats can be mixed in one request. Each becomes inclusive local-day Unix-second bounds on dueAt/completedAt, including DST. Both filters combine with AND; omit unused dates. Invalid dates, timestamps and null return HTTP 400. Legacy dueFrom/dueTo Unix bounds remain supported but cannot be combined with dueDate. Success retains { success, message, data: { tasks, pagination } }."
+                "description": "Admin-only tenant task list. Include the CSRF cookie and matching ADMIN_CSRF_TOKEN header. Optional filters.dueDate and filters.completedDate accept YYYY-MM-DD or DD/MM/YYYY strings interpreted in the client's configured host timezone (HostSettings timezone), matching response formatting. Formats can be mixed in one request. Each becomes inclusive local-day Unix-second bounds on dueAt/completedAt, including DST. Both filters combine with AND; omit unused dates. Invalid dates, timestamps and null return HTTP 400. Legacy dueFrom/dueTo Unix bounds remain supported but cannot be combined with dueDate. Success retains { success, message, data: { tasks, pagination } }. assignedToUserId accepts a single positive ID or an array of positive IDs (for example [47, 48]); array values match ANY selected employee, while all other filters combine with AND. An empty array [] means no employee filter. Duplicate IDs are deduplicated; invalid IDs or array entries return HTTP 400."
               },
               "response": []
             },
