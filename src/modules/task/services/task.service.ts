@@ -150,9 +150,7 @@ export class TaskService {
       totals.totalTasks === 0 ? 0 : Number((count / totals.totalTasks * 100).toFixed(2));
 
     return {
-      status: 'success',
-      timestamp: moment.unix(now).tz(settings.timeZone).format('YYYY-MM-DD hh:mm A'),
-      data: {
+        timestamp: moment.unix(now).tz(settings.timeZone).format('YYYY-MM-DD hh:mm A'),
         summary: {
           totalTasks: totals.totalTasks,
           inProgress: totals.inProgress,
@@ -183,8 +181,7 @@ export class TaskService {
           overdueCount: user.overdueCount,
           efficiencyRate: user.assignedCount === 0
             ? 0 : Number((user.completedCount / user.assignedCount * 100).toFixed(1)),
-        })),
-      },
+        }))
     };
   }
 
@@ -419,9 +416,8 @@ export class TaskService {
       column.taskCount += 1;
     }
     return {
-      status: 'success',
       timestamp: moment.unix(now).tz(settings.timeZone).format('YYYY-MM-DD hh:mm A'),
-      data: { columns },
+      columns,
     };
   }
 

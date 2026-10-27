@@ -108,7 +108,7 @@ export const requireAdminRole = async (
   }
 
   try {
-    console.log('##################### req.user:', req.user);
+    //console.log('##################### req.user:', req.user);
     //const isAdmin = await isAdminRole(req.user.hostId, req.user.roleId);
     const isAdmin = req.user.isAdminUser == 1;
 
@@ -148,7 +148,7 @@ export const requireSuperAdminRole = async (
   }
 
   try {
-    console.log('##################### req.user:', req.user);
+    //console.log('##################### req.user:', req.user);
     //const isAdmin = await isAdminRole(req.user.hostId, req.user.roleId);
     const isSuperAdmin = req.user.isSuperAdmin == 1;
 
