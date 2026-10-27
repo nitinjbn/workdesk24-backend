@@ -163,9 +163,10 @@ export class TaskService {
           overduePercentage: percentage(totals.overdue),
         },
         statusDistribution: [
-          { status: 'TODO', label: 'To Do', count: totals.pending, percentage: percentage(totals.pending), color: '#9333ea' },
+          { status: 'TODO', label: 'Pending', count: totals.pending, percentage: percentage(totals.pending), color: '#9333ea' },
           { status: 'IN_PROGRESS', label: 'In Progress', count: totals.inProgress, percentage: percentage(totals.inProgress), color: '#ffaa00' },
-          { status: 'COMPLETED', label: 'Completed', count: totals.completed, percentage: percentage(totals.completed), color: '#008000' },
+          { status: 'COMPLETED', label: 'Completed', count: totals.completed, percentage: percentage(totals.completed), color: '#008000' },
+
         ],
         priorityDistribution: [
           { priority: 'HIGH', label: 'High', count: totals.high, color: '#c00404' },
@@ -402,7 +403,7 @@ export class TaskService {
       sortBy, sortOrder: sortOrder as 'ASC' | 'DESC', now,
     });
     const columns = [
-      { columnId: 'col_todo', title: 'To Do', statusKey: 'TODO' },
+      { columnId: 'col_todo', title: 'Pending', statusKey: 'TODO' },
       { columnId: 'col_in_progress', title: 'In Progress', statusKey: 'IN_PROGRESS' },
       { columnId: 'col_completed', title: 'Completed', statusKey: 'COMPLETED' },
       { columnId: 'col_overdue', title: 'Overdue', statusKey: 'OVERDUE' },
