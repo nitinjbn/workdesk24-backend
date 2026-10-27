@@ -163,16 +163,15 @@ export class TaskService {
           overduePercentage: percentage(totals.overdue),
         },
         statusDistribution: [
-          { status: 'TODO', label: 'To Do', count: totals.pending, percentage: percentage(totals.pending), color: '#94a3b8' },
-          { status: 'IN_PROGRESS', label: 'In Progress', count: totals.inProgress, percentage: percentage(totals.inProgress), color: '#3b82f6' },
-          { status: 'COMPLETED', label: 'Completed', count: totals.completed, percentage: percentage(totals.completed), color: '#10b981' },
-          { status: 'OVERDUE', label: 'Overdue', count: totals.overdue, percentage: percentage(totals.overdue), color: '#ef4444' },
+          { status: 'TODO', label: 'To Do', count: totals.pending, percentage: percentage(totals.pending), color: '#9333ea' },
+          { status: 'IN_PROGRESS', label: 'In Progress', count: totals.inProgress, percentage: percentage(totals.inProgress), color: '#ffaa00' },
+          { status: 'COMPLETED', label: 'Completed', count: totals.completed, percentage: percentage(totals.completed), color: '#008000' },
         ],
         priorityDistribution: [
-          { priority: 'HIGH', label: 'High', count: totals.high, color: '#f97316' },
-          { priority: 'MEDIUM', label: 'Medium', count: totals.medium, color: '#3b82f6' },
-          { priority: 'LOW', label: 'Low', count: totals.low, color: '#94a3b8' },
-          { priority: 'URGENT', label: 'Urgent', count: totals.urgent, color: '#ef4444' },
+          { priority: 'HIGH', label: 'High', count: totals.high, color: '#c00404' },
+          { priority: 'MEDIUM', label: 'Medium', count: totals.medium, color: '#ffaa00' },
+          { priority: 'LOW', label: 'Low', count: totals.low, color: '#0284c7' },
+          { priority: 'URGENT', label: 'Urgent', count: totals.urgent, color: '#8b0000' },
         ],
         userTasksMetrics: users.map((user) => ({
           userId: user.userId,
