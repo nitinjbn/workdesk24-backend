@@ -153,12 +153,14 @@ export class TaskService {
         timestamp: moment.unix(now).tz(settings.timeZone).format('YYYY-MM-DD hh:mm A'),
         summary: {
           totalTasks: totals.totalTasks,
+          pendingTasks: totals.pending,
           inProgress: totals.inProgress,
           completed: totals.completed,
           overdue: totals.overdue,
           completionPercentage: percentage(totals.completed),
           pendingPercentage: percentage(totals.pending),
           inProgressPercentage: percentage(totals.inProgress),
+          overduePercentage: percentage(totals.overdue),
         },
         statusDistribution: [
           { status: 'TODO', label: 'To Do', count: totals.pending, color: '#94a3b8' },
