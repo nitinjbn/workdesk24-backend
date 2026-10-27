@@ -37,30 +37,28 @@ test('dashboard aggregates all users, matches the response shape and rounds perc
     },
   });
   assert.deepEqual(await service.getDashboardStats(admin), {
-    status: 'success',
     timestamp: '2026-10-27 07:56 AM',
-    data: {
-      summary: {
-        totalTasks: 48, inProgress: 14, completed: 21, overdue: 5,
-        completionPercentage: 43.75, pendingPercentage: 16.67, inProgressPercentage: 29.17,
-      },
-      statusDistribution: [
-        { status: 'TODO', label: 'To Do', count: 8, color: '#94a3b8' },
-        { status: 'IN_PROGRESS', label: 'In Progress', count: 14, color: '#3b82f6' },
-        { status: 'COMPLETED', label: 'Completed', count: 21, color: '#10b981' },
-        { status: 'OVERDUE', label: 'Overdue', count: 5, color: '#ef4444' },
-      ],
-      priorityDistribution: [
-        { priority: 'HIGH', label: 'High', count: 13, color: '#f97316' },
-        { priority: 'MEDIUM', label: 'Medium', count: 16, color: '#3b82f6' },
-        { priority: 'LOW', label: 'Low', count: 11, color: '#94a3b8' },
-        { priority: 'URGENT', label: 'Urgent', count: 8, color: '#ef4444' },
-      ],
-      userTasksMetrics: [
-        { userId: 47, name: 'Rajesh Sharma', profileImageUrl: 'https://example.com/avatar.png', assignedCount: 12, completedCount: 7, overdueCount: 1, efficiencyRate: 58.3 },
-        { userId: 48, name: null, profileImageUrl: null, assignedCount: 36, completedCount: 14, overdueCount: 4, efficiencyRate: 38.9 },
-      ],
+    summary: {
+      totalTasks: 48, pendingTasks: 8, inProgress: 14, completed: 21, overdue: 5,
+      completionPercentage: 43.75, pendingPercentage: 16.67, inProgressPercentage: 29.17,
+      overduePercentage: 10.42,
     },
+    statusDistribution: [
+      { status: 'TODO', label: 'To Do', count: 8, color: '#94a3b8' },
+      { status: 'IN_PROGRESS', label: 'In Progress', count: 14, color: '#3b82f6' },
+      { status: 'COMPLETED', label: 'Completed', count: 21, color: '#10b981' },
+      { status: 'OVERDUE', label: 'Overdue', count: 5, color: '#ef4444' },
+    ],
+    priorityDistribution: [
+      { priority: 'HIGH', label: 'High', count: 13, color: '#f97316' },
+      { priority: 'MEDIUM', label: 'Medium', count: 16, color: '#3b82f6' },
+      { priority: 'LOW', label: 'Low', count: 11, color: '#94a3b8' },
+      { priority: 'URGENT', label: 'Urgent', count: 8, color: '#ef4444' },
+    ],
+    userTasksMetrics: [
+      { userId: 47, name: 'Rajesh Sharma', profileImageUrl: 'https://example.com/avatar.png', assignedCount: 12, completedCount: 7, overdueCount: 1, efficiencyRate: 58.3 },
+      { userId: 48, name: null, profileImageUrl: null, assignedCount: 36, completedCount: 14, overdueCount: 4, efficiencyRate: 38.9 },
+    ],
   });
 });
 
@@ -68,14 +66,14 @@ test('empty dashboard returns zero counts and percentages in the host timezone',
   stubSettings(context, 'America/New_York');
   const result = await new TaskService({ async getDashboardStats() { return []; } }).getDashboardStats(admin);
   assert.equal(result.timestamp, '2026-10-26 10:26 PM');
-  assert.deepEqual(result.data.summary, {
-    totalTasks: 0, inProgress: 0, completed: 0, overdue: 0,
-    completionPercentage: 0, pendingPercentage: 0, inProgressPercentage: 0,
+  assert.deepEqual(result.summary, {
+    totalTasks: 0, pendingTasks: 0, inProgress: 0, completed: 0, overdue: 0,
+    completionPercentage: 0, pendingPercentage: 0, inProgressPercentage: 0, overduePercentage: 0,
   });
-  assert.deepEqual(result.data.userTasksMetrics, []);
-  assert.deepEqual(result.data.statusDistribution.map((item) => item.count), [0, 0, 0, 0]);
-  assert.deepEqual(result.data.priorityDistribution.map((item) => item.priority), ['HIGH', 'MEDIUM', 'LOW', 'URGENT']);
-  assert.deepEqual(result.data.priorityDistribution.map((item) => item.count), [0, 0, 0, 0]);
+  assert.deepEqual(result.userTasksMetrics, []);
+  assert.deepEqual(result.statusDistribution.map((item) => item.count), [0, 0, 0, 0]);
+  assert.deepEqual(result.priorityDistribution.map((item) => item.priority), ['HIGH', 'MEDIUM', 'LOW', 'URGENT']);
+  assert.deepEqual(result.priorityDistribution.map((item) => item.count), [0, 0, 0, 0]);
 });
 
 test('dashboard rejects non-admins before queries and propagates database/configuration errors', async (context) => {
@@ -189,8 +187,14 @@ test('POST dashboard-stats preserves the envelope and enforces authentication, a
   };
   const result = await send();
   assert.equal(result.status, 200);
-  assert.deepEqual(result.body, await service.getDashboardStats(admin));
-  assert.deepEqual(Object.keys(result.body), ['status', 'timestamp', 'data']);
+  assert.deepEqual(result.body, {
+    success: true,
+    message: 'Dashboard stats retrieved successfully',
+    data: await service.getDashboardStats(admin),
+  });
+  assert.deepEqual(Object.keys(result.body), ['success', 'message', 'data']);
+  assert.equal(result.body.data.summary.pendingTasks, 0);
+  assert.equal(result.body.data.summary.overduePercentage, 0);
   for (const hostId of [undefined, null, '', true, [], [7], {}, 0, -1, 1.5, '7.0', 'invalid', Number.MAX_SAFE_INTEGER + 1]) {
     const invalid = await send({ body: { hostId } });
     assert.equal(invalid.status, 400);
