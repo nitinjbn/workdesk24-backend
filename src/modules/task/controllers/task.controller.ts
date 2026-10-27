@@ -32,12 +32,17 @@ function hostScopedIdentity(req: AuthRequest) {
 export class TaskController {
   kanbanBoard = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      res.json(await taskService.getKanbanBoard({
+      return this.respond(
+        () => taskService.getKanbanBoard({
         ...hostScopedIdentity(req),
         filters: req.body?.filters ?? req.body ?? {},
         sortBy: req.body?.sortBy,
         sortOrder: req.body?.sortOrder,
-      }));
+      }),
+        res,
+        next,
+        'Kanban board retrieved successfully'
+      );
     } catch (error) {
       next(error);
     }
@@ -45,7 +50,12 @@ export class TaskController {
 
   dashboardStats = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      res.json(await taskService.getDashboardStats(hostScopedIdentity(req)));
+      this.respond(
+        () => taskService.getDashboardStats(hostScopedIdentity(req)),
+        res,
+        next,
+        'Dashboard stats retrieved successfully'
+      );
     } catch (error) {
       next(error);
     }
