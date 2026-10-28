@@ -61,6 +61,46 @@ test('dashboard aggregates all users, matches the response shape and rounds perc
   });
 });
 
+test('user metrics require at least one pending or in-progress task without changing totals', async (context) => {
+  stubSettings(context);
+  const baseUser = {
+    name: null, profileImageUrl: null, assignedCount: 1, pendingCount: 0,
+    inProgressCount: 0, completedCount: 0, overdueCount: 0,
+    highCount: 0, mediumCount: 0, lowCount: 0, urgentCount: 0,
+  };
+  const result = await new TaskService({
+    async getDashboardStats() {
+      return [
+        { ...baseUser, userId: 1, completedCount: 1 },
+        { ...baseUser, userId: 2, pendingCount: 1 },
+        { ...baseUser, userId: 3, inProgressCount: 1 },
+        { ...baseUser, userId: 4, pendingCount: 1, overdueCount: 1 },
+      ];
+    },
+  }).getDashboardStats(admin);
+
+  assert.deepEqual(result.userTasksMetrics.map((user) => user.userId), [2, 3, 4]);
+  assert.equal(result.summary.totalTasks, 4);
+  assert.equal(result.summary.completed, 1);
+});
+
+test('completed-only employees return empty user metrics while retaining completed totals', async (context) => {
+  stubSettings(context);
+  const result = await new TaskService({
+    async getDashboardStats() {
+      return [{
+        userId: 1, name: null, profileImageUrl: null, assignedCount: 1,
+        pendingCount: 0, inProgressCount: 0, completedCount: 1, overdueCount: 0,
+        highCount: 0, mediumCount: 0, lowCount: 0, urgentCount: 0,
+      }];
+    },
+  }).getDashboardStats(admin);
+
+  assert.deepEqual(result.userTasksMetrics, []);
+  assert.equal(result.summary.totalTasks, 1);
+  assert.equal(result.summary.completed, 1);
+});
+
 test('empty dashboard returns zero counts and percentages in the host timezone', async (context) => {
   stubSettings(context, 'America/New_York');
   const result = await new TaskService({ async getDashboardStats() { return []; } }).getDashboardStats(admin);

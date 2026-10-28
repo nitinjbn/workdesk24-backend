@@ -173,7 +173,7 @@ export class TaskService {
           { priority: 'LOW', label: 'Low', count: totals.low, color: '#0284c7' },
           { priority: 'URGENT', label: 'Urgent', count: totals.urgent, color: '#8b0000' },
         ],
-        userTasksMetrics: users.map((user) => ({
+        userTasksMetrics: users.filter((user) => user.pendingCount > 0 || user.inProgressCount > 0).map((user) => ({
           userId: user.userId,
           name: user.name,
           profileImageUrl: user.profileImageUrl,
