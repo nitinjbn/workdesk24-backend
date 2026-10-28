@@ -165,8 +165,7 @@ export class TaskService {
         statusDistribution: [
           { status: 'TODO', label: 'Pending', count: totals.pending, percentage: percentage(totals.pending), color: '#9333ea' },
           { status: 'IN_PROGRESS', label: 'In Progress', count: totals.inProgress, percentage: percentage(totals.inProgress), color: '#ffaa00' },
-          { status: 'COMPLETED', label: 'Completed', count: totals.completed, percentage: percentage(totals.completed), color: '#008000' },
-
+          { status: 'OVERDUE', label: 'Overdue', count: totals.overdue, percentage: percentage(totals.overdue), color: '#c00404' },
         ],
         priorityDistribution: [
           { priority: 'HIGH', label: 'High', count: totals.high, color: '#c00404' },
@@ -178,11 +177,9 @@ export class TaskService {
           userId: user.userId,
           name: user.name,
           profileImageUrl: user.profileImageUrl,
-          assignedCount: user.assignedCount,
-          completedCount: user.completedCount,
+          pendingCount: user.pendingCount,
+          inProgressCount: user.inProgressCount,
           overdueCount: user.overdueCount,
-          efficiencyRate: user.assignedCount === 0
-            ? 0 : Number((user.completedCount / user.assignedCount * 100).toFixed(1)),
         }))
     };
   }

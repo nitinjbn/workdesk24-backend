@@ -31,8 +31,8 @@ test('dashboard aggregates all users, matches the response shape and rounds perc
       assert.equal(hostId, 7);
       assert.equal(timestamp, now);
       return [
-        { userId: 47, name: 'Rajesh Sharma', profileImageUrl: 'https://example.com/avatar.png', assignedCount: 12, pendingCount: 2, inProgressCount: 2, completedCount: 7, overdueCount: 1, highCount: 3, mediumCount: 4, lowCount: 3, urgentCount: 2 },
-        { userId: 48, name: null, profileImageUrl: null, assignedCount: 36, pendingCount: 6, inProgressCount: 12, completedCount: 14, overdueCount: 4, highCount: 10, mediumCount: 12, lowCount: 8, urgentCount: 6 },
+        { userId: 47, name: 'Rajesh Sharma', profileImageUrl: 'https://example.com/avatar.png', assignedCount: 12, pendingCount: 2, inProgressCount: 2, completedCount: 7, overdueCount: 1, highCount: 1, mediumCount: 2, lowCount: 2, urgentCount: 1 },
+        { userId: 48, name: null, profileImageUrl: null, assignedCount: 36, pendingCount: 6, inProgressCount: 12, completedCount: 14, overdueCount: 4, highCount: 5, mediumCount: 7, lowCount: 5, urgentCount: 3 },
       ];
     },
   });
@@ -44,20 +44,19 @@ test('dashboard aggregates all users, matches the response shape and rounds perc
       overduePercentage: 10.42,
     },
     statusDistribution: [
-      { status: 'TODO', label: 'To Do', count: 8, color: '#94a3b8' },
-      { status: 'IN_PROGRESS', label: 'In Progress', count: 14, color: '#3b82f6' },
-      { status: 'COMPLETED', label: 'Completed', count: 21, color: '#10b981' },
-      { status: 'OVERDUE', label: 'Overdue', count: 5, color: '#ef4444' },
+      { status: 'TODO', label: 'Pending', count: 8, percentage: 16.67, color: '#9333ea' },
+      { status: 'IN_PROGRESS', label: 'In Progress', count: 14, percentage: 29.17, color: '#ffaa00' },
+      { status: 'OVERDUE', label: 'Overdue', count: 5, percentage: 10.42, color: '#c00404' },
     ],
     priorityDistribution: [
-      { priority: 'HIGH', label: 'High', count: 13, color: '#f97316' },
-      { priority: 'MEDIUM', label: 'Medium', count: 16, color: '#3b82f6' },
-      { priority: 'LOW', label: 'Low', count: 11, color: '#94a3b8' },
-      { priority: 'URGENT', label: 'Urgent', count: 8, color: '#ef4444' },
+      { priority: 'HIGH', label: 'High', count: 6, color: '#c00404' },
+      { priority: 'MEDIUM', label: 'Medium', count: 9, color: '#ffaa00' },
+      { priority: 'LOW', label: 'Low', count: 7, color: '#0284c7' },
+      { priority: 'URGENT', label: 'Urgent', count: 4, color: '#8b0000' },
     ],
     userTasksMetrics: [
-      { userId: 47, name: 'Rajesh Sharma', profileImageUrl: 'https://example.com/avatar.png', assignedCount: 12, completedCount: 7, overdueCount: 1, efficiencyRate: 58.3 },
-      { userId: 48, name: null, profileImageUrl: null, assignedCount: 36, completedCount: 14, overdueCount: 4, efficiencyRate: 38.9 },
+      { userId: 47, name: 'Rajesh Sharma', profileImageUrl: 'https://example.com/avatar.png', pendingCount: 2, inProgressCount: 2, overdueCount: 1 },
+      { userId: 48, name: null, profileImageUrl: null, pendingCount: 6, inProgressCount: 12, overdueCount: 4 },
     ],
   });
 });
@@ -71,7 +70,8 @@ test('empty dashboard returns zero counts and percentages in the host timezone',
     completionPercentage: 0, pendingPercentage: 0, inProgressPercentage: 0, overduePercentage: 0,
   });
   assert.deepEqual(result.userTasksMetrics, []);
-  assert.deepEqual(result.statusDistribution.map((item) => item.count), [0, 0, 0, 0]);
+  assert.deepEqual(result.statusDistribution.map((item) => item.status), ['TODO', 'IN_PROGRESS', 'OVERDUE']);
+  assert.deepEqual(result.statusDistribution.map((item) => item.count), [0, 0, 0]);
   assert.deepEqual(result.priorityDistribution.map((item) => item.priority), ['HIGH', 'MEDIUM', 'LOW', 'URGENT']);
   assert.deepEqual(result.priorityDistribution.map((item) => item.count), [0, 0, 0, 0]);
 });
@@ -127,13 +127,13 @@ test('repository SQL uses exclusive buckets, host isolation and deleted/cancelle
   });
   const repository = new TaskRepository();
   assert.deepEqual(await repository.getDashboardStats(7, now), [
-    { userId: 47, name: 'Rajesh', profileImageUrl: 'avatar.png', assignedCount: 5, pendingCount: 1, inProgressCount: 1, completedCount: 1, overdueCount: 2, highCount: 2, mediumCount: 1, lowCount: 1, urgentCount: 1 },
-    { userId: 48, name: null, profileImageUrl: null, assignedCount: 1, pendingCount: 0, inProgressCount: 0, completedCount: 1, overdueCount: 0, highCount: 0, mediumCount: 1, lowCount: 0, urgentCount: 0 },
+    { userId: 47, name: 'Rajesh', profileImageUrl: 'avatar.png', assignedCount: 5, pendingCount: 1, inProgressCount: 1, completedCount: 1, overdueCount: 2, highCount: 1, mediumCount: 1, lowCount: 1, urgentCount: 1 },
+    { userId: 48, name: null, profileImageUrl: null, assignedCount: 1, pendingCount: 0, inProgressCount: 0, completedCount: 1, overdueCount: 0, highCount: 0, mediumCount: 0, lowCount: 0, urgentCount: 0 },
     { userId: 50, name: null, profileImageUrl: null, assignedCount: 1, pendingCount: 1, inProgressCount: 0, completedCount: 0, overdueCount: 0, highCount: 0, mediumCount: 0, lowCount: 1, urgentCount: 0 },
   ]);
   assert.equal(query.mock.callCount(), 1);
   assert.deepEqual(await repository.getDashboardStats(8, now), [
-    { userId: 47, name: 'Other tenant', profileImageUrl: 'other.png', assignedCount: 1, pendingCount: 0, inProgressCount: 0, completedCount: 1, overdueCount: 0, highCount: 0, mediumCount: 0, lowCount: 0, urgentCount: 1 },
+    { userId: 47, name: 'Other tenant', profileImageUrl: 'other.png', assignedCount: 1, pendingCount: 0, inProgressCount: 0, completedCount: 1, overdueCount: 0, highCount: 0, mediumCount: 0, lowCount: 0, urgentCount: 0 },
   ]);
   assert.deepEqual(await repository.getDashboardStats(9, now), []);
   assert.deepEqual(await repository.getDashboardStats(10, now), []);

@@ -36,10 +36,10 @@ export class TaskRepository {
                             SUM(CASE WHEN t.status = 'IN_PROGRESS' THEN 1 ELSE 0 END) AS inProgressCount,
               SUM(CASE WHEN t.status = 'COMPLETED' THEN 1 ELSE 0 END) AS completedCount,
               SUM(CASE WHEN t.status IN ('PENDING', 'IN_PROGRESS') AND t.dueAt < :now THEN 1 ELSE 0 END) AS overdueCount,
-              SUM(CASE WHEN t.priority = 'HIGH' THEN 1 ELSE 0 END) AS highCount,
-              SUM(CASE WHEN t.priority = 'MEDIUM' THEN 1 ELSE 0 END) AS mediumCount,
-              SUM(CASE WHEN t.priority = 'LOW' THEN 1 ELSE 0 END) AS lowCount,
-              SUM(CASE WHEN t.priority = 'URGENT' THEN 1 ELSE 0 END) AS urgentCount
+              SUM(CASE WHEN t.status <> 'COMPLETED' AND t.priority = 'HIGH' THEN 1 ELSE 0 END) AS highCount,
+              SUM(CASE WHEN t.status <> 'COMPLETED' AND t.priority = 'MEDIUM' THEN 1 ELSE 0 END) AS mediumCount,
+              SUM(CASE WHEN t.status <> 'COMPLETED' AND t.priority = 'LOW' THEN 1 ELSE 0 END) AS lowCount,
+              SUM(CASE WHEN t.status <> 'COMPLETED' AND t.priority = 'URGENT' THEN 1 ELSE 0 END) AS urgentCount
        FROM wd_tasks t
        LEFT JOIN wd_users u ON u.id = t.assignedToUserId AND u.hostId = t.hostId AND u.isDeleted = 0
        WHERE t.hostId = :hostId AND t.isDeleted = 0 AND t.status <> 'CANCELLED'
