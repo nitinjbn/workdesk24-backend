@@ -55,8 +55,8 @@ test('dashboard aggregates all users, matches the response shape and rounds perc
       { priority: 'URGENT', label: 'Urgent', count: 4, color: '#8b0000' },
     ],
     userTasksMetrics: [
-      { userId: 47, name: 'Rajesh Sharma', profileImageUrl: 'https://example.com/avatar.png', assignedCount: 12, completedCount: 7, overdueCount: 1, efficiencyRate: 58.3 },
-      { userId: 48, name: null, profileImageUrl: null, assignedCount: 36, completedCount: 14, overdueCount: 4, efficiencyRate: 38.9 },
+      { userId: 47, name: 'Rajesh Sharma', profileImageUrl: 'https://example.com/avatar.png', pendingCount: 2, inProgressCount: 2, overdueCount: 1 },
+      { userId: 48, name: null, profileImageUrl: null, pendingCount: 6, inProgressCount: 12, overdueCount: 4 },
     ],
   });
 });

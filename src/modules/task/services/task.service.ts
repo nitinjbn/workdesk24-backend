@@ -177,11 +177,9 @@ export class TaskService {
           userId: user.userId,
           name: user.name,
           profileImageUrl: user.profileImageUrl,
-          assignedCount: user.assignedCount,
-          completedCount: user.completedCount,
+          pendingCount: user.pendingCount,
+          inProgressCount: user.inProgressCount,
           overdueCount: user.overdueCount,
-          efficiencyRate: user.assignedCount === 0
-            ? 0 : Number((user.completedCount / user.assignedCount * 100).toFixed(1)),
         }))
     };
   }
