@@ -24,7 +24,7 @@ class HostSubscription
   public netAmount!: number;
   public planStartDate!: number;
   public planEndDate!: number;
-  public paymentStatus!: 'PENDING' | 'PAID';
+  public paymentStatus!: 'FREE' | 'PENDING' | 'PAID';
   public paymentReference?: string;
   public remarks?: string;
   public isEnabled?: number;
@@ -106,7 +106,7 @@ export function initHostSubscription(sequelize: Sequelize): typeof HostSubscript
         allowNull: false,
       },
       paymentStatus: {
-        type: DataTypes.ENUM('PENDING', 'PAID'),
+        type: DataTypes.ENUM('FREE', 'PENDING', 'PAID'),
         allowNull: false,
       },
       paymentReference: {

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import userController from '../../../modules/master/controllers/user.controller';
+import { supportHostScopeMiddleware } from '../../../shared/middleware/auth.middleware';
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -19,11 +20,13 @@ router.post(
 router.post(
   '/users/createUser',
   upload.single('media'),
+  supportHostScopeMiddleware,
   userController.createAppUser.bind(userController)
 );
 router.post(
   '/users/updateUser',
   upload.single('media'),
+  supportHostScopeMiddleware,
   userController.updateAppUser.bind(userController)
 );
 router.post('/users/deleteUser', userController.deleteAppUser.bind(userController));

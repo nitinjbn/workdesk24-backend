@@ -1,7 +1,11 @@
 import { Router } from 'express';
 import rateLimitConfig from '../../../config/rateLimit';
-import { authMiddleware, requireAdminRole } from '../../../shared/middleware/auth.middleware';
-import { requireAdminCsrfToken } from '../../../shared/middleware/csrf.middleware';
+import {
+  authMiddleware,
+  requireAdminRole,
+  switchUserAuthentication,
+} from '../../../shared/middleware/auth.middleware';
+import { requireAdminCsrfToken, requireAdminSwitchCsrfToken } from '../../../shared/middleware/csrf.middleware';
 import adminAuthController from '../../../modules/admin/controllers/auth.controller';
 import userRoutes from './users.routes';
 import productRoutes from './products.routes';
@@ -15,8 +19,18 @@ import leavesRoutes from './leaves.routes';
 import geoFencingRoutes from './geo-fencing.routes';
 import taskRoutes from './tasks.routes';
 import { apiLogRouteContext } from '../../../modules/api-logs';
+import { requireSupportReadOnlyPolicy } from '../../../shared/middleware/support-access.middleware';
 
 const router = Router();
+
+router.post(
+  '/switchUser',
+  apiLogRouteContext('admin', 'auth'),
+  rateLimitConfig.auth,
+  switchUserAuthentication,
+  requireAdminSwitchCsrfToken,
+  adminAuthController.switchUser.bind(adminAuthController)
+);
 
 router.post(
   '/validateSubDomain',
@@ -47,6 +61,7 @@ router.post(
 router.use(authMiddleware);
 router.use(requireAdminRole);
 router.use(requireAdminCsrfToken);
+router.use(requireSupportReadOnlyPolicy);
 // IMPORTANT: req.user contains the authenticated admin user's information
 
 router.use(apiLogRouteContext('admin', 'users'), userRoutes);

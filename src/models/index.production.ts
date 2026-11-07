@@ -21,6 +21,10 @@ import { initFeedback } from './schemas/Feedback';
 import { initImage } from './schemas/Image';
 import { initCustomer } from './schemas/Customer';
 import { initUserRefreshToken } from './schemas/UserRefreshToken';
+import { initUserRefreshTokenHistory } from './schemas/UserRefreshTokenHistory';
+import { initAdminSwitchSession } from './schemas/AdminSwitchSession';
+import { initAdminHostSwitchAudit } from './schemas/AdminHostSwitchAudit';
+import { initAdminSwitchHandoff } from './schemas/AdminSwitchHandoff';
 import { initDesignation } from './schemas/Designation';
 import config, { logger } from '../config/database';
 import {
@@ -137,6 +141,10 @@ const UserSettings = initUserSettings(sequelize);
 const UserDevice = initUserDevice(sequelize);
 const Inquiry = initInquiry(sequelize);
 const UserRefreshToken = initUserRefreshToken(sequelize);
+const UserRefreshTokenHistory = initUserRefreshTokenHistory(sequelize);
+const AdminSwitchSession = initAdminSwitchSession(sequelize);
+const AdminHostSwitchAudit = initAdminHostSwitchAudit(sequelize);
+const AdminSwitchHandoff = initAdminSwitchHandoff(sequelize);
 const Attendance = initAttendance(sequelize);
 const GpsHistory = initGpsHistory(sequelize);
 const Visit = initVisit(sequelize);
@@ -211,6 +219,10 @@ const db: any = {
   CustomerType,
   CustomerAttribute,
   UserRefreshToken,
+  UserRefreshTokenHistory,
+  AdminSwitchSession,
+  AdminHostSwitchAudit,
+  AdminSwitchHandoff,
   Designation,
   Product,
   ProductCategory,
@@ -327,6 +339,10 @@ export {
   CustomerUserAssignment,
   UserLastLocation,
   UserRefreshToken,
+  UserRefreshTokenHistory,
+  AdminSwitchSession,
+  AdminHostSwitchAudit,
+  AdminSwitchHandoff,
   Designation,
   Product,
   ProductCategory,

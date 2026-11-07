@@ -8,35 +8,21 @@ import { bullBoardBasePath, createBullBoardRouter } from './modules/bull-board';
 import { errorHandler } from './shared/middleware/error-handler.middleware';
 import responseSerializerMiddleware from './shared/middleware/response-serializer.middleware';
 import { ApiLoggingErrorMiddleware, ApiLoggingMiddleware } from './modules/api-logs';
+import { createCorsPolicy } from './shared/utils/cors-config.util';
 
 const app: Application = express();
 
-const getCorsOrigins = (): string[] => {
-  const configuredOrigins = process.env.CORS_ORIGINS?.trim();
-  if (!configuredOrigins) {
-    return [];
-  }
-
-  return configuredOrigins
-    .split(',')
-    .map((origin) => origin.trim())
-    .filter((origin) => origin.length > 0);
-};
-
-const allowedOrigins = getCorsOrigins();
+const corsPolicy = createCorsPolicy(
+  process.env.NODE_ENV,
+  process.env.CORS_ORIGINS,
+  process.env.CORS_SUBDOMAIN_DOMAINS
+);
 
 // Middleware
 app.use(
   cors({
-    origin: (origin, callback) => {
-      if (!origin || !allowedOrigins.length || allowedOrigins.includes(origin)) {
-        callback(null, true);
-        return;
-      }
-
-      callback(new Error('Origin is not allowed by CORS policy'));
-    },
-    credentials: true,
+    origin: corsPolicy.origin,
+    credentials: corsPolicy.credentials,
   })
 );
 app.use(cookieParser());

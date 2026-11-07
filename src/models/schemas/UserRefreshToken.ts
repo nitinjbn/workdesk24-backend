@@ -18,6 +18,8 @@ interface UserRefreshTokenAttributes {
   isRevoked: number;
   revokedReason?: string | null;
   revokedAt?: number | null;
+  switchSessionId?: string | null;
+  contextVersion?: number | null;
 }
 
 interface UserRefreshTokenCreationAttributes
@@ -43,6 +45,8 @@ class UserRefreshToken
   public isRevoked!: number;
   public revokedReason?: string | null;
   public revokedAt?: number | null;
+  public switchSessionId?: string | null;
+  public contextVersion?: number | null;
 }
 
 export function initUserRefreshToken(sequelize: Sequelize): typeof UserRefreshToken {
@@ -123,6 +127,16 @@ export function initUserRefreshToken(sequelize: Sequelize): typeof UserRefreshTo
         allowNull: true,
         defaultValue: null,
       },
+      switchSessionId: {
+        type: DataTypes.STRING(36),
+        allowNull: true,
+        defaultValue: null,
+      },
+      contextVersion: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        defaultValue: null,
+      },
     },
     {
       sequelize,
@@ -152,6 +166,7 @@ export function initUserRefreshToken(sequelize: Sequelize): typeof UserRefreshTo
         { unique: true, fields: ['hostId', 'userId', 'deviceId'] },
         { unique: true, fields: ['tokenHash'] },
         { fields: ['tokenFamily'] },
+        { fields: ['switchSessionId'] },
         { fields: ['expiresAt'] },
         { fields: ['isRevoked'] },
       ]

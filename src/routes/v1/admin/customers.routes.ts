@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import customerController from '../../../modules/master/controllers/customer.controller';
+import { supportHostScopeMiddleware } from '../../../shared/middleware/auth.middleware';
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -25,6 +26,7 @@ router.post(
 router.post(
   '/customers/uploadMedia',
   upload.single('media'),
+  supportHostScopeMiddleware,
   customerController.uploadMedia.bind(customerController)
 );
 router.post('/customers/deleteMedia', customerController.deleteMedia.bind(customerController));

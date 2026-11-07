@@ -172,14 +172,17 @@ export class UserController {
         leavePolicyId,
         attendanceSites,
       } = req.body;
+      const effectiveHostId = req.authContext?.isSupportSession
+        ? req.authContext.currentHostId!
+        : hostId;
 
       // Check if the host is eligible to create an app user, this will throw an error if not eligible
-      await UserValidator.checkCreateAppUserEligibility(hostId);
+      await UserValidator.checkCreateAppUserEligibility(effectiveHostId);
 
       const file = req.file as Express.Multer.File | undefined;
 
       //Step 1: Validate the mobile number uniqueness and format using PhoneUtil
-      const mobileValidationResult = await this.validateMobile({ hostId, mobile, countryIsoCode });
+      const mobileValidationResult = await this.validateMobile({ hostId: effectiveHostId, mobile, countryIsoCode });
       if (!mobileValidationResult.isValid) {
         throw new Error('Invalid mobile number');
       }
@@ -187,7 +190,7 @@ export class UserController {
       const normalizedMobile = mobileValidationResult.e164 || mobile;
 
       //Step 2: Validate the email uniqueness and format using EmailUtil
-      const emailValidationResult = await this.validateEmail({ email, hostId });
+      const emailValidationResult = await this.validateEmail({ email, hostId: effectiveHostId });
       if (!emailValidationResult.isValid) {
         throw new Error('Invalid email address');
       }
@@ -206,13 +209,13 @@ export class UserController {
       //Step 4: Upload the profile image to media storage if provided
       let profileImageUrl = '';
       if (file) {
-        const result = await uploadBufferToMediaStorage(file, `${hostId}/users`);
+        const result = await uploadBufferToMediaStorage(file, `${effectiveHostId}/users`);
         //console.log('####################### Media uploaded to Cloudinary:', result);
         profileImageUrl = result.url;
       }
 
       const createUserResult = await userService.createAppUser({
-        hostId,
+        hostId: effectiveHostId,
         name,
         email: emailValidationResult.email,
         employeeCode,
@@ -355,6 +358,9 @@ export class UserController {
         leavePolicyId,
         attendanceSites,
       } = req.body;
+      const effectiveHostId = req.authContext?.isSupportSession
+        ? req.authContext.currentHostId!
+        : hostId;
       const file = req.file as Express.Multer.File | undefined;
 
       if (!userId) {
@@ -365,7 +371,7 @@ export class UserController {
         return;
       }
 
-      const existingUser = await userService.getUserDetails({ userId, hostId });
+      const existingUser = await userService.getUserDetails({ userId, hostId: effectiveHostId });
       if (Object.keys(existingUser.user).length === 0) {
         res.status(404).json({
           success: false,
@@ -376,7 +382,7 @@ export class UserController {
 
       //Step 1: Validate the mobile number uniqueness and format using PhoneUtil
       const mobileValidationResult = await this.validateMobile({
-        hostId,
+        hostId: effectiveHostId,
         mobile,
         countryIsoCode,
         userId: Number(userId),
@@ -390,7 +396,7 @@ export class UserController {
       //Step 2: Validate the email uniqueness and format using EmailUtil
       const emailValidationResult = await this.validateEmail({
         email,
-        hostId,
+        hostId: effectiveHostId,
         userId: Number(userId),
       });
       if (!emailValidationResult.isValid) {
@@ -398,7 +404,7 @@ export class UserController {
       }
 
       let updateObj: any = {
-        hostId,
+        hostId: effectiveHostId,
         userId,
         name,
         email: emailValidationResult.email,
@@ -438,7 +444,7 @@ export class UserController {
 
       // Update profile image only if a new file is provided
       if (file) {
-        const result = await uploadBufferToMediaStorage(file, `${hostId}/users`);
+        const result = await uploadBufferToMediaStorage(file, `${effectiveHostId}/users`);
         //console.log('####################### Media uploaded to Cloudinary:', result);
         updateObj.profileImageUrl = result.url;
       }
@@ -463,6 +469,9 @@ export class UserController {
   async deleteAppUser(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const { hostId, userId } = req.body;
+      const effectiveHostId = req.authContext?.isSupportSession
+        ? req.authContext.currentHostId!
+        : hostId;
 
       if (!userId) {
         res.status(400).json({
@@ -472,7 +481,7 @@ export class UserController {
         return;
       }
 
-      const existingUser = await userService.getUserDetails({ userId, hostId });
+      const existingUser = await userService.getUserDetails({ userId, hostId: effectiveHostId });
       //console.log('###################### existingUser:', existingUser);
       if (Object.keys(existingUser.user).length === 0) {
         res.status(404).json({
@@ -483,7 +492,7 @@ export class UserController {
       }
 
       let updateObj: any = {
-        hostId,
+        hostId: effectiveHostId,
         userId,
       };
 

@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { AuthRequest } from '../../../shared/types/auth.types';
 import authService from '../../auth/services/auth.service';
 import { ApiResponse } from '../../../shared/types/base.types';
 import {
@@ -11,9 +12,44 @@ import {
   getSuperAdminCsrfCookieName,
   getSuperAdminCsrfCookieOptions,
   getSuperAdminCsrfClearCookieOptions,
+  getAdminSwitchHandoffCookieName,
+  getAdminSwitchHandoffCookieOptions,
+  getAdminSwitchHandoffCsrfCookieName,
+  getAdminSwitchHandoffCsrfCookieOptions,
 } from '../../../shared/utils/auth-cookie.util';
 
 export class SuperAdminAuthController {
+  async createSwitchHandoff(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      if (!req.user) {
+        res.status(401).json({ success: false, message: 'Authentication required' } as ApiResponse);
+        return;
+      }
+
+      const refreshToken = req.cookies?.[getSuperAdminRefreshCookieName()] as string | undefined;
+      if (!refreshToken) {
+        res.status(401).json({ success: false, message: 'A valid Super Admin session is required' } as ApiResponse);
+        return;
+      }
+
+      const result = await authService.createAdminSwitchHandoff(req.user.id, refreshToken);
+      res.cookie(getAdminSwitchHandoffCookieName(), result.handoffToken, getAdminSwitchHandoffCookieOptions());
+      res.cookie(
+        getAdminSwitchHandoffCsrfCookieName(),
+        result.csrfToken,
+        getAdminSwitchHandoffCsrfCookieOptions()
+      );
+      res.setHeader('Cache-Control', 'no-store');
+      res.json({
+        success: true,
+        message: 'Switch handoff created',
+        data: { csrfToken: result.csrfToken },
+      } as ApiResponse);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async login(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { email, password, deviceDetails } = req.body;

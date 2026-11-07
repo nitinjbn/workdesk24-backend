@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { AuthRequest } from '../../../shared/types/auth.types';
 import authService from '../../auth/services/auth.service';
 import { ApiResponse } from '../../../shared/types/base.types';
 import {
@@ -11,9 +12,51 @@ import {
   getAdminCsrfCookieName,
   getAdminCsrfCookieOptions,
   getAdminCsrfClearCookieOptions,
+  getAdminSwitchHandoffCookieName,
+  getAdminSwitchHandoffClearCookieOptions,
+  getAdminSwitchHandoffCsrfCookieName,
+  getAdminSwitchHandoffCsrfClearCookieOptions,
 } from '../../../shared/utils/auth-cookie.util';
 
 export class AdminAuthController {
+  async switchUser(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const result = await authService.switchAdminHost(req.body?.hostId, {
+        handoffToken: req.cookies?.[getAdminSwitchHandoffCookieName()],
+        userId: req.authContext?.isSupportSession ? req.user?.id : undefined,
+        switchSessionId: req.authContext?.switchSessionId,
+        contextVersion: req.authContext?.contextVersion,
+        requestIp: req.ip,
+        userAgent: req.get('user-agent') || null,
+      });
+
+      res.cookie(getAdminAuthCookieName(), result.accessToken, getAdminAuthCookieOptions());
+      res.cookie(getAdminRefreshCookieName(), result.refreshToken, getAdminRefreshCookieOptions());
+      res.cookie(getAdminCsrfCookieName(), result.csrfToken, getAdminCsrfCookieOptions());
+      res.clearCookie(getAdminSwitchHandoffCookieName(), getAdminSwitchHandoffClearCookieOptions());
+      res.clearCookie(
+        getAdminSwitchHandoffCsrfCookieName(),
+        getAdminSwitchHandoffCsrfClearCookieOptions()
+      );
+      res.setHeader('Cache-Control', 'no-store');
+
+      res.json({
+        success: true,
+        message: 'Host switch successful',
+        data: {
+          user: result.user,
+          host: result.host,
+          accessMode: result.accessMode,
+          switchSession: result.switchSession,
+          subscription: result.subscription,
+          csrfToken: result.csrfToken,
+        },
+      } as ApiResponse);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async login(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { email, password, deviceDetails, hostId } = req.body;
@@ -81,6 +124,13 @@ export class AdminAuthController {
           subscription: result.subscription,
           permissions: result.permissionsByModule,
           csrfToken: result.csrfToken,
+          ...(result.switchSession
+            ? {
+                host: result.host,
+                accessMode: result.accessMode,
+                switchSession: result.switchSession,
+              }
+            : {}),
         },
       } as ApiResponse);
     } catch (error) {
@@ -94,8 +144,14 @@ export class AdminAuthController {
       const refreshCookieName = getAdminRefreshCookieName();
       const csrfCookieName = getAdminCsrfCookieName();
       const refreshToken = req.cookies?.[refreshCookieName] as string | undefined;
+      const accessCookieToken = req.cookies?.[accessCookieName] as string | undefined;
+      const authorizationHeader = req.headers.authorization as string | undefined;
+      const bearerToken = authorizationHeader?.startsWith('Bearer ')
+        ? authorizationHeader.slice(7).trim()
+        : undefined;
+      const accessToken = accessCookieToken || bearerToken;
 
-      await authService.logoutAdminSession(refreshToken);
+      await authService.logoutAdminSession(refreshToken, accessToken);
 
       res.clearCookie(accessCookieName, getAdminAuthClearCookieOptions());
       res.clearCookie(refreshCookieName, getAdminRefreshClearCookieOptions());

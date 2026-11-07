@@ -8,7 +8,9 @@ function identity(req: AuthRequest) {
   return {
     hostId: req.user!.hostId,
     userId: req.user!.id,
-    isAdmin: Number(req.user!.isAdminUser) === 1,
+    isAdmin:
+      Number(req.user!.isAdminUser) === 1 ||
+      req.authContext?.isSupportSession === true,
   };
 }
 

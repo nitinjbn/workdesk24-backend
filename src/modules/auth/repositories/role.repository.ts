@@ -2,6 +2,17 @@ import { Op, WhereOptions } from 'sequelize';
 import Role from '../../../models/schemas/Role';
 
 export class RoleRepository {
+  async findActiveByHostAndCode(hostId: number, roleCode: string): Promise<Role | null> {
+    return Role.findOne({
+      where: {
+        hostId,
+        roleCode,
+        isDeleted: 0,
+        isEnabled: 1,
+      } as WhereOptions<Role>,
+    });
+  }
+
   async findActiveByHostAndId(hostId: number, roleId: number): Promise<Role | null> {
     return Role.findOne({
       where: {

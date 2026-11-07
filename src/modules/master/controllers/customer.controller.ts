@@ -201,7 +201,10 @@ export class CustomerController {
 
   async uploadMedia(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { hostId, customerId, mediaType, isPrimary, sortOrder, isEnabled } = req.body;
+      const hostId = req.authContext?.isSupportSession
+        ? req.authContext.currentHostId!
+        : req.body.hostId;
+      const { customerId, mediaType, isPrimary, sortOrder, isEnabled } = req.body;
       const file = req.file as Express.Multer.File | undefined;
 
       if (!file) {
