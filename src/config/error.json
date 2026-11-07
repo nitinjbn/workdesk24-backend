@@ -14,6 +14,16 @@
     "status": 401,
     "message": "Invalid login credentials."
   },
+  "CURRENT_PASSWORD_INCORRECT": {
+    "code": "CURRENT_PASSWORD_INCORRECT",
+    "status": 400,
+    "message": "Current password is incorrect."
+  },
+  "PASSWORD_POLICY_VIOLATION": {
+    "code": "PASSWORD_POLICY_VIOLATION",
+    "status": 400,
+    "message": "Password must be at least 6 characters long and include at least one uppercase letter, one lowercase letter, one number, and one special character."
+  },
   "ACCESS_DENIED": {
     "code": "ACCESS_DENIED",
     "status": 403,

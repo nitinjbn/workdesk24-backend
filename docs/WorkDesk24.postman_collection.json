@@ -1780,6 +1780,42 @@
                                                        "response":  [
 
                                                                     ]
+                                                   },
+                                                   {
+                                                       "name":  "Change Password",
+                                                       "request":  {
+                                                                       "method":  "POST",
+                                                                       "header":  [
+                                                                                      {
+                                                                                          "key":  "Content-Type",
+                                                                                          "value":  "application/json"
+                                                                                      },
+                                                                                      {
+                                                                                          "key":  "x-csrf-token",
+                                                                                          "value":  "{{ADMIN_CSRF_TOKEN}}",
+                                                                                          "type":  "text"
+                                                                                      }
+                                                                                  ],
+                                                                       "body":  {
+                                                                                    "mode":  "raw",
+                                                                                    "raw":  "{\n  \"currentPassword\": \"OldPass@123\",\n  \"newPassword\": \"NewPass@123\"\n}"
+                                                                                },
+                                                                       "url":  {
+                                                                                   "raw":  "{{BASE_URL}}/api/v1/admin/changePassword",
+                                                                                   "host":  [
+                                                                                                "{{BASE_URL}}"
+                                                                                            ],
+                                                                                   "path":  [
+                                                                                                "api",
+                                                                                                "v1",
+                                                                                                "admin",
+                                                                                                "changePassword"
+                                                                                            ]
+                                                                               }
+                                                                   },
+                                                       "response":  [
+
+                                                                    ]
                                                    }
                                                ],
                                       "description":  "User registration and login endpoints"

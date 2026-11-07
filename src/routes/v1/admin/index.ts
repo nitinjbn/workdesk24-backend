@@ -5,7 +5,10 @@ import {
   requireAdminRole,
   switchUserAuthentication,
 } from '../../../shared/middleware/auth.middleware';
-import { requireAdminCsrfToken, requireAdminSwitchCsrfToken } from '../../../shared/middleware/csrf.middleware';
+import {
+  requireAdminCsrfToken,
+  requireAdminSwitchCsrfToken,
+} from '../../../shared/middleware/csrf.middleware';
 import adminAuthController from '../../../modules/admin/controllers/auth.controller';
 import userRoutes from './users.routes';
 import productRoutes from './products.routes';
@@ -63,6 +66,12 @@ router.use(requireAdminRole);
 router.use(requireAdminCsrfToken);
 router.use(requireSupportReadOnlyPolicy);
 // IMPORTANT: req.user contains the authenticated admin user's information
+
+router.post(
+  '/changePassword',
+  apiLogRouteContext('admin', 'auth'),
+  adminAuthController.changePassword.bind(adminAuthController)
+);
 
 router.use(apiLogRouteContext('admin', 'users'), userRoutes);
 router.use(apiLogRouteContext('admin', 'products'), productRoutes);
