@@ -34,4 +34,5 @@ export interface JwtPayload {
   switchSessionId?: string;
   contextVersion?: number;
   authContext?: 'ADMIN_SWITCH';
+  passwordChangedAt?: number;
 }

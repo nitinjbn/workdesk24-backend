@@ -47,6 +47,15 @@ export class AdminSwitchSessionRepository {
     });
   }
 
+  async findActiveByUser(userId: number, transaction: Transaction): Promise<AdminSwitchSession[]> {
+    return AdminSwitchSession.findAll({
+      where: { userId, isActive: 1, isDeleted: 0 },
+      order: [['id', 'ASC']],
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+  }
+
   async update(
     session: AdminSwitchSession,
     data: Partial<AdminSwitchSession>,

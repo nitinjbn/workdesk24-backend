@@ -25,6 +25,7 @@ import {
   isAdminRole,
 } from '../../../shared/utils/jwt.util';
 import { createConfiguredError } from '../../../shared/utils/error.util';
+import { validatePasswordPattern } from '../../../shared/utils/password.util';
 import { CommonUtil } from '../../../shared/utils/common.util';
 import { CONFIG } from '../../../config/constants';
 import {
@@ -65,6 +66,13 @@ interface HostSpecificLoginDto {
   deviceDetails?: {
     deviceId: string;
   };
+}
+
+interface ChangePasswordDto {
+  userId: number;
+  currentPassword: string;
+  newPassword: string;
+  currentRefreshToken?: string;
 }
 
 interface VerifyOtpDto {
@@ -214,7 +222,7 @@ export class AuthService {
 
   async login(data: LoginDto): Promise<AuthResponse> {
     const user = await this.validateCredentials(data);
-    return this.buildAppLoginResponse(user, data.deviceDetails || {});
+    return this.buildAppLoginResponse(user, data.deviceDetails || {}, user.password);
   }
 
   async verifyOtp(payload: VerifyOtpDto): Promise<AuthResponse> {
@@ -324,7 +332,11 @@ export class AuthService {
     await userRepository.updateUserDeviceDetails(payload);
   }
 
-  private async buildAppLoginResponse(user: any, deviceDetails?: any): Promise<AuthResponse> {
+  private async buildAppLoginResponse(
+    user: any,
+    deviceDetails?: any,
+    expectedPasswordHash?: string
+  ): Promise<AuthResponse> {
     // Try to get plain object if method exists, otherwise use as-is
     user = (user?.get ? user.get({ plain: true }) : user) as unknown as LoginUser;
     //const isAllowedAppLogin = await isAppLoginRole(user.hostId, user.roleId);
@@ -342,6 +354,8 @@ export class AuthService {
       userId: user.id,
       deviceType: 'ANDROID',
       deviceId: resolvedDeviceId,
+      passwordChangedAt: user.passwordChangedAt ?? 0,
+      expectedPasswordHash,
     });
     const permissionsByModule = await this.getPermissionsByModuleForUser(
       user.hostId,
@@ -458,6 +472,8 @@ export class AuthService {
       userId: user.id,
       deviceType: 'WEB',
       deviceId: data.deviceDetails?.deviceId || 'default',
+      passwordChangedAt: user.passwordChangedAt ?? 0,
+      expectedPasswordHash: user.password,
     });
     const permissionsByModule = await this.getPermissionsByModuleForUser(
       user.hostId,
@@ -1174,6 +1190,175 @@ export class AuthService {
     return user;
   }
 
+  async changePassword(data: ChangePasswordDto): Promise<AdminSessionTokens | null> {
+    try {
+      return await this.executeChangePassword(data);
+    } catch (error) {
+      if (!this.isDeadlockError(error)) {
+        throw error;
+      }
+      // The failed transaction is fully rolled back before this single retry.
+      return await this.executeChangePassword(data);
+    }
+  }
+
+  private isDeadlockError(error: unknown): boolean {
+    const dbError = error as { parent?: { code?: string }; original?: { code?: string } };
+    return (
+      dbError?.parent?.code === 'ER_LOCK_DEADLOCK' ||
+      dbError?.original?.code === 'ER_LOCK_DEADLOCK'
+    );
+  }
+
+  private async executeChangePassword(data: ChangePasswordDto): Promise<AdminSessionTokens | null> {
+    const { userId, currentPassword, newPassword, currentRefreshToken } = data;
+
+    return sequelize.transaction(async (transaction) => {
+      // Lock the user row first: replaceForDevice (login) takes the same lock,
+      // which serializes password changes against concurrent logins.
+      const user = await userRepository.findByIdWithPassword(userId, transaction, true);
+      if (!user) {
+        throw createConfiguredError('USER_NOT_FOUND', 'User not found', 404, 'NOT_FOUND');
+      }
+
+      if (user.accountStatus != 'ACTIVE') {
+        throw createConfiguredError('ACCOUNT_INACTIVE');
+      }
+
+      const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+      if (!isCurrentPasswordValid) {
+        throw createConfiguredError('CURRENT_PASSWORD_INCORRECT');
+      }
+
+      const patternResult = validatePasswordPattern(newPassword);
+      if (!patternResult.isValid) {
+        throw createConfiguredError('PASSWORD_POLICY_VIOLATION');
+      }
+
+      const now = Math.floor(Date.now() / 1000);
+
+      // Hashing is handled by the User model's beforeUpdate hook
+      user.password = newPassword;
+      user.passwordChangedAt = now;
+      await user.save({ transaction });
+
+      const currentTokenRecord = await this.resolveCurrentTokenRecord(
+        userId,
+        currentRefreshToken,
+        transaction
+      );
+      const keepTokenFamily = currentTokenRecord?.tokenFamily ?? null;
+
+      // Lock switch-session rows before the bulk token revocation to keep the
+      // session-row -> token-row lock order used by the host-switch flows.
+      const activeSwitchSessions = await adminSwitchSessionRepository.findActiveByUser(
+        userId,
+        transaction
+      );
+
+      await userRefreshTokenRepository.revokeActiveForUserExceptFamily(
+        userId,
+        keepTokenFamily,
+        transaction,
+        'PASSWORD_CHANGED'
+      );
+
+      for (const session of activeSwitchSessions) {
+        if (keepTokenFamily && session.sourceTokenFamily === keepTokenFamily) {
+          continue;
+        }
+        await this.endAdminSwitchSession(session, 'PASSWORD_CHANGED', transaction);
+      }
+
+      if (!currentTokenRecord || !currentRefreshToken) {
+        return null;
+      }
+
+      // Rotate the current session's credentials so its new access token
+      // carries the new passwordChangedAt generation and stays usable.
+      const rotation = await userRefreshTokenRepository.rotateByTokenHash(
+        this.hashToken(currentRefreshToken),
+        { userId, tokenFamily: currentTokenRecord.tokenFamily },
+        (current) => {
+          const bundle = this.generateUserSessionTokenBundle({
+            hostId: current.hostId,
+            userId,
+            tokenFamily: current.tokenFamily,
+            deviceType: current.deviceType,
+            deviceId: current.deviceId,
+            passwordChangedAt: now,
+          });
+          return {
+            data: {
+              ...bundle.refreshTokenRecord,
+              updatedAt: now,
+              revokedAt: now,
+              revokedReason: 'ROTATED',
+            },
+            value: bundle,
+          };
+        },
+        transaction
+      );
+
+      if (rotation.status !== 'ROTATED') {
+        // Fail secure: without rotated credentials the current session cannot
+        // outlive the password change, so its family is revoked as well.
+        await userRefreshTokenRepository.revokeActiveForFamily(
+          userId,
+          currentTokenRecord.tokenFamily,
+          transaction,
+          'PASSWORD_CHANGED'
+        );
+        return null;
+      }
+
+      return rotation.value.sessionTokens;
+    });
+  }
+
+  /**
+   * Fail-secure resolution of the caller's current refresh-token record.
+   * Returns null when the token is missing, invalid, expired, revoked or not
+   * owned by the authenticated user; callers then revoke ALL active sessions.
+   */
+  private async resolveCurrentTokenRecord(
+    userId: number,
+    currentRefreshToken: string | undefined,
+    transaction: Transaction
+  ): Promise<Awaited<ReturnType<typeof userRefreshTokenRepository.findByTokenHash>>> {
+    if (!currentRefreshToken) {
+      return null;
+    }
+
+    try {
+      const payload = this.verifyRefreshToken(currentRefreshToken);
+      if (payload.userId !== userId || payload.switchSessionId) {
+        return null;
+      }
+
+      const tokenRecord = await userRefreshTokenRepository.findByTokenHash(
+        this.hashToken(currentRefreshToken),
+        transaction,
+        true
+      );
+      const now = Math.floor(Date.now() / 1000);
+      if (
+        !tokenRecord ||
+        tokenRecord.userId !== userId ||
+        tokenRecord.tokenFamily !== payload.tokenFamily ||
+        tokenRecord.isRevoked === 1 ||
+        tokenRecord.expiresAt <= now
+      ) {
+        return null;
+      }
+
+      return tokenRecord;
+    } catch {
+      return null;
+    }
+  }
+
   private async validateCredentials(data: LoginDto): Promise<LoginUser> {
     const { email, password } = data;
 
@@ -1198,7 +1383,8 @@ export class AuthService {
     userId: number,
     deviceType: 'WEB' | 'ANDROID' | 'IOS' = 'WEB',
     sessionId: string,
-    switchContext?: { switchSessionId: string; contextVersion: number }
+    switchContext?: { switchSessionId: string; contextVersion: number },
+    passwordChangedAt?: number | null
   ): string {
     const secret = getJwtSecret();
     const expiresIn = getJwtExpiresIn(deviceType);
@@ -1214,7 +1400,9 @@ export class AuthService {
               switchSessionId: switchContext.switchSessionId,
               contextVersion: switchContext.contextVersion,
             }
-          : {}),
+          : // Non-switch tokens always carry the password generation they were
+            // issued for; tokens from before the latest change are rejected.
+            { passwordChangedAt: passwordChangedAt ?? 0 }),
       },
       secret,
       { expiresIn }
@@ -1232,6 +1420,7 @@ export class AuthService {
     lastUsedAt?: number | null;
     switchSessionId?: string;
     contextVersion?: number;
+    passwordChangedAt?: number | null;
   }) {
     const refreshSecret = getJwtRefreshSecret();
     const refreshExpiresIn = getJwtRefreshExpiresIn(payload.deviceType);
@@ -1297,7 +1486,8 @@ export class AuthService {
                 switchSessionId: payload.switchSessionId,
                 contextVersion: payload.contextVersion || 1,
               }
-            : undefined
+            : undefined,
+          payload.passwordChangedAt
         ),
         refreshToken,
         refreshTokenHash,
@@ -1319,9 +1509,15 @@ export class AuthService {
     deviceName?: string | null;
     appVersion?: string | null;
     lastUsedAt?: number | null;
+    passwordChangedAt?: number | null;
+    expectedPasswordHash?: string;
   }): Promise<AdminSessionTokens> {
-    const bundle = this.generateUserSessionTokenBundle(payload);
-    await userRefreshTokenRepository.replaceForDevice(bundle.refreshTokenRecord);
+    const { expectedPasswordHash, ...bundlePayload } = payload;
+    const bundle = this.generateUserSessionTokenBundle(bundlePayload);
+    await userRefreshTokenRepository.replaceForDevice(
+      bundle.refreshTokenRecord,
+      expectedPasswordHash
+    );
     await userRepository.updateUserDeviceDetails({
       hostId: payload.hostId,
       userId: payload.userId,
@@ -1350,6 +1546,7 @@ export class AuthService {
           tokenFamily: payload.tokenFamily,
           deviceType,
           deviceId: current.deviceId,
+          passwordChangedAt: user.passwordChangedAt ?? 0,
         });
 
         return {
@@ -1658,6 +1855,8 @@ export class AuthService {
       userId: user.id,
       deviceType: 'WEB',
       deviceId: data.deviceDetails?.deviceId || 'default',
+      passwordChangedAt: user.passwordChangedAt ?? 0,
+      expectedPasswordHash: user.password,
     });
 
     return {

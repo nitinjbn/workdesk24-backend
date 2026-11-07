@@ -23,6 +23,7 @@ interface UserAttributes extends BaseModel {
   lastLoginAt?: number;
   accountStatus: 'ACTIVE' | 'INACTIVE' | 'LOCKED';
   accountStatusUpdatedAt?: number;
+  passwordChangedAt?: number | null;
   addressLine1?: string;
   addressLine2?: string;
   landmark?: string;
@@ -100,6 +101,7 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
   public lastLoginAt?: number | null;
   public accountStatus!: 'ACTIVE' | 'INACTIVE';
   public accountStatusUpdatedAt?: number;
+  public passwordChangedAt?: number | null;
   public addressLine1?: string;
   public addressLine2?: string;
   public landmark?: string;
@@ -275,6 +277,11 @@ export function initUser(sequelize: Sequelize): typeof User {
         defaultValue: 'ACTIVE',
       },
       accountStatusUpdatedAt: {
+        type: DataTypes.BIGINT,
+        allowNull: true,
+        defaultValue: null,
+      },
+      passwordChangedAt: {
         type: DataTypes.BIGINT,
         allowNull: true,
         defaultValue: null,

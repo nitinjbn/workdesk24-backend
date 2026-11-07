@@ -204,6 +204,68 @@ export class AdminAuthController {
       next(error);
     }
   }
+
+  async changePassword(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { currentPassword, newPassword } = req.body || {};
+
+      if (
+        !currentPassword ||
+        !newPassword ||
+        typeof currentPassword !== 'string' ||
+        typeof newPassword !== 'string'
+      ) {
+        res.status(400).json({
+          success: false,
+          message: 'currentPassword and newPassword are required',
+        } as ApiResponse);
+        return;
+      }
+
+      if (req.authContext?.isSupportSession) {
+        res.status(403).json({
+          success: false,
+          message: 'Password change is not available in a support session',
+        } as ApiResponse);
+        return;
+      }
+
+      const userId = req.user?.id;
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          message: 'Authentication required',
+        } as ApiResponse);
+        return;
+      }
+
+      const sessionTokens = await authService.changePassword({
+        userId,
+        currentPassword,
+        newPassword,
+        currentRefreshToken: req.cookies?.[getAdminRefreshCookieName()],
+      });
+
+      if (sessionTokens) {
+        res.cookie(getAdminAuthCookieName(), sessionTokens.accessToken, getAdminAuthCookieOptions());
+        res.cookie(
+          getAdminRefreshCookieName(),
+          sessionTokens.refreshToken,
+          getAdminRefreshCookieOptions()
+        );
+        res.cookie(getAdminCsrfCookieName(), sessionTokens.csrfToken, getAdminCsrfCookieOptions());
+      }
+
+      res.setHeader('Cache-Control', 'no-store');
+      res.json({
+        success: true,
+        message: 'Password changed successfully',
+        data: sessionTokens ? { csrfToken: sessionTokens.csrfToken } : null,
+      } as ApiResponse);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default new AdminAuthController();

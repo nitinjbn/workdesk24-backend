@@ -22,6 +22,45 @@ const getBearerToken = (authorizationHeader: string | undefined): string | null 
   return token;
 };
 
+const isPlainAccessTokenUsable = (
+  decoded: JwtPayload,
+  user: { accountStatus?: string; passwordChangedAt?: number | null },
+  res: Response
+): boolean => {
+  if (user.accountStatus !== 'ACTIVE') {
+    res.setHeader('x-auth-error-code', 'ACCOUNT_INACTIVE');
+    res.setHeader('x-http-status-code', '403');
+    res.status(403).json({
+      success: false,
+      code: 'ACCOUNT_INACTIVE',
+      statusCode: 403,
+      message:
+        'Your account is inactive. Please contact your administrator or WorkDesk24 support.',
+    });
+    return false;
+  }
+
+  // Server-side invalidation: a plain access token must carry the password
+  // generation that is current for the user. The exact-value comparison has
+  // no iat rounding or same-second ambiguity; legacy tokens without the claim
+  // and users who never changed their password both resolve to generation 0.
+  const requiredPasswordGeneration = user.passwordChangedAt || 0;
+  const tokenPasswordGeneration = decoded.passwordChangedAt || 0;
+  if (tokenPasswordGeneration < requiredPasswordGeneration) {
+    res.setHeader('x-auth-error-code', 'INVALID_TOKEN');
+    res.setHeader('x-http-status-code', '401');
+    res.status(401).json({
+      success: false,
+      code: 'INVALID_TOKEN',
+      statusCode: 401,
+      message: 'Invalid token',
+    });
+    return false;
+  }
+
+  return true;
+};
+
 const forceHostId = (value: unknown, hostId: number): unknown => {
   if (Array.isArray(value)) {
     return value.map((item) => forceHostId(item, hostId));
@@ -200,6 +239,10 @@ export const authMiddleware = async (
       return;
     }
 
+    if (!isPlainAccessTokenUsable(decoded, user, res)) {
+      return;
+    }
+
     req.user = {
       id: user.id,
       hostId: user.hostId,
@@ -366,6 +409,10 @@ export const authMiddlewareSuperAdmin = async (
         statusCode: 401, // This is important for the APP to handle refresh token as fallback if HTTPS status code is not 401 (There was an issue in uploadMedia, where APP was getting -1 as HTTP status code, and it was not able to handle refresh token fallback)
         message: 'Invalid token',
       });
+      return;
+    }
+
+    if (!isPlainAccessTokenUsable(decoded, user, res)) {
       return;
     }
 

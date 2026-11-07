@@ -1,7 +1,7 @@
 import { BaseRepository } from '../../../shared/repositories/base.repository';
 import User from '../../../models/schemas/User';
 import UserDevice from '../../../models/schemas/UserDevices';
-import { Op, WhereOptions } from 'sequelize';
+import { Op, Transaction, WhereOptions } from 'sequelize';
 import { UserOTP, UserAttendanceSite, AttendanceSite } from '../../../models';
 import { DateTimeFormatUtil } from '../../../shared/utils/date-time-format.util';
 import UserOTPDeliveries from '../../../models/schemas/UserOTPDeliveries';
@@ -40,6 +40,19 @@ export class UserRepository extends BaseRepository<typeof User.prototype> {
     return this.model.findOne({
       where: { email, isDeleted: 0 } as WhereOptions<typeof User.prototype>,
       attributes: { include: ['password'] },
+    });
+  }
+
+  async findByIdWithPassword(
+    id: number,
+    transaction?: Transaction,
+    lock = false
+  ): Promise<typeof User.prototype | null> {
+    return this.model.findOne({
+      where: { id, isDeleted: 0 } as WhereOptions<typeof User.prototype>,
+      attributes: { include: ['password'] },
+      transaction,
+      lock: transaction && lock ? transaction.LOCK.UPDATE : undefined,
     });
   }
 

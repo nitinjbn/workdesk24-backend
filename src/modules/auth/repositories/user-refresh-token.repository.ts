@@ -2,6 +2,7 @@ import UserRefreshToken from '../../../models/schemas/UserRefreshToken';
 import UserRefreshTokenHistory from '../../../models/schemas/UserRefreshTokenHistory';
 import User from '../../../models/schemas/User';
 import { Op, Transaction } from 'sequelize';
+import { createConfiguredError } from '../../../shared/utils/error.util';
 import { DateTimeFormatUtil } from '../../../shared/utils/date-time-format.util';
 
 interface CreateRefreshTokenInput {
@@ -42,7 +43,10 @@ export class UserRefreshTokenRepository {
     return UserRefreshToken.create(data, { transaction });
   }
 
-  async replaceForDevice(data: CreateRefreshTokenInput): Promise<UserRefreshToken> {
+  async replaceForDevice(
+    data: CreateRefreshTokenInput,
+    expectedPasswordHash?: string
+  ): Promise<UserRefreshToken> {
     const sequelize = UserRefreshToken.sequelize;
     if (!sequelize) {
       throw new Error('Refresh-token model is not connected to Sequelize');
@@ -50,10 +54,21 @@ export class UserRefreshTokenRepository {
 
     const now = Math.floor(Date.now() / 1000);
     return sequelize.transaction(async (transaction) => {
-      await User.findByPk(data.userId, {
+      const lockedUser = await User.findByPk(data.userId, {
         transaction,
         lock: transaction.LOCK.UPDATE,
       });
+
+      // Guards against a login that validated its credentials just before a
+      // concurrent password change committed: the hash observed at validation
+      // must still match the hash on the locked user row.
+      if (
+        expectedPasswordHash !== undefined &&
+        lockedUser?.password !== expectedPasswordHash
+      ) {
+        throw createConfiguredError('INVALID_CREDENTIALS');
+      }
+
       const current = await UserRefreshToken.findOne({
         where: { hostId: data.hostId, userId: data.userId, deviceId: data.deviceId },
         transaction,
@@ -297,6 +312,26 @@ export class UserRefreshTokenRepository {
     await UserRefreshToken.update(
       { isRevoked: 1, revokedAt: now, revokedReason: reason, updatedAt: now },
       { where: { userId, tokenFamily, isRevoked: 0 }, transaction }
+    );
+  }
+
+  async revokeActiveForUserExceptFamily(
+    userId: number,
+    keepTokenFamily: string | null,
+    transaction: Transaction,
+    reason: string
+  ): Promise<void> {
+    const now = Math.floor(Date.now() / 1000);
+    await UserRefreshToken.update(
+      { isRevoked: 1, revokedAt: now, revokedReason: reason, updatedAt: now },
+      {
+        where: {
+          userId,
+          isRevoked: 0,
+          ...(keepTokenFamily ? { tokenFamily: { [Op.ne]: keepTokenFamily } } : {}),
+        },
+        transaction,
+      }
     );
   }
 
