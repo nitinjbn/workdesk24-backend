@@ -29,6 +29,7 @@ import { createConfiguredError } from '../../../shared/utils/error.util';
 interface BaseContext {
   hostId: number;
   userId: number;
+  isSupportSession?: boolean;
 }
 
 export class AiInsightsService {
@@ -70,13 +71,15 @@ export class AiInsightsService {
   async getQuestion(params: {
     hostId: number;
     userId: number;
+    isSupportSession?: boolean;
     insightId: string;
   }): Promise<AiInsightQuestion> {
 
     await this.insightPermissionService
       .validateAccess({
         hostId: params.hostId,
-        userId: params.userId
+        userId: params.userId,
+        isSupportSession: params.isSupportSession,
       });
 
     const insight =
@@ -101,6 +104,7 @@ export class AiInsightsService {
   async executeInsight(params: {
     hostId: number;
     userId: number;
+    isSupportSession?: boolean;
     request: AiInsightQueryRequest;
   }): Promise<AiInsightQueryResponse> {
 
@@ -139,6 +143,7 @@ export class AiInsightsService {
       .validateInsightAccess({
         hostId,
         userId,
+        isSupportSession: params.isSupportSession,
         insightId: request.insightId
       });
 

@@ -30,6 +30,15 @@ router.post(
   requireSuperAdminCsrfToken,
   superAdminAuthController.logout.bind(superAdminAuthController)
 );
+router.post(
+  '/switchUser/handoff',
+  apiLogRouteContext('superadmin', 'auth'),
+  rateLimitConfig.auth,
+  authMiddlewareSuperAdmin,
+  requireSuperAdminRole,
+  requireSuperAdminCsrfToken,
+  superAdminAuthController.createSwitchHandoff.bind(superAdminAuthController)
+);
 
 router.use(authMiddlewareSuperAdmin);
 router.use(requireSuperAdminRole);

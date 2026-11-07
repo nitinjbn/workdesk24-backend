@@ -824,6 +824,67 @@
 
                                                                     ]
                                                    }
+                                                   ,
+                                                   {
+                                                       "name": "Create Super Admin Switch Handoff",
+                                                       "event": [
+                                                           {
+                                                               "listen": "test",
+                                                               "script": {
+                                                                   "exec": [
+                                                                       "if (pm.response.code === 200) {",
+                                                                       "    pm.collectionVariables.set('SWITCH_CSRF', pm.response.json().data.csrfToken);",
+                                                                       "}"
+                                                                   ],
+                                                                   "type": "text/javascript"
+                                                               }
+                                                           }
+                                                       ],
+                                                       "request": {
+                                                           "method": "POST",
+                                                           "header": [
+                                                               { "key": "Content-Type", "value": "application/json" },
+                                                               { "key": "x-csrf-token", "value": "{{SUPER_ADMIN_CSRF}}" }
+                                                           ],
+                                                           "body": { "mode": "raw", "raw": "{}" },
+                                                           "url": {
+                                                               "raw": "{{BASE_URL}}/api/v1/superadmin/switchUser/handoff",
+                                                               "host": ["{{BASE_URL}}"],
+                                                               "path": ["api", "v1", "superadmin", "switchUser", "handoff"]
+                                                           }
+                                                       },
+                                                       "response": []
+                                                   },
+                                                   {
+                                                       "name": "Switch User",
+                                                       "event": [
+                                                           {
+                                                               "listen": "test",
+                                                               "script": {
+                                                                   "exec": [
+                                                                       "if (pm.response.code === 200) {",
+                                                                       "    pm.collectionVariables.set('SWITCH_CSRF', pm.response.json().data.csrfToken);",
+                                                                       "}"
+                                                                   ],
+                                                                   "type": "text/javascript"
+                                                               }
+                                                           }
+                                                       ],
+                                                       "request": {
+                                                           "method": "POST",
+                                                           "header": [
+                                                               { "key": "Content-Type", "value": "application/json" },
+                                                               { "key": "x-csrf-token", "value": "{{SWITCH_CSRF}}" }
+                                                           ],
+                                                           "body": { "mode": "raw", "raw": "{\n  \"hostId\": 42\n}" },
+                                                           "url": {
+                                                               "raw": "{{BASE_URL}}/api/v1/admin/switchUser",
+                                                               "host": ["{{BASE_URL}}"],
+                                                               "path": ["api", "v1", "admin", "switchUser"]
+                                                           }
+                                                       },
+                                                       "response": []
+                                                   }
                                                ],
                                       "description":  "Data synchronization endpoints for Android app"
                                   },

@@ -6,6 +6,7 @@ export class InsightPermissionService {
   async validateAccess(params: {
     hostId: number;
     userId: number;
+    isSupportSession?: boolean;
   }): Promise<void> {
 
     const {
@@ -31,6 +32,10 @@ export class InsightPermissionService {
       );
     }
 
+    if (params.isSupportSession) {
+      return;
+    }
+
     const user = await db.User.findOne({
       where: {
         id: userId,
@@ -54,11 +59,13 @@ export class InsightPermissionService {
     hostId: number;
     userId: number;
     insightId: string;
+    isSupportSession?: boolean;
   }): Promise<void> {
 
     await this.validateAccess({
       hostId: params.hostId,
-      userId: params.userId
+      userId: params.userId,
+      isSupportSession: params.isSupportSession,
     });
   }
 }

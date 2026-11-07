@@ -3,19 +3,23 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.addColumn('wd_attendance', 'attendanceLocation', {
-      type: Sequelize.STRING(255),
-      allowNull: true,
-    });
+    const schema = await queryInterface.describeTable('wd_attendance');
+    if (!schema.attendanceLocation) {
+      await queryInterface.addColumn('wd_attendance', 'attendanceLocation', {
+        type: Sequelize.STRING(255),
+        allowNull: true,
+      });
+    }
 
-    await queryInterface.addColumn('wd_attendance', 'dayoverLocation', {
-      type: Sequelize.STRING(255),
-      allowNull: true,
-    });
+    if (!schema.dayoverLocation) {
+      await queryInterface.addColumn('wd_attendance', 'dayoverLocation', {
+        type: Sequelize.STRING(255),
+        allowNull: true,
+      });
+    }
   },
 
-  async down(queryInterface) {
-    await queryInterface.removeColumn('wd_attendance', 'dayoverLocation');
-    await queryInterface.removeColumn('wd_attendance', 'attendanceLocation');
+  async down() {
+    // Columns may predate this migration in fresh-install schemas; rollback is forward-only.
   },
 };

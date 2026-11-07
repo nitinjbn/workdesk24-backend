@@ -2,6 +2,9 @@
 
 This document explains how the admin frontend should integrate with backend auth endpoints under `/api/v1/admin`.
 
+For a plain-language explanation of handoff, switching, refresh, logout and every
+related database column, see [SWITCH_USER_IMPLEMENTATION_GUIDE.md](SWITCH_USER_IMPLEMENTATION_GUIDE.md).
+
 ## Security Model
 
 - Access token is stored in an HttpOnly cookie (not readable by JavaScript).
@@ -55,6 +58,17 @@ This document explains how the admin frontend should integrate with backend auth
 ```
 
 Store `data.csrfToken` in memory/state and use it in subsequent requests.
+
+### Super Admin host support
+
+- While authenticated on `/api/v1/superadmin`, call `POST /api/v1/superadmin/switchUser/handoff` with the Super Admin CSRF header.
+- The response returns a short-lived CSRF value and sets one-time handoff cookies scoped only to `/api/v1/admin/switchUser`.
+- Call `POST /api/v1/admin/switchUser` with `{ "hostId": 42 }` and the returned `x-csrf-token`. The browser sends the handoff cookies automatically.
+- The response replaces the admin cookies with a support session. The response identifies the original Super Admin, selected host, and `SUPPORT_FULL` or `SUPPORT_READ_ONLY` access mode.
+- Subsequent host changes call the same switch endpoint using the active admin cookies and latest CSRF value. A stale access context is rejected; refresh the session before retrying.
+- Expired, absent, disabled, or unpaid subscriptions are read-only. Read-only support may use explicitly allowed query endpoints; other admin routes are denied regardless of HTTP method.
+- Admin logout terminates an active switch session and invalidates its access tokens immediately.
+- Serialize refresh calls per browser session (single-flight). A duplicate request using the previous refresh token is treated as replay and revokes that token family; the server does not retain replacement secrets to safely replay the same response.
 
 ### 2) Call Protected Admin APIs
 
@@ -212,6 +226,25 @@ Backend must allow credentials and your admin origin:
 - `ADMIN_AUTH_COOKIE_SECURE=true` in production
 - `ADMIN_AUTH_COOKIE_SAME_SITE=lax` for same-site
 - Use `sameSite=none` only for cross-site HTTPS setups
+
+### Dynamic Tenant Subdomains
+
+Set `CORS_SUBDOMAIN_DOMAINS=workdesk24.com` in the backend environment to allow any
+canonical HTTPS subdomain origin, for example `https://test.workdesk24.com` or
+`https://customer123.workdesk24.com`. Nested subdomains are also allowed.
+Only configure base domains whose subdomain frontend content you control.
+
+The root `https://workdesk24.com` is not included. List it in `CORS_ORIGINS` if needed.
+HTTP subdomains, non-default ports, trailing dots, wildcard strings and lookalike
+domains are rejected. Responses reflect the approved request origin with credentials
+enabled; they never use an `Access-Control-Allow-Origin: *` wildcard.
+
+Production requires at least one exact origin or subdomain base domain. Multiple
+base domains may be comma-separated. For local frontend development, separately set
+`CORS_ORIGINS=http://localhost:3000` using the actual frontend origin/port.
+The default entrypoint loads the root `.env`; on Railway set service variables.
+Restart the API after changing configuration. Do not put `https://`, `*.` or a path
+in `CORS_SUBDOMAIN_DOMAINS`.
 
 ## Failure Handling
 

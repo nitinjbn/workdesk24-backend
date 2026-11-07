@@ -3,6 +3,8 @@ import { CookieOptions } from 'express';
 const DEFAULT_ACCESS_COOKIE_NAME = 'wd24_admin_access_token';
 const DEFAULT_REFRESH_COOKIE_NAME = 'wd24_admin_refresh_token';
 const DEFAULT_CSRF_COOKIE_NAME = 'wd24_admin_csrf';
+const DEFAULT_SWITCH_HANDOFF_COOKIE_NAME = 'wd24_admin_switch_handoff';
+const DEFAULT_SWITCH_HANDOFF_CSRF_COOKIE_NAME = 'wd24_admin_switch_handoff_csrf';
 const DEFAULT_ACCESS_COOKIE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const DEFAULT_REFRESH_COOKIE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -60,6 +62,40 @@ export const getAdminRefreshCookieName = (): string => {
 export const getAdminCsrfCookieName = (): string => {
   return process.env.ADMIN_CSRF_COOKIE_NAME?.trim() || DEFAULT_CSRF_COOKIE_NAME;
 };
+
+export const getAdminSwitchHandoffCookieName = (): string => {
+  return DEFAULT_SWITCH_HANDOFF_COOKIE_NAME;
+};
+
+export const getAdminSwitchHandoffCsrfCookieName = (): string => {
+  return DEFAULT_SWITCH_HANDOFF_CSRF_COOKIE_NAME;
+};
+
+export const getAdminSwitchHandoffCookieOptions = (): CookieOptions => ({
+  httpOnly: true,
+  secure: shouldUseSecureCookie(),
+  sameSite: parseSameSite(process.env.SUPER_ADMIN_AUTH_COOKIE_SAME_SITE),
+  path: '/api/v1/admin/switchUser',
+  maxAge: 60 * 1000,
+});
+
+export const getAdminSwitchHandoffCsrfCookieOptions = (): CookieOptions => ({
+  httpOnly: false,
+  secure: shouldUseSecureCookie(),
+  sameSite: parseSameSite(process.env.SUPER_ADMIN_AUTH_COOKIE_SAME_SITE),
+  path: '/api/v1/admin/switchUser',
+  maxAge: 60 * 1000,
+});
+
+export const getAdminSwitchHandoffClearCookieOptions = (): CookieOptions => ({
+  ...getAdminSwitchHandoffCookieOptions(),
+  maxAge: undefined,
+});
+
+export const getAdminSwitchHandoffCsrfClearCookieOptions = (): CookieOptions => ({
+  ...getAdminSwitchHandoffCsrfCookieOptions(),
+  maxAge: undefined,
+});
 
 export const getAdminAuthCookieOptions = (): CookieOptions => {
   const secure = shouldUseSecureCookie();

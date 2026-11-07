@@ -10,7 +10,12 @@ import rolePermissionRepository, {
 import userPermissionRepository, {
   UserPermissionAssignmentView,
 } from '../repositories/user-permission.repository';
-import { UserSettings } from '../../../models';
+import roleRepository from '../repositories/role.repository';
+import { sequelize, UserSettings } from '../../../models';
+import adminSwitchSessionRepository from '../repositories/admin-switch-session.repository';
+import adminSwitchHandoffRepository from '../repositories/admin-switch-handoff.repository';
+import adminHostSwitchAuditRepository from '../repositories/admin-host-switch-audit.repository';
+import { Transaction } from 'sequelize';
 import {
   getJwtExpiresIn,
   getJwtRefreshExpiresIn,
@@ -29,6 +34,7 @@ import {
 import { formatStorageFieldsByConfig } from '../../../shared/utils/storage-format.util';
 import { getHostDateTimeSettings } from '../../../shared/utils/host-settings.util';
 import hostService from '../../master/services/host.service';
+import { JwtPayload } from '../../../shared/types/auth.types';
 
 interface RegisterDto {
   hostId?: number;
@@ -114,6 +120,9 @@ interface AdminAuthResponse {
   accessToken: string;
   refreshToken: string;
   csrfToken: string;
+  host?: unknown;
+  accessMode?: 'SUPPORT_FULL' | 'SUPPORT_READ_ONLY';
+  switchSession?: { switchSessionId: string; contextVersion: number };
 }
 
 interface SuperAdminAuthResponse {
@@ -123,10 +132,32 @@ interface SuperAdminAuthResponse {
   csrfToken: string;
 }
 
+interface AdminSwitchHandoffResponse {
+  handoffToken: string;
+  csrfToken: string;
+}
+
+interface AdminSwitchAuthResponse extends AdminAuthResponse {
+  host: unknown;
+  accessMode: 'SUPPORT_FULL' | 'SUPPORT_READ_ONLY';
+  switchSession: { switchSessionId: string; contextVersion: number };
+}
+
+interface AdminSwitchRequestContext {
+  handoffToken?: string;
+  userId?: number;
+  switchSessionId?: string;
+  contextVersion?: number;
+  requestIp?: string | null;
+  userAgent?: string | null;
+}
+
 interface RefreshTokenPayload extends jwt.JwtPayload {
   userId: number;
   tokenFamily: string;
   tokenType: 'refresh';
+  switchSessionId?: string;
+  contextVersion?: number;
 }
 
 interface AdminSessionTokens {
@@ -135,6 +166,9 @@ interface AdminSessionTokens {
   refreshTokenHash: string;
   csrfToken: string;
   tokenFamily: string;
+  sessionId: string;
+  switchSessionId?: string;
+  contextVersion?: number;
 }
 
 type LoginUser = NonNullable<Awaited<ReturnType<typeof userRepository.findWithPassword>>>;
@@ -447,29 +481,337 @@ export class AuthService {
     };
   }
 
+  async createAdminSwitchHandoff(
+    userId: number,
+    refreshToken: string
+  ): Promise<AdminSwitchHandoffResponse> {
+    const refreshPayload = this.verifyRefreshToken(refreshToken);
+    if (refreshPayload.userId !== userId || refreshPayload.switchSessionId) {
+      throw createConfiguredError('INVALID_REFRESH_TOKEN');
+    }
+
+    const refreshRecord = await userRefreshTokenRepository.findByTokenHash(
+      this.hashToken(refreshToken)
+    );
+    if (
+      !refreshRecord ||
+      refreshRecord.userId !== userId ||
+      refreshRecord.hostId !== refreshPayload.hostId ||
+      refreshRecord.tokenFamily !== refreshPayload.tokenFamily ||
+      refreshRecord.deviceType !== 'WEB' ||
+      refreshRecord.isRevoked === 1 ||
+      refreshRecord.expiresAt <= Math.floor(Date.now() / 1000)
+    ) {
+      throw createConfiguredError('INVALID_REFRESH_TOKEN');
+    }
+
+    const user = await userRepository.findById(userId);
+    if (!user || user.accountStatus !== 'ACTIVE' || user.isSuperAdmin !== 1) {
+      throw createConfiguredError('SUPER_ADMIN_ACCESS_REQUIRED');
+    }
+
+    const now = Math.floor(Date.now() / 1000);
+    const handoffToken = crypto.randomBytes(32).toString('hex');
+    await adminSwitchHandoffRepository.create({
+      tokenHash: this.hashToken(handoffToken),
+      userId: user.id,
+      tokenFamily: refreshPayload.tokenFamily,
+      expiresAt: now + 60,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    return { handoffToken, csrfToken: this.createCsrfToken() };
+  }
+
+  async switchAdminHost(
+    hostId: number,
+    context: AdminSwitchRequestContext
+  ): Promise<AdminSwitchAuthResponse> {
+    if (!Number.isSafeInteger(hostId) || hostId <= 0) {
+      throw createConfiguredError('INVALID_HOST_ID', 'A valid hostId is required', 400, 'VALIDATION_ERROR');
+    }
+
+    return sequelize.transaction(async (transaction) => {
+      const now = Math.floor(Date.now() / 1000);
+      let session: Awaited<ReturnType<typeof adminSwitchSessionRepository.findBySwitchSessionId>>;
+      let user: AuthUser;
+      let targetHostContext: Awaited<ReturnType<typeof hostService.getSwitchHostContext>>;
+      let tokens: AdminSessionTokens;
+      let previousHostId: number | null = null;
+
+      if (context.handoffToken) {
+        const handoff = await adminSwitchHandoffRepository.findByTokenHash(
+          this.hashToken(context.handoffToken),
+          transaction,
+          true
+        );
+        if (!handoff || handoff.consumedAt || handoff.expiresAt <= now) {
+          throw createConfiguredError('INVALID_SWITCH_HANDOFF', 'Switch handoff is invalid or expired', 401);
+        }
+
+        const activeSourceSession = await userRefreshTokenRepository.findActiveByFamily(
+          handoff.userId,
+          handoff.tokenFamily,
+          transaction
+        );
+        if (!activeSourceSession) {
+          throw createConfiguredError('INVALID_SWITCH_HANDOFF', 'The source Super Admin session is no longer active', 401);
+        }
+
+        const originalUser = await userRepository.findById(handoff.userId, transaction);
+        if (
+          !originalUser ||
+          originalUser.accountStatus !== 'ACTIVE' ||
+          originalUser.isSuperAdmin !== 1
+        ) {
+          throw createConfiguredError('SUPER_ADMIN_ACCESS_REQUIRED');
+        }
+
+        targetHostContext = await hostService.getSwitchHostContext(hostId, transaction, true);
+        if (!targetHostContext) {
+          throw createConfiguredError('HOST_NOT_ELIGIBLE', 'Host is inactive, deleted, or unavailable', 404, 'NOT_FOUND');
+        }
+
+        await handoff.update({ consumedAt: now, updatedAt: now }, { transaction });
+        const switchSessionId = crypto.randomUUID();
+        const tokenFamily = crypto.randomBytes(16).toString('hex');
+        const deviceId = `support-${crypto.randomUUID()}`;
+        tokens = this.generateUserSessionTokenBundle({
+          hostId: originalUser.hostId,
+          userId: originalUser.id,
+          tokenFamily,
+          deviceType: 'WEB',
+          deviceId,
+          switchSessionId,
+          contextVersion: 1,
+        }).sessionTokens;
+        const refreshTokenRecord = this.generateRefreshRecordForSwitchSession(
+          tokens,
+          originalUser.hostId,
+          originalUser.id,
+          tokenFamily,
+          deviceId,
+          1
+        );
+        session = await adminSwitchSessionRepository.create(
+          {
+            switchSessionId,
+            userId: originalUser.id,
+            originalHostId: originalUser.hostId,
+            sourceTokenFamily: handoff.tokenFamily,
+            currentHostId: hostId,
+            tokenFamily,
+            deviceId,
+            contextVersion: 1,
+            startedAt: now,
+            createdAt: now,
+            updatedAt: now,
+          },
+          transaction
+        );
+        const refreshRecord = await userRefreshTokenRepository.create(
+          refreshTokenRecord,
+          transaction
+        );
+        await adminSwitchSessionRepository.update(
+          session,
+          { currentRefreshTokenId: refreshRecord.id },
+          transaction
+        );
+        await adminHostSwitchAuditRepository.create(
+          {
+            switchSessionId,
+            originalUserId: originalUser.id,
+            originalHostId: originalUser.hostId,
+            previousHostId: null,
+            newHostId: hostId,
+            eventType: 'SWITCH',
+            contextVersion: 1,
+            requestIp: context.requestIp || null,
+            userAgent: context.userAgent || null,
+            createdAt: now,
+            updatedAt: now,
+          },
+          transaction
+        );
+        user = originalUser as unknown as AuthUser;
+      } else {
+        if (!context.switchSessionId || !context.userId || context.contextVersion === undefined) {
+          throw createConfiguredError('INVALID_SWITCH_SESSION', 'An active switch session is required', 401);
+        }
+
+        session = await adminSwitchSessionRepository.findBySwitchSessionId(
+          context.switchSessionId,
+          { transaction, lock: true }
+        );
+        if (
+          !session ||
+          session.userId !== context.userId ||
+          session.contextVersion !== context.contextVersion
+        ) {
+          throw createConfiguredError('STALE_SWITCH_CONTEXT', 'Switch context changed; retry with the current session', 409);
+        }
+
+        const originalUser = await userRepository.findById(session.userId, transaction);
+        if (
+          !originalUser ||
+          originalUser.accountStatus !== 'ACTIVE' ||
+          originalUser.isSuperAdmin !== 1
+        ) {
+          throw createConfiguredError('SUPER_ADMIN_ACCESS_REQUIRED');
+        }
+
+        const activeSourceSession = await userRefreshTokenRepository.findActiveByFamily(
+          session.userId,
+          session.sourceTokenFamily,
+          transaction,
+          false
+        );
+        if (!activeSourceSession) {
+          throw createConfiguredError('SUPER_ADMIN_ACCESS_REQUIRED');
+        }
+
+        targetHostContext = await hostService.getSwitchHostContext(hostId, transaction, true);
+        if (!targetHostContext) {
+          throw createConfiguredError('HOST_NOT_ELIGIBLE', 'Host is inactive, deleted, or unavailable', 404, 'NOT_FOUND');
+        }
+
+        previousHostId = session.currentHostId;
+        const nextContextVersion = session.contextVersion + 1;
+        const bundle = this.generateUserSessionTokenBundle({
+          hostId: session.originalHostId,
+          userId: session.userId,
+          tokenFamily: session.tokenFamily,
+          deviceType: 'WEB',
+          deviceId: session.deviceId,
+          switchSessionId: session.switchSessionId,
+          contextVersion: nextContextVersion,
+        });
+        const replacedRefresh = await userRefreshTokenRepository.replaceForSwitchSession(
+          {
+            switchSessionId: session.switchSessionId,
+            userId: session.userId,
+            tokenFamily: session.tokenFamily,
+            contextVersion: session.contextVersion,
+          },
+          {
+            ...bundle.refreshTokenRecord,
+            updatedAt: now,
+            revokedAt: now,
+            revokedReason: 'HOST_SWITCHED',
+          },
+          transaction
+        );
+        if (replacedRefresh.status === 'EXPIRED') {
+          throw createConfiguredError('REFRESH_TOKEN_EXPIRED');
+        }
+        if (replacedRefresh.status !== 'REPLACED') {
+          throw createConfiguredError('STALE_SWITCH_CONTEXT', 'Switch context changed; retry with the current session', 409);
+        }
+
+        await adminSwitchSessionRepository.update(
+          session,
+          {
+            currentHostId: hostId,
+            contextVersion: nextContextVersion,
+            currentRefreshTokenId: replacedRefresh.record.id,
+            updatedAt: now,
+          },
+          transaction
+        );
+        await adminHostSwitchAuditRepository.create(
+          {
+            switchSessionId: session.switchSessionId,
+            originalUserId: originalUser.id,
+            originalHostId: session.originalHostId,
+            previousHostId,
+            newHostId: hostId,
+            eventType: 'SWITCH',
+            contextVersion: nextContextVersion,
+            requestIp: context.requestIp || null,
+            userAgent: context.userAgent || null,
+            createdAt: now,
+            updatedAt: now,
+          },
+          transaction
+        );
+        tokens = bundle.sessionTokens;
+        user = originalUser as unknown as AuthUser;
+      }
+
+      return this.buildAdminSwitchResponse(user, targetHostContext!, session!, tokens);
+    });
+  }
+
+  private generateRefreshRecordForSwitchSession(
+    tokens: AdminSessionTokens,
+    hostId: number,
+    userId: number,
+    tokenFamily: string,
+    deviceId: string,
+    contextVersion: number
+  ) {
+    const decoded = jwt.decode(tokens.refreshToken) as jwt.JwtPayload | null;
+    if (!decoded?.exp) {
+      throw this.createHttpError('Failed to create refresh token', 500);
+    }
+
+    return {
+      hostId,
+      userId,
+      tokenHash: tokens.refreshTokenHash,
+      tokenFamily,
+      deviceType: 'WEB' as const,
+      deviceId,
+      expiresAt: decoded.exp,
+      createdAt: Math.floor(Date.now() / 1000),
+      switchSessionId: tokens.switchSessionId,
+      contextVersion,
+    };
+  }
+
+  private async buildAdminSwitchResponse(
+    user: AuthUser,
+    hostContext: NonNullable<Awaited<ReturnType<typeof hostService.getSwitchHostContext>>>,
+    session: NonNullable<Awaited<ReturnType<typeof adminSwitchSessionRepository.findBySwitchSessionId>>>,
+    tokens: AdminSessionTokens
+  ): Promise<AdminSwitchAuthResponse> {
+    const isReadOnly = hostContext.accessMode === 'SUPPORT_READ_ONLY';
+    const supportRole = await roleRepository.findActiveByHostAndCode(session.currentHostId, 'ADMIN');
+    const permissionsByModule = supportRole
+      ? await this.getPermissionsByModuleForUser(
+          session.currentHostId,
+          supportRole.id,
+          user.id
+        )
+      : [];
+
+    return {
+      user: (user as unknown as LoginUser).toJSON(),
+      host: hostContext.host,
+      accessMode: hostContext.accessMode,
+      switchSession: {
+        switchSessionId: session.switchSessionId,
+        contextVersion: session.contextVersion,
+      },
+      subscription: {
+        status: isReadOnly ? 'INACTIVE' : 'ACTIVE',
+        canUseApp: !isReadOnly,
+        isReadOnly,
+        canRenew: false,
+      },
+      permissionsByModule,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      csrfToken: tokens.csrfToken,
+    };
+  }
+
   async refreshAdminSession(refreshToken: string): Promise<AdminAuthResponse> {
     const payload = this.verifyRefreshToken(refreshToken);
-    const now = Math.floor(Date.now() / 1000);
-    const tokenHash = this.hashToken(refreshToken);
-    const tokenRecord = await userRefreshTokenRepository.findByTokenHash(tokenHash);
-
-    if (!tokenRecord) {
-      throw createConfiguredError('INVALID_REFRESH_TOKEN');
-    }
-
-    if (tokenRecord.isRevoked === 1) {
-      await userRefreshTokenRepository.revokeAllActiveForUser(tokenRecord.userId);
-      throw createConfiguredError('REFRESH_TOKEN_REUSE_DETECTED');
-    }
-
-    if (tokenRecord.expiresAt <= now) {
-      await userRefreshTokenRepository.revokeTokenById(tokenRecord.id);
-      throw createConfiguredError('REFRESH_TOKEN_EXPIRED');
-    }
-
-    if (tokenRecord.userId !== payload.userId || tokenRecord.tokenFamily !== payload.tokenFamily) {
-      await userRefreshTokenRepository.revokeAllActiveForUser(tokenRecord.userId);
-      throw createConfiguredError('INVALID_REFRESH_TOKEN');
+    if (payload.switchSessionId) {
+      return this.refreshAdminSwitchSession(refreshToken, payload);
     }
 
     const user = await userRepository.findById(payload.userId);
@@ -488,22 +830,7 @@ export class AuthService {
       throw createConfiguredError('ADMIN_PORTAL_ACCESS_DENIED');
     }
 
-    const resolvedDeviceId = await this.resolveUserDeviceId(
-      user.hostId,
-      user.id,
-      tokenRecord.deviceId
-    );
-    const rotatedTokens = await this.createUserSessionTokens({
-      hostId: user.hostId,
-      userId: user.id,
-      tokenFamily: payload.tokenFamily,
-      deviceType: 'WEB',
-      deviceId: resolvedDeviceId,
-    });
-    await userRefreshTokenRepository.revokeTokenById(
-      tokenRecord.id,
-      rotatedTokens.refreshTokenHash
-    );
+    const rotatedTokens = await this.rotateUserSessionTokens(refreshToken, payload, user, 'WEB');
     const permissionsByModule = await this.getPermissionsByModuleForUser(
       user.hostId,
       user.roleId,
@@ -524,53 +851,254 @@ export class AuthService {
     };
   }
 
-  async logoutAdminSession(refreshToken?: string): Promise<void> {
-    if (!refreshToken) {
+  async logoutAdminSession(refreshToken?: string, accessToken?: string): Promise<void> {
+    if (refreshToken) {
+      try {
+        const payload = this.verifyRefreshToken(refreshToken);
+        if (payload.switchSessionId) {
+          await this.terminateAdminSwitchSession(payload, 'LOGOUT');
+          return;
+        }
+
+        const tokenHash = this.hashToken(refreshToken);
+        const tokenRecord = await userRefreshTokenRepository.findByTokenHash(tokenHash);
+        if (!tokenRecord) {
+          return;
+        }
+
+        if (tokenRecord.userId !== payload.userId) {
+          await userRefreshTokenRepository.revokeAllActiveForUser(tokenRecord.userId);
+          return;
+        }
+
+        await userRefreshTokenRepository.revokeTokenById(tokenRecord.id);
+        return;
+      } catch {
+        // A valid switch access token may still terminate the session if refresh state is missing.
+      }
+    }
+
+    if (!accessToken) {
       return;
     }
 
     try {
-      const payload = this.verifyRefreshToken(refreshToken);
-      const tokenHash = this.hashToken(refreshToken);
-      const tokenRecord = await userRefreshTokenRepository.findByTokenHash(tokenHash);
-
-      if (!tokenRecord) {
-        return;
+      const payload = jwt.verify(accessToken, getJwtSecret()) as JwtPayload;
+      if (
+        payload.tokenType === 'access' &&
+        payload.authContext === 'ADMIN_SWITCH' &&
+        payload.switchSessionId &&
+        payload.contextVersion !== undefined
+      ) {
+        await this.terminateAdminSwitchSessionByAccess(payload, 'LOGOUT');
       }
-
-      if (tokenRecord.userId !== payload.userId) {
-        await userRefreshTokenRepository.revokeAllActiveForUser(tokenRecord.userId);
-        return;
-      }
-
-      await userRefreshTokenRepository.revokeTokenById(tokenRecord.id);
     } catch {
       return;
     }
   }
 
-  async refreshAppSession(refreshToken: string): Promise<AuthResponse> {
-    const payload = this.verifyRefreshToken(refreshToken);
-    const now = Math.floor(Date.now() / 1000);
-    const tokenHash = this.hashToken(refreshToken);
-    const tokenRecord = await userRefreshTokenRepository.findByTokenHash(tokenHash);
-
-    if (!tokenRecord) {
+  private async refreshAdminSwitchSession(
+    refreshToken: string,
+    payload: RefreshTokenPayload
+  ): Promise<AdminSwitchAuthResponse> {
+    if (!payload.switchSessionId || payload.contextVersion === undefined) {
       throw createConfiguredError('INVALID_REFRESH_TOKEN');
     }
 
-    if (tokenRecord.isRevoked === 1) {
-      await userRefreshTokenRepository.revokeAllActiveForUser(tokenRecord.userId);
-      throw createConfiguredError('REFRESH_TOKEN_REUSE_DETECTED');
+    const outcome = await sequelize.transaction(async (transaction) => {
+      const session = await adminSwitchSessionRepository.findBySwitchSessionId(
+        payload.switchSessionId!,
+        { transaction, lock: true }
+      );
+      if (
+        !session ||
+        session.userId !== payload.userId ||
+        session.tokenFamily !== payload.tokenFamily
+      ) {
+        throw createConfiguredError('INVALID_SWITCH_SESSION');
+      }
+
+      const user = await userRepository.findById(session.userId, transaction);
+      if (!user || user.accountStatus !== 'ACTIVE' || user.isSuperAdmin !== 1) {
+        await this.endAdminSwitchSession(session, 'ACCOUNT_INACTIVE', transaction);
+        return { errorCode: 'SUPER_ADMIN_ACCESS_REQUIRED' as const };
+      }
+
+      const activeSourceSession = await userRefreshTokenRepository.findActiveByFamily(
+        session.userId,
+        session.sourceTokenFamily,
+        transaction,
+        false
+      );
+      if (!activeSourceSession) {
+        await this.endAdminSwitchSession(session, 'SOURCE_SESSION_REVOKED', transaction);
+        return { errorCode: 'SUPER_ADMIN_ACCESS_REQUIRED' as const };
+      }
+
+      const hostContext = await hostService.getSwitchHostContext(
+        session.currentHostId,
+        transaction,
+        true
+      );
+      if (!hostContext) {
+        await this.endAdminSwitchSession(session, 'HOST_INELIGIBLE', transaction);
+        return { errorCode: 'HOST_NOT_ELIGIBLE' as const };
+      }
+
+      const now = Math.floor(Date.now() / 1000);
+      const nextContextVersion = session.contextVersion + 1;
+      const result = await userRefreshTokenRepository.rotateByTokenHash(
+        this.hashToken(refreshToken),
+        {
+          userId: session.userId,
+          tokenFamily: session.tokenFamily,
+          switchSessionId: session.switchSessionId,
+          contextVersion: session.contextVersion,
+        },
+        (current) => {
+          const bundle = this.generateUserSessionTokenBundle({
+            hostId: session.originalHostId,
+            userId: session.userId,
+            tokenFamily: session.tokenFamily,
+            deviceType: 'WEB',
+            deviceId: session.deviceId,
+            switchSessionId: session.switchSessionId,
+            contextVersion: nextContextVersion,
+          });
+          return {
+            data: {
+              ...bundle.refreshTokenRecord,
+              updatedAt: now,
+              revokedAt: now,
+              revokedReason: 'ROTATED',
+            },
+            value: bundle,
+          };
+        },
+        transaction
+      );
+
+      if (result.status === 'REPLAY') {
+        await this.endAdminSwitchSession(session, 'REFRESH_REPLAY', transaction);
+        return { errorCode: 'REFRESH_TOKEN_REUSE_DETECTED' as const };
+      }
+      if (result.status === 'EXPIRED') {
+        return { errorCode: 'REFRESH_TOKEN_EXPIRED' as const };
+      }
+      if (result.status !== 'ROTATED') {
+        return { errorCode: 'INVALID_REFRESH_TOKEN' as const };
+      }
+
+      await adminSwitchSessionRepository.update(
+        session,
+        {
+          currentRefreshTokenId: session.currentRefreshTokenId,
+          contextVersion: nextContextVersion,
+          updatedAt: now,
+        },
+        transaction
+      );
+
+      return {
+        response: await this.buildAdminSwitchResponse(
+          user as unknown as AuthUser,
+          hostContext,
+          session,
+          result.value.sessionTokens
+        ),
+      };
+    });
+
+    if ('errorCode' in outcome) {
+      throw createConfiguredError(outcome.errorCode);
+    }
+    return outcome.response;
+  }
+
+  private async terminateAdminSwitchSession(
+    payload: RefreshTokenPayload,
+    reason: string
+  ): Promise<void> {
+    if (!payload.switchSessionId) {
+      return;
     }
 
-    if (tokenRecord.expiresAt <= now) {
-      await userRefreshTokenRepository.revokeTokenById(tokenRecord.id);
-      throw createConfiguredError('REFRESH_TOKEN_EXPIRED');
+    await sequelize.transaction(async (transaction) => {
+      const session = await adminSwitchSessionRepository.findBySwitchSessionId(
+        payload.switchSessionId!,
+        { transaction, lock: true }
+      );
+      if (
+        !session ||
+        session.userId !== payload.userId ||
+        session.tokenFamily !== payload.tokenFamily ||
+        session.contextVersion !== payload.contextVersion
+      ) {
+        return;
+      }
+      await this.endAdminSwitchSession(session, reason, transaction);
+    });
+  }
+
+  private async terminateAdminSwitchSessionByAccess(
+    payload: JwtPayload,
+    reason: string
+  ): Promise<void> {
+    if (!payload.switchSessionId || payload.contextVersion === undefined) {
+      return;
     }
 
-    if (tokenRecord.userId !== payload.userId || tokenRecord.tokenFamily !== payload.tokenFamily) {
-      await userRefreshTokenRepository.revokeAllActiveForUser(tokenRecord.userId);
+    await sequelize.transaction(async (transaction) => {
+      const session = await adminSwitchSessionRepository.findBySwitchSessionId(
+        payload.switchSessionId!,
+        { transaction, lock: true }
+      );
+      if (
+        !session ||
+        session.userId !== payload.userId ||
+        session.contextVersion !== payload.contextVersion
+      ) {
+        return;
+      }
+      await this.endAdminSwitchSession(session, reason, transaction);
+    });
+  }
+
+  private async endAdminSwitchSession(
+    session: NonNullable<Awaited<ReturnType<typeof adminSwitchSessionRepository.findBySwitchSessionId>>>,
+    reason: string,
+    transaction: Transaction
+  ): Promise<void> {
+    const now = Math.floor(Date.now() / 1000);
+    await session.update(
+      { isActive: 0, endedAt: now, updatedAt: now },
+      { transaction }
+    );
+    await userRefreshTokenRepository.revokeActiveForFamily(
+      session.userId,
+      session.tokenFamily,
+      transaction,
+      reason
+    );
+    await adminHostSwitchAuditRepository.create(
+      {
+        switchSessionId: session.switchSessionId,
+        originalUserId: session.userId,
+        originalHostId: session.originalHostId,
+        previousHostId: session.currentHostId,
+        newHostId: null,
+        eventType: 'SESSION_TERMINATED',
+        contextVersion: session.contextVersion,
+        createdAt: now,
+        updatedAt: now,
+      },
+      transaction
+    );
+  }
+
+  async refreshAppSession(refreshToken: string): Promise<AuthResponse> {
+    const payload = this.verifyRefreshToken(refreshToken);
+    if (payload.switchSessionId) {
       throw createConfiguredError('INVALID_REFRESH_TOKEN');
     }
 
@@ -592,21 +1120,11 @@ export class AuthService {
       throw createConfiguredError('APP_LOGIN_ACCESS_DENIED');
     }
 
-    const resolvedDeviceId = await this.resolveUserDeviceId(
-      user.hostId,
-      user.id,
-      tokenRecord.deviceId
-    );
-    const rotatedTokens = await this.createUserSessionTokens({
-      hostId: user.hostId,
-      userId: user.id,
-      tokenFamily: payload.tokenFamily,
-      deviceType: 'ANDROID',
-      deviceId: resolvedDeviceId,
-    });
-    await userRefreshTokenRepository.revokeTokenById(
-      tokenRecord.id,
-      rotatedTokens.refreshTokenHash
+    const rotatedTokens = await this.rotateUserSessionTokens(
+      refreshToken,
+      payload,
+      user,
+      'ANDROID'
     );
     const permissionsByModule = await this.getPermissionsByModuleForUser(
       user.hostId,
@@ -685,15 +1203,31 @@ export class AuthService {
   private generateAccessToken(
     userId: number,
     deviceType: 'WEB' | 'ANDROID' | 'IOS' = 'WEB',
-    sessionId: string
+    sessionId: string,
+    switchContext?: { switchSessionId: string; contextVersion: number }
   ): string {
     const secret = getJwtSecret();
     const expiresIn = getJwtExpiresIn(deviceType);
 
-    return jwt.sign({ userId, tokenType: 'access', sessionId }, secret, { expiresIn });
+    return jwt.sign(
+      {
+        userId,
+        tokenType: 'access',
+        sessionId,
+        ...(switchContext
+          ? {
+              authContext: 'ADMIN_SWITCH',
+              switchSessionId: switchContext.switchSessionId,
+              contextVersion: switchContext.contextVersion,
+            }
+          : {}),
+      },
+      secret,
+      { expiresIn }
+    );
   }
 
-  private async createUserSessionTokens(payload: {
+  private generateUserSessionTokenBundle(payload: {
     hostId: number;
     userId: number;
     tokenFamily?: string;
@@ -702,14 +1236,13 @@ export class AuthService {
     deviceName?: string | null;
     appVersion?: string | null;
     lastUsedAt?: number | null;
-  }): Promise<AdminSessionTokens> {
+    switchSessionId?: string;
+    contextVersion?: number;
+  }) {
     const refreshSecret = getJwtRefreshSecret();
     const refreshExpiresIn = getJwtRefreshExpiresIn(payload.deviceType);
     const { hostId, userId, tokenFamily } = payload;
     const finalTokenFamily = tokenFamily || crypto.randomBytes(16).toString('hex');
-
-    // Revoke any existing refresh token for this device before creating a new one
-    await userRefreshTokenRepository.revokeTokenByDevice(hostId, userId, payload.deviceId);
 
     const refreshToken = jwt.sign(
       {
@@ -717,6 +1250,13 @@ export class AuthService {
         userId,
         tokenFamily: finalTokenFamily,
         tokenType: 'refresh',
+        jti: crypto.randomUUID(),
+        ...(payload.switchSessionId
+          ? {
+              switchSessionId: payload.switchSessionId,
+              contextVersion: payload.contextVersion,
+            }
+          : {}),
       },
       refreshSecret,
       { expiresIn: refreshExpiresIn }
@@ -729,19 +1269,9 @@ export class AuthService {
 
     const refreshTokenHash = this.hashToken(refreshToken);
 
-    // This sessionId is restricted to this particular deviceId and cannot be reused across different devices. - NOT IMPLEMENTED YET
     const sessionId = crypto.randomUUID();
-    if (payload.deviceId) {
-      // Update session in UserDevice
-      await userRepository.updateUserDeviceDetails({
-        hostId,
-        userId,
-        deviceId: payload.deviceId,
-        sessionId,
-      });
-    }
 
-    await userRefreshTokenRepository.create({
+    const refreshTokenRecord = {
       hostId,
       userId,
       tokenHash: refreshTokenHash,
@@ -752,15 +1282,112 @@ export class AuthService {
       appVersion: payload.appVersion || null,
       lastUsedAt: payload.lastUsedAt || null,
       expiresAt: decodedRefreshToken.exp,
-    });
+      createdAt: Math.floor(Date.now() / 1000),
+      ...(payload.switchSessionId
+        ? {
+            switchSessionId: payload.switchSessionId,
+            contextVersion: payload.contextVersion ?? 1,
+          }
+        : {}),
+    };
 
     return {
-      accessToken: this.generateAccessToken(userId, payload.deviceType || 'WEB', sessionId),
-      refreshToken,
-      refreshTokenHash,
-      tokenFamily: finalTokenFamily,
-      csrfToken: this.createCsrfToken(),
+      refreshTokenRecord,
+      sessionTokens: {
+        accessToken: this.generateAccessToken(
+          userId,
+          payload.deviceType || 'WEB',
+          sessionId,
+          payload.switchSessionId
+            ? {
+                switchSessionId: payload.switchSessionId,
+                contextVersion: payload.contextVersion || 1,
+              }
+            : undefined
+        ),
+        refreshToken,
+        refreshTokenHash,
+        tokenFamily: finalTokenFamily,
+        csrfToken: this.createCsrfToken(),
+        sessionId,
+        switchSessionId: payload.switchSessionId,
+        contextVersion: payload.contextVersion,
+      } satisfies AdminSessionTokens,
     };
+  }
+
+  private async createUserSessionTokens(payload: {
+    hostId: number;
+    userId: number;
+    tokenFamily?: string;
+    deviceType?: 'WEB' | 'ANDROID' | 'IOS';
+    deviceId: string;
+    deviceName?: string | null;
+    appVersion?: string | null;
+    lastUsedAt?: number | null;
+  }): Promise<AdminSessionTokens> {
+    const bundle = this.generateUserSessionTokenBundle(payload);
+    await userRefreshTokenRepository.replaceForDevice(bundle.refreshTokenRecord);
+    await userRepository.updateUserDeviceDetails({
+      hostId: payload.hostId,
+      userId: payload.userId,
+      deviceId: payload.deviceId,
+      sessionId: bundle.sessionTokens.sessionId,
+    });
+
+    return bundle.sessionTokens;
+  }
+
+  private async rotateUserSessionTokens(
+    refreshToken: string,
+    payload: RefreshTokenPayload,
+    user: AuthUser,
+    deviceType: 'WEB' | 'ANDROID' | 'IOS'
+  ): Promise<AdminSessionTokens> {
+    const tokenHash = this.hashToken(refreshToken);
+    const now = Math.floor(Date.now() / 1000);
+    const result = await userRefreshTokenRepository.rotateByTokenHash(
+      tokenHash,
+      { userId: payload.userId, tokenFamily: payload.tokenFamily },
+      (current) => {
+        const bundle = this.generateUserSessionTokenBundle({
+          hostId: user.hostId,
+          userId: user.id,
+          tokenFamily: payload.tokenFamily,
+          deviceType,
+          deviceId: current.deviceId,
+        });
+
+        return {
+          data: {
+            ...bundle.refreshTokenRecord,
+            updatedAt: now,
+            revokedAt: now,
+            revokedReason: 'ROTATED',
+          },
+          value: bundle,
+        };
+      }
+    );
+
+    if (result.status === 'REPLAY') {
+      throw createConfiguredError('REFRESH_TOKEN_REUSE_DETECTED');
+    }
+    if (result.status === 'EXPIRED') {
+      throw createConfiguredError('REFRESH_TOKEN_EXPIRED');
+    }
+    if (result.status !== 'ROTATED') {
+      throw createConfiguredError('INVALID_REFRESH_TOKEN');
+    }
+
+    await userRepository.updateUserDeviceDetails({
+      hostId: user.hostId,
+      userId: user.id,
+      deviceId: result.value.refreshTokenRecord.deviceId,
+      sessionId: result.value.sessionTokens.sessionId,
+    });
+
+    return result.value.sessionTokens;
   }
 
   private async resolveUserDeviceId(
@@ -792,6 +1419,14 @@ export class AuthService {
       const decoded = jwt.verify(token, secret) as RefreshTokenPayload;
 
       if (decoded.tokenType !== 'refresh' || !decoded.userId || !decoded.tokenFamily) {
+        throw this.createHttpError('Invalid refresh token', 401);
+      }
+
+      if (
+        (decoded.switchSessionId &&
+          (!Number.isSafeInteger(decoded.contextVersion) || Number(decoded.contextVersion) < 1)) ||
+        (!decoded.switchSessionId && decoded.contextVersion !== undefined)
+      ) {
         throw this.createHttpError('Invalid refresh token', 401);
       }
 
@@ -1041,26 +1676,7 @@ export class AuthService {
 
   async refreshSuperAdminSession(refreshToken: string): Promise<SuperAdminAuthResponse> {
     const payload = this.verifyRefreshToken(refreshToken);
-    const now = Math.floor(Date.now() / 1000);
-    const tokenHash = this.hashToken(refreshToken);
-    const tokenRecord = await userRefreshTokenRepository.findByTokenHash(tokenHash);
-
-    if (!tokenRecord) {
-      throw createConfiguredError('INVALID_REFRESH_TOKEN');
-    }
-
-    if (tokenRecord.isRevoked === 1) {
-      await userRefreshTokenRepository.revokeAllActiveForUser(tokenRecord.userId);
-      throw createConfiguredError('REFRESH_TOKEN_REUSE_DETECTED');
-    }
-
-    if (tokenRecord.expiresAt <= now) {
-      await userRefreshTokenRepository.revokeTokenById(tokenRecord.id);
-      throw createConfiguredError('REFRESH_TOKEN_EXPIRED');
-    }
-
-    if (tokenRecord.userId !== payload.userId || tokenRecord.tokenFamily !== payload.tokenFamily) {
-      await userRefreshTokenRepository.revokeAllActiveForUser(tokenRecord.userId);
+    if (payload.switchSessionId) {
       throw createConfiguredError('INVALID_REFRESH_TOKEN');
     }
 
@@ -1080,22 +1696,7 @@ export class AuthService {
       throw createConfiguredError('SUPER_ADMIN_ACCESS_DENIED');
     }
 
-    const resolvedDeviceId = await this.resolveUserDeviceId(
-      user.hostId,
-      user.id,
-      tokenRecord.deviceId
-    );
-    const rotatedTokens = await this.createUserSessionTokens({
-      hostId: user.hostId,
-      userId: user.id,
-      tokenFamily: payload.tokenFamily,
-      deviceType: 'WEB',
-      deviceId: resolvedDeviceId,
-    });
-    await userRefreshTokenRepository.revokeTokenById(
-      tokenRecord.id,
-      rotatedTokens.refreshTokenHash
-    );
+    const rotatedTokens = await this.rotateUserSessionTokens(refreshToken, payload, user, 'WEB');
 
     return {
       user: user.toJSON(),
@@ -1112,19 +1713,41 @@ export class AuthService {
 
     try {
       const payload = this.verifyRefreshToken(refreshToken);
-      const tokenHash = this.hashToken(refreshToken);
-      const tokenRecord = await userRefreshTokenRepository.findByTokenHash(tokenHash);
-
-      if (!tokenRecord) {
+      if (payload.switchSessionId) {
+        await this.terminateAdminSwitchSession(payload, 'LOGOUT');
         return;
       }
 
-      if (tokenRecord.userId !== payload.userId) {
-        await userRefreshTokenRepository.revokeAllActiveForUser(tokenRecord.userId);
-        return;
-      }
+      await sequelize.transaction(async (transaction) => {
+        const sourceSession = await userRefreshTokenRepository.findActiveByFamily(
+          payload.userId,
+          payload.tokenFamily,
+          transaction,
+          true
+        );
+        if (
+          !sourceSession ||
+          sourceSession.hostId !== payload.hostId ||
+          sourceSession.deviceType !== 'WEB'
+        ) {
+          return;
+        }
 
-      await userRefreshTokenRepository.revokeTokenById(tokenRecord.id);
+        await userRefreshTokenRepository.revokeActiveForFamily(
+          payload.userId,
+          payload.tokenFamily,
+          transaction,
+          'LOGOUT'
+        );
+        const derivedSessions = await adminSwitchSessionRepository.findActiveBySourceSession(
+          payload.userId,
+          payload.tokenFamily,
+          transaction
+        );
+        for (const session of derivedSessions) {
+          await this.endAdminSwitchSession(session, 'SOURCE_SESSION_LOGOUT', transaction);
+        }
+      });
     } catch {
       return;
     }

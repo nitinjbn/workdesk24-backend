@@ -1,7 +1,12 @@
 import { Response, NextFunction } from 'express';
 import crypto from 'crypto';
 import { AuthRequest } from '../types/auth.types';
-import { getAdminCsrfCookieName, getSuperAdminCsrfCookieName } from '../utils/auth-cookie.util';
+import {
+  getAdminCsrfCookieName,
+  getAdminSwitchHandoffCookieName,
+  getAdminSwitchHandoffCsrfCookieName,
+  getSuperAdminCsrfCookieName,
+} from '../utils/auth-cookie.util';
 
 const safeEqual = (a: string, b: string): boolean => {
   const aBuffer = Buffer.from(a, 'utf8');
@@ -66,6 +71,29 @@ export const requireSuperAdminCsrfToken = (
     res.status(401).json({
       success: false,
       message: 'Invalid CSRF token.',
+    });
+    return;
+  }
+
+  next();
+};
+
+export const requireAdminSwitchCsrfToken = (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): void => {
+  const csrfCookieName = req.cookies?.[getAdminSwitchHandoffCookieName()]
+    ? getAdminSwitchHandoffCsrfCookieName()
+    : getAdminCsrfCookieName();
+  const csrfCookieToken = req.cookies?.[csrfCookieName] as string | undefined;
+  const csrfHeaderToken = req.headers['x-csrf-token'];
+  const csrfToken = Array.isArray(csrfHeaderToken) ? csrfHeaderToken[0] : csrfHeaderToken;
+
+  if (!csrfCookieToken || !csrfToken || !safeEqual(csrfCookieToken, String(csrfToken))) {
+    res.status(401).json({
+      success: false,
+      message: 'CSRF token is missing or invalid.',
     });
     return;
   }

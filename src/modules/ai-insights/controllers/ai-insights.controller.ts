@@ -26,7 +26,8 @@ export class AiInsightsController {
 
       const data = await this.aiInsightsService.getCategories({
         hostId: req.user.hostId,
-        userId: req.user.id
+        userId: req.user.id,
+        isSupportSession: req.authContext?.isSupportSession === true,
       });
 
       res.status(200).json({
@@ -70,6 +71,7 @@ export class AiInsightsController {
       const data = await this.aiInsightsService.getQuestion({
         hostId: req.user.hostId,
         userId: req.user.id,
+        isSupportSession: req.authContext?.isSupportSession === true,
         insightId
       });
 
@@ -112,6 +114,7 @@ export class AiInsightsController {
       const data = await this.aiInsightsService.executeInsight({
         hostId: req.user.hostId,
         userId: req.user.id,
+        isSupportSession: req.authContext?.isSupportSession === true,
         request: parsed.data
       });
 

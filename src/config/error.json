@@ -39,6 +39,36 @@
     "status": 401,
     "message": "Refresh token has expired. Please login again."
   },
+  "INVALID_HOST_ID": {
+    "code": "INVALID_HOST_ID",
+    "status": 400,
+    "message": "A valid hostId is required."
+  },
+  "HOST_NOT_ELIGIBLE": {
+    "code": "HOST_NOT_ELIGIBLE",
+    "status": 404,
+    "message": "The requested host is inactive, deleted, or unavailable."
+  },
+  "INVALID_SWITCH_HANDOFF": {
+    "code": "INVALID_SWITCH_HANDOFF",
+    "status": 401,
+    "message": "The Super Admin switch handoff is invalid or expired."
+  },
+  "INVALID_SWITCH_SESSION": {
+    "code": "INVALID_SWITCH_SESSION",
+    "status": 401,
+    "message": "The host switch session is invalid or expired."
+  },
+  "STALE_SWITCH_CONTEXT": {
+    "code": "STALE_SWITCH_CONTEXT",
+    "status": 409,
+    "message": "The host switch context changed. Refresh the session and retry."
+  },
+  "SUPER_ADMIN_ACCESS_REQUIRED": {
+    "code": "SUPER_ADMIN_ACCESS_REQUIRED",
+    "status": 403,
+    "message": "An active Super Admin account is required."
+  },
   "REPORT_HOST_SCOPE_REQUIRED": {
     "code": "REPORT_HOST_SCOPE_REQUIRED",
     "status": 400,
