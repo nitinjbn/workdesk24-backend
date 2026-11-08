@@ -18,9 +18,7 @@ const rateLimitConfig = {
   public: rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 100, // 100 requests per window
-    handler: createRateLimitHandler(
-      'Too many requests from this IP, please try again later.'
-    ),
+    handler: createRateLimitHandler('Too many requests from this IP, please try again later.'),
     standardHeaders: true,
     legacyHeaders: false,
   }),
@@ -35,10 +33,8 @@ const rateLimitConfig = {
 
   auth: rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 10, // 10 login attempts per window
-    handler: createRateLimitHandler(
-      'Too many authentication attempts. Please try again later.'
-    ),
+    max: 100, // 10 login attempts per window
+    handler: createRateLimitHandler('Too many authentication attempts. Please try again later.'),
     skipSuccessfulRequests: true,
     standardHeaders: true,
     legacyHeaders: false,
