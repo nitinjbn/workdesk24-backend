@@ -469,7 +469,7 @@ test('task repository compares inclusive numeric date bounds while preserving te
   const repository = new TaskRepository();
   const params = {
     hostId: 7, userId: 22, isAdmin: false, page: 1, limit: 20,
-    sortBy: 'createdAt', sortOrder: 'DESC', now: 1800000000,
+    sortBy: 'createdAt', sortOrder: 'DESC', overdueCutoff: 1800000000,
   };
   await repository.listTasks({ ...params, filters: { dueFrom: 100, dueTo: 200, completedFrom: 300, completedTo: 400, overdueOnly: true } });
   const { where } = query.mock.calls[0].arguments[0];
@@ -478,7 +478,7 @@ test('task repository compares inclusive numeric date bounds while preserving te
   assert.equal(where.assignedToUserId, 22);
   assert.deepEqual(where.dueAt, { [Op.gte]: 100, [Op.lte]: 200 });
   assert.deepEqual(where.completedAt, { [Op.gte]: 300, [Op.lte]: 400 });
-  assert.deepEqual(where[Op.and][0], { dueAt: { [Op.lt]: params.now } });
+  assert.deepEqual(where[Op.and][0], { dueAt: { [Op.lt]: params.overdueCutoff } });
   await repository.listTasks({ ...params, filters: {} });
   assert.equal(query.mock.calls[1].arguments[0].where.dueAt, undefined);
   assert.equal(query.mock.calls[1].arguments[0].where.completedAt, undefined);

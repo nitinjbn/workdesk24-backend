@@ -24,18 +24,18 @@ interface TaskListScope {
   filters: Record<string, unknown>;
   sortBy: string;
   sortOrder: 'ASC' | 'DESC';
-  now: number;
+  overdueCutoff: number;
 }
 
 export class TaskRepository {
-  async getDashboardStats(hostId: number, now: number) {
+  async getDashboardStats(hostId: number, overdueCutoff: number) {
     const rows = await sequelize.query<TaskDashboardUserRow>(
       `SELECT t.assignedToUserId AS userId, u.name, u.profileImageUrl,
               COUNT(*) AS assignedCount,
               SUM(CASE WHEN               t.status = 'PENDING' THEN 1 ELSE 0 END) AS pendingCount,
                             SUM(CASE WHEN t.status = 'IN_PROGRESS' THEN 1 ELSE 0 END) AS inProgressCount,
               SUM(CASE WHEN t.status = 'COMPLETED' THEN 1 ELSE 0 END) AS completedCount,
-              SUM(CASE WHEN t.status IN ('PENDING', 'IN_PROGRESS') AND t.dueAt < :now THEN 1 ELSE 0 END) AS overdueCount,
+              SUM(CASE WHEN t.status IN ('PENDING', 'IN_PROGRESS') AND t.dueAt < :overdueCutoff THEN 1 ELSE 0 END) AS overdueCount,
               SUM(CASE WHEN t.status <> 'COMPLETED' AND t.priority = 'HIGH' THEN 1 ELSE 0 END) AS highCount,
               SUM(CASE WHEN t.status <> 'COMPLETED' AND t.priority = 'MEDIUM' THEN 1 ELSE 0 END) AS mediumCount,
               SUM(CASE WHEN t.status <> 'COMPLETED' AND t.priority = 'LOW' THEN 1 ELSE 0 END) AS lowCount,
@@ -45,7 +45,7 @@ export class TaskRepository {
        WHERE t.hostId = :hostId AND t.isDeleted = 0 AND t.status <> 'CANCELLED'
        GROUP BY t.assignedToUserId, u.name, u.profileImageUrl
        ORDER BY assignedCount DESC, t.assignedToUserId ASC`,
-      { replacements: { hostId, now }, type: QueryTypes.SELECT }
+      { replacements: { hostId, overdueCutoff }, type: QueryTypes.SELECT }
     );
     return rows.map((row) => ({
       userId: Number(row.userId),
@@ -130,7 +130,7 @@ export class TaskRepository {
   }
 
   private taskListOptions(params: TaskListScope) {
-    const { hostId, userId, isAdmin, filters, sortBy, sortOrder, now } = params;
+    const { hostId, userId, isAdmin, filters, sortBy, sortOrder, overdueCutoff } = params;
     const where: Record<string | symbol, unknown> = { hostId, isDeleted: 0 };
 
     if (!isAdmin) where.assignedToUserId = userId;
@@ -158,7 +158,7 @@ export class TaskRepository {
     }
     if (filters.overdueOnly) {
       where[Op.and] = [
-        { dueAt: { [Op.lt]: now } },
+        { dueAt: { [Op.lt]: overdueCutoff } },
         { status: { [Op.notIn]: ['COMPLETED', 'CANCELLED'] } },
       ];
     }

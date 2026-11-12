@@ -26,10 +26,13 @@ function stubSettings(context, timeZone = 'Asia/Kolkata') {
 
 test('dashboard aggregates all users, matches the response shape and rounds percentages', async (context) => {
   stubSettings(context);
+  // Overdue comparisons use the start of the current day in the host timezone,
+  // so tasks due today are not counted as overdue during the day.
+  const startOfTodayInKolkata = Date.parse('2026-10-26T18:30:00Z') / 1000;
   const service = new TaskService({
-    async getDashboardStats(hostId, timestamp) {
+    async getDashboardStats(hostId, overdueCutoff) {
       assert.equal(hostId, 7);
-      assert.equal(timestamp, now);
+      assert.equal(overdueCutoff, startOfTodayInKolkata);
       return [
         { userId: 47, name: 'Rajesh Sharma', profileImageUrl: 'https://example.com/avatar.png', assignedCount: 12, pendingCount: 2, inProgressCount: 2, completedCount: 7, overdueCount: 1, highCount: 1, mediumCount: 2, lowCount: 2, urgentCount: 1 },
         { userId: 48, name: null, profileImageUrl: null, assignedCount: 36, pendingCount: 6, inProgressCount: 12, completedCount: 14, overdueCount: 4, highCount: 5, mediumCount: 7, lowCount: 5, urgentCount: 3 },

@@ -125,16 +125,26 @@ export class TaskService {
     if (!isAdmin) throw taskError('TASK_ADMIN_REQUIRED', 'Admin access is required for this operation', 403);
   }
 
+  /**
+   * A task is overdue only once its due DATE has fully passed in the host
+   * timezone. dueAt values are date-granular (midnight timestamps), so tasks
+   * due today must not be flagged overdue during the day.
+   */
+  private getOverdueCutoff(now: number, timeZone: string): number {
+    return moment.unix(now).tz(timeZone).startOf('day').unix();
+  }
+
   async getDashboardStats(payload: { hostId: number; isAdmin: boolean }) {
     this.requireAdmin(payload.isAdmin);
     const now = Math.floor(Date.now() / 1000);
-    const [users, settings] = await Promise.all([
-      this.repository.getDashboardStats(payload.hostId, now),
-      getHostDateTimeSettings(payload.hostId),
-    ]);
+    const settings = await getHostDateTimeSettings(payload.hostId);
     if (!moment.tz.zone(settings.timeZone)) {
       throw taskError('INVALID_TIME_ZONE', 'Host timezone must be a valid IANA timezone', 500);
     }
+    const users = await this.repository.getDashboardStats(
+      payload.hostId,
+      this.getOverdueCutoff(now, settings.timeZone)
+    );
     const totals = users.reduce((result, user) => ({
       totalTasks: result.totalTasks + user.assignedCount,
       pending: result.pending + user.pendingCount,
@@ -394,10 +404,11 @@ export class TaskService {
     if (!moment.tz.zone(settings.timeZone)) {
       throw taskError('INVALID_TIME_ZONE', 'Host timezone must be a valid IANA timezone', 500);
     }
+    const overdueCutoff = this.getOverdueCutoff(now, settings.timeZone);
     const rows = await this.repository.getKanbanTasks({
       hostId: payload.hostId, userId: payload.userId, isAdmin: payload.isAdmin,
       filters: this.normalizeTaskFilters(filters, bounds, settings),
-      sortBy, sortOrder: sortOrder as 'ASC' | 'DESC', now,
+      sortBy, sortOrder: sortOrder as 'ASC' | 'DESC', overdueCutoff,
     });
     const columns = [
       { columnId: 'col_todo', title: 'Pending', statusKey: 'TODO' },
@@ -407,7 +418,7 @@ export class TaskService {
     ].map((column) => ({ ...column, taskCount: 0, tasks: [] as Record<string, unknown>[] }));
     for (const row of rows) {
       const overdue = (row.status === 'PENDING' || row.status === 'IN_PROGRESS')
-        && row.dueAt != null && Number(row.dueAt) < now;
+        && row.dueAt != null && Number(row.dueAt) < overdueCutoff;
       const key = overdue ? 'OVERDUE' : row.status === 'PENDING' ? 'TODO' : row.status;
       const column = columns.find((item) => item.statusKey === key);
       if (!column) throw taskError('INVALID_TASK_STATUS', 'Task has an unsupported Kanban status', 500);
@@ -434,6 +445,9 @@ export class TaskService {
       throw taskError('INVALID_TASK_SORT', 'sortBy or sortOrder is invalid');
     }
     const dateTimeSettings = await getHostDateTimeSettings(payload.hostId);
+    if (!moment.tz.zone(dateTimeSettings.timeZone)) {
+      throw taskError('INVALID_TIME_ZONE', 'Host timezone must be a valid IANA timezone', 500);
+    }
     const normalizedFilters = this.normalizeTaskFilters(filters, bounds, dateTimeSettings);
     const result = await this.repository.listTasks({
       hostId: payload.hostId,
@@ -444,7 +458,10 @@ export class TaskService {
       limit,
       sortBy,
       sortOrder: sortOrder as 'ASC' | 'DESC',
-      now: Math.floor(Date.now() / 1000),
+      overdueCutoff: this.getOverdueCutoff(
+        Math.floor(Date.now() / 1000),
+        dateTimeSettings.timeZone
+      ),
     });
 
     const plainData = result.rows.map((item: any) =>
