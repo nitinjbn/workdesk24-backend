@@ -2,6 +2,23 @@ import { FindAndCountOptions, Includeable, Op } from 'sequelize';
 import db, { User, UserSettings, Role, Designation, UserDevice } from '../../../models';
 
 export class usersRepository {
+  async getUsers(params: { hostId: number }): Promise<Array<{ userId: number; name: string }>> {
+    const users = await User.findAll({
+      attributes: ['id', 'name'],
+      where: {
+        hostId: params.hostId,
+        isDeleted: 0,
+        isFieldAppUser: 1,
+      },
+      order: [
+        ['name', 'ASC'],
+        ['id', 'ASC'],
+      ],
+    });
+
+    return users.map((user) => ({ userId: user.id, name: user.name }));
+  }
+
   async getUserById(params: { hostId: number; userId: number }): Promise<any> {
     const { hostId, userId } = params;
 

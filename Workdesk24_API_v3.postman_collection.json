@@ -806,6 +806,32 @@
           "description": "Data synchronization endpoints for Android app",
           "item": [
             {
+              "name": "Get Users",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{TOKEN}}", "type": "text" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": { "mode": "raw", "raw": "{}" },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/app/sync/getUsers",
+                  "host": ["{{BASE_URL}}"],
+                  "path": ["api", "v1", "app", "sync", "getUsers"]
+                },
+                "description": "Returns all non-deleted field-app users for the authenticated employee's host, matching the admin getUsers scope. Each user contains only userId and name, ordered by name ASC (userId ASC for ties). No pagination or filters. No request fields are required; any supplied hostId, page, limit or filters cannot change the scope or results. Inactive users are included, as in the unfiltered admin API. Empty results return data.users: []."
+              },
+              "response": [
+                {
+                  "name": "Users retrieved successfully",
+                  "status": "OK",
+                  "code": 200,
+                  "header": [{ "key": "Content-Type", "value": "application/json" }],
+                  "body": "{\n  \"success\": true,\n  \"message\": \"Users retrieved successfully\",\n  \"data\": {\n    \"users\": [\n      { \"userId\": 7, \"name\": \"Alice\" },\n      { \"userId\": 8, \"name\": \"Bob\" }\n    ]\n  }\n}"
+                }
+              ]
+            },
+            {
               "name": "Get Customers",
               "request": {
                 "method": "POST",

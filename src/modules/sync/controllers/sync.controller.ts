@@ -330,6 +330,30 @@ export class SyncController {
     }
   }
 
+  async getUsers(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const hostId = req.user?.hostId;
+      if (!hostId) {
+        res.status(401).json({
+          success: false,
+          message: 'Valid authenticated host is required',
+          data: null,
+        } as ApiResponse);
+        return;
+      }
+
+      const result = await syncService.getUsers(hostId);
+
+      res.json({
+        success: true,
+        message: 'Users retrieved successfully',
+        data: result,
+      } as ApiResponse);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async getProducts(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const userId = req.user!.id;

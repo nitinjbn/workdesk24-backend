@@ -1489,6 +1489,10 @@ export class SyncService {
     return await customerRepository.getCustomers(payload);
   }
 
+  async getUsers(hostId: number) {
+    return { users: await userRepository.getUsers({ hostId }) };
+  }
+
   async getProducts(payload: { userId: number; hostId: number }): Promise<any> {
     return await productRepository.getProducts(payload);
   }

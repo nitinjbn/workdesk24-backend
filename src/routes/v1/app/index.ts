@@ -45,6 +45,7 @@ router.post('/sync/all', syncController.syncAll.bind(syncController));
 router.post('/sync/get-updates', syncController.getUpdates.bind(syncController));
 router.post('/sync/status', syncController.getSyncStatus.bind(syncController));
 router.post('/sync/getCustomers', syncController.getCustomers.bind(syncController));
+router.post('/sync/getUsers', syncController.getUsers.bind(syncController));
 router.post('/sync/getProducts', syncController.getProducts.bind(syncController));
 router.post(
   '/sync/uploadMedia',
