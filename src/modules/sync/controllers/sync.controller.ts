@@ -457,7 +457,7 @@ export class SyncController {
         isEnabled,
         customerMedia = [],
         customerAttribute = [],
-        assignedUserIds = [],
+        assignedUserIds,
       } = req.body;
 
       const result = await customerService.createCustomer({
@@ -484,7 +484,7 @@ export class SyncController {
         isEnabled,
         customerMedia,
         customerAttribute,
-        assignedUserIds,
+        assignedUserIds: assignedUserIds || [],
         createdByUserType: 'USER',
         createdByUserId: userId,
         approvalStatus: 'PENDING',
