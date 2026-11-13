@@ -587,6 +587,17 @@
               "response": []
             },
             {
+              "name": "Update Task Status (Admin)",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
+                "body": { "mode": "raw", "raw": "{\n  \"taskId\": 1001,\n  \"status\": \"PENDING\",\n  \"remarks\": \"Reopened by admin\"\n}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/updateTaskStatus", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "updateTaskStatus"] },
+                "description": "Admin-only status override; status must be PENDING, IN_PROGRESS, COMPLETED, or CANCELLED. Any transition between these values is allowed, and a status activity record is written. remarks is optional. Include the CSRF cookie and matching ADMIN_CSRF_TOKEN header."
+              },
+              "response": []
+            },
+            {
               "name": "Cancel Task (Admin)",
               "request": {
                 "method": "POST",

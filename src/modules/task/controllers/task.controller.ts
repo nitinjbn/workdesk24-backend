@@ -151,6 +151,19 @@ export class TaskController {
       'Task completed successfully'
     );
 
+  updateTaskStatus = (req: AuthRequest, res: Response, next: NextFunction): Promise<void> =>
+    this.respond(
+      () => taskService.updateTaskStatus({
+        ...identity(req),
+        taskId: req.body.taskId,
+        status: req.body.status,
+        remarks: req.body.remarks,
+      }),
+      res,
+      next,
+      'Task status updated successfully'
+    );
+
   cancelTask = (req: AuthRequest, res: Response, next: NextFunction): Promise<void> =>
     this.respond(
       () => taskService.cancelTask({ ...identity(req), taskId: req.body.taskId, remarks: req.body.remarks }),

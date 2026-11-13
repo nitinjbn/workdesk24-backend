@@ -158,6 +158,17 @@
           "response": []
         },
         {
+          "name": "Update Task Status",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"taskId\": {{TASK_ID}},\n  \"status\": \"PENDING\",\n  \"remarks\": \"Reopened by admin\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/updateTaskStatus", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "updateTaskStatus"] },
+            "description": "Admin-only status override accepting PENDING, IN_PROGRESS, COMPLETED, or CANCELLED, including transitions outside the normal workflow. Writes a status activity record; remarks is optional."
+          },
+          "response": []
+        },
+        {
           "name": "Cancel Task",
           "request": {
             "method": "POST",

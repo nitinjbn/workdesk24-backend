@@ -81,6 +81,10 @@ function validId(value: unknown): value is number {
   return Number.isSafeInteger(Number(value)) && Number(value) > 0;
 }
 
+function isTaskStatus(value: unknown): value is TaskStatus {
+  return TASK_STATUSES.some((status) => status === value);
+}
+
 function validateTimestamp(value: unknown, fieldName: string): number | null {
   if (value === null) return null;
   if (!isValidUnixTimestamp(value)) {
@@ -641,6 +645,51 @@ export class TaskService {
 
   completeTask(payload: { hostId: number; taskId: number; userId: number; isAdmin: boolean; remarks?: string }): Promise<any> {
     return this.transition({ ...payload, targetStatus: 'COMPLETED', action: 'COMPLETED' });
+  }
+
+  async updateTaskStatus(payload: {
+    hostId: number; taskId: number; userId: number; isAdmin: boolean; status: unknown; remarks?: unknown;
+  }): Promise<any> {
+    this.requireAdmin(payload.isAdmin);
+    if (!validId(payload.taskId)) throw taskError('INVALID_TASK_ID', 'A valid taskId is required');
+    if (!isTaskStatus(payload.status)) {
+      throw taskError('INVALID_TASK_STATUS', `status must be one of: ${TASK_STATUSES.join(', ')}`);
+    }
+    if (
+      payload.remarks !== undefined &&
+      payload.remarks !== null &&
+      (typeof payload.remarks !== 'string' || payload.remarks.length > 500)
+    ) {
+      throw taskError('INVALID_TASK_REMARKS', 'remarks must be a string of at most 500 characters');
+    }
+
+    return this.inTransaction(async (transaction) => {
+      const task = await this.repository.getTask(payload.hostId, payload.taskId, transaction, true);
+      if (!task) throw taskError('TASK_NOT_FOUND', 'Task not found', 404);
+      const currentStatus = task.status as TaskStatus;
+      if (currentStatus === payload.status) return { task: asPlain(task), changed: false };
+
+      const now = Math.floor(Date.now() / 1000);
+      const timestamps: Record<'startedAt' | 'completedAt' | 'cancelledAt', number | null> = {
+        startedAt: payload.status === 'PENDING' ? null : task.startedAt ?? null,
+        completedAt: payload.status === 'COMPLETED' ? now : null,
+        cancelledAt: payload.status === 'CANCELLED' ? now : null,
+      };
+      if (payload.status === 'IN_PROGRESS' && !timestamps.startedAt) timestamps.startedAt = now;
+
+      await this.repository.updateTask(task, { status: payload.status, ...timestamps, updatedAt: now }, transaction);
+      await this.repository.createLog({
+        hostId: payload.hostId,
+        taskId: payload.taskId,
+        action: 'UPDATED',
+        performedByUserId: payload.userId,
+        oldStatus: currentStatus,
+        newStatus: payload.status,
+        remarks: typeof payload.remarks === 'string' ? payload.remarks.trim() || null : null,
+        createdAt: now,
+      }, transaction);
+      return { task: asPlain(task), changed: true };
+    });
   }
 
   cancelTask(payload: { hostId: number; taskId: number; userId: number; isAdmin: boolean; remarks?: string }): Promise<any> {

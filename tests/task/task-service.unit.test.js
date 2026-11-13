@@ -583,6 +583,41 @@ test('cancellation records previous status and cancelledAt', async () => {
   assert.equal(repository.logs.length, 1);
 });
 
+test('admin can update a task to any supported status and logs the status change', async () => {
+  const { service, repository } = makeHarness();
+  repository.task = {
+    id: 101, hostId: 7, assignedToUserId: 22, status: 'COMPLETED',
+    startedAt: 100, completedAt: 200, cancelledAt: null, isDeleted: 0,
+  };
+
+  const result = await service.updateTaskStatus({
+    ...admin, taskId: 101, status: 'PENDING', remarks: 'Reopened by admin',
+  });
+
+  assert.equal(result.task.status, 'PENDING');
+  assert.equal(result.task.startedAt, null);
+  assert.equal(result.task.completedAt, null);
+  assert.equal(result.task.cancelledAt, null);
+  assert.equal(repository.logs[0].action, 'UPDATED');
+  assert.equal(repository.logs[0].oldStatus, 'COMPLETED');
+  assert.equal(repository.logs[0].newStatus, 'PENDING');
+  assert.equal(repository.logs[0].remarks, 'Reopened by admin');
+  assert.equal(result.changed, true);
+});
+
+test('task status override requires admin and rejects unsupported status or invalid remarks', async () => {
+  const { service, repository } = makeHarness();
+  repository.task = { id: 101, hostId: 7, assignedToUserId: 22, status: 'PENDING', isDeleted: 0 };
+  await assert.rejects(
+    service.updateTaskStatus({ hostId: 7, taskId: 101, userId: 22, isAdmin: false, status: 'COMPLETED' }),
+    /Admin access is required/
+  );
+  await assert.rejects(service.updateTaskStatus({ ...admin, taskId: 101, status: 'ARCHIVED' }), /status must be one of/);
+  await assert.rejects(service.updateTaskStatus({ ...admin, taskId: 101, status: 'COMPLETED', remarks: 'x'.repeat(501) }), /remarks must be a string/);
+  assert.equal(repository.task.status, 'PENDING');
+  assert.equal(repository.logs.length, 0);
+});
+
 test('assignment records both assignees while preserving status', async () => {
   const { service, repository } = makeHarness();
   repository.task = { id: 101, hostId: 7, assignedToUserId: 21, status: 'IN_PROGRESS', isDeleted: 0 };

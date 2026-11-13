@@ -14,6 +14,7 @@ router.post('/updateTask', taskController.updateTask);
 router.post('/assignTask', taskController.assignTask);
 router.post('/startTask', taskController.startTask);
 router.post('/completeTask', taskController.completeTask);
+router.post('/updateTaskStatus', taskController.updateTaskStatus);
 router.post('/cancelTask', taskController.cancelTask);
 router.post('/getTaskActivity', taskController.getTaskActivity);
 router.post('/addTaskComment', taskController.addTaskComment);
