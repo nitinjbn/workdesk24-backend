@@ -63,3 +63,18 @@ test('the support read-only gate does not change normal admin behavior', () => {
 
   assert.equal(continued, true);
 });
+
+test('read-only support allows category reads but blocks every category mutation', () => {
+  for (const [action, allowed] of [
+    ['list', true], ['detail', true], ['create', false], ['update', false], ['delete', false], ['toggle-status', false],
+  ]) {
+    const response = createResponse();
+    let continued = false;
+    requireSupportReadOnlyPolicy({
+      path: `/tasks/task-categories/${action}`,
+      authContext: { isSupportSession: true, accessMode: 'SUPPORT_READ_ONLY' },
+    }, response, () => { continued = true; });
+    assert.equal(continued, allowed);
+    assert.equal(response.statusCode, allowed ? 200 : 403);
+  }
+});

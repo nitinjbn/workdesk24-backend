@@ -429,8 +429,80 @@
         },
         {
           "name": "Task Management",
-          "description": "Admin management operations use /api/v1/admin/tasks and the existing admin role/CSRF middleware. Employee operations use /api/v1/app/task. Task responses use the standard { success, message, data } envelope.",
+          "description": "Admin management operations use /api/v1/admin/tasks and the existing admin role/CSRF middleware. Employee operations use /api/v1/app/task. Task responses retain { success, message, data }. Creation now requires taskCategoryId. Task list/detail/Kanban include taskCategoryId and taskCategory: { id, name, taskNumberPrefix }, or null for legacy uncategorized tasks. Disabled categories remain readable. Optional filters.taskCategoryId narrows lists/Kanban. See Task_Management.postman_collection.json for detailed category examples.",
           "item": [
+            {
+              "name": "Task Categories (Admin)",
+              "description": "Uses ADMIN_TOKEN and matching CSRF cookie/header. All scope comes from authentication. Unix timestamps, active name/prefix uniqueness per host, read-only nextTaskNumber. No category operation renumbers existing tasks.",
+              "item": [
+                {
+                  "name": "List Task Categories",
+                  "request": {
+                    "method": "POST",
+                    "header": [{ "key": "Authorization", "value": "Bearer {{ADMIN_TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }, { "key": "Cookie", "value": "wd24_admin_csrf={{ADMIN_CSRF_TOKEN}}" }],
+                    "body": { "mode": "raw", "raw": "{}" },
+                    "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/task-categories/list", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "task-categories", "list"] },
+                    "description": "All fields optional. Default {} returns ALL matching categories without a pagination key. Supply page or limit to paginate, e.g. { page: 1, limit: 20 }; the omitted parameter defaults to page 1 or limit 20 (limit max 100). Paginated responses include pagination: { page, limit, total, totalPages }. Optional search matches name; isEnabled is 0/1 (omit for both). sortBy: id/name/createdAt/updatedAt; default name ASC. Each category includes taskCount."
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Create Task Category",
+                  "request": {
+                    "method": "POST",
+                    "header": [{ "key": "Authorization", "value": "Bearer {{ADMIN_TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }, { "key": "Cookie", "value": "wd24_admin_csrf={{ADMIN_CSRF_TOKEN}}" }],
+                    "body": { "mode": "raw", "raw": "{\n  \"name\": \"Projects\",\n  \"description\": \"Project tasks\",\n  \"taskNumberPrefix\": \"PRJ\",\n  \"isEnabled\": 1\n}" },
+                    "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/task-categories/create", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "task-categories", "create"] },
+                    "description": "Trimmed name (1-100) and prefix (1-20) required. Optional description (max 500/null) and isEnabled (0/1, default 1). Counter starts at 1. Duplicate non-deleted name/prefix returns 409, including disabled categories; PRJ and PRJ- share the same namespace. Returns data.category."
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Update Task Category",
+                  "request": {
+                    "method": "POST",
+                    "header": [{ "key": "Authorization", "value": "Bearer {{ADMIN_TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }, { "key": "Cookie", "value": "wd24_admin_csrf={{ADMIN_CSRF_TOKEN}}" }],
+                    "body": { "mode": "raw", "raw": "{\n  \"taskCategoryId\": 1,\n  \"name\": \"Projects\",\n  \"description\": null,\n  \"taskNumberPrefix\": \"PROJ\"\n}" },
+                    "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/task-categories/update", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "task-categories", "update"] },
+                    "description": "Requires at least one editable field: name, description, prefix. nextTaskNumber is read-only. Prefix changes only affect future tasks and never reset the sequence. Returns data.category."
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Task Category Detail",
+                  "request": {
+                    "method": "POST",
+                    "header": [{ "key": "Authorization", "value": "Bearer {{ADMIN_TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }, { "key": "Cookie", "value": "wd24_admin_csrf={{ADMIN_CSRF_TOKEN}}" }],
+                    "body": { "mode": "raw", "raw": "{\n  \"taskCategoryId\": 1\n}" },
+                    "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/task-categories/detail", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "task-categories", "detail"] },
+                    "description": "Returns data.category including taskCount (all associated tasks). Deleted/missing/cross-host IDs return 404."
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Toggle Task Category Status",
+                  "request": {
+                    "method": "POST",
+                    "header": [{ "key": "Authorization", "value": "Bearer {{ADMIN_TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }, { "key": "Cookie", "value": "wd24_admin_csrf={{ADMIN_CSRF_TOKEN}}" }],
+                    "body": { "mode": "raw", "raw": "{\n  \"taskCategoryId\": 1,\n  \"isEnabled\": 0\n}" },
+                    "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/task-categories/toggle-status", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "task-categories", "toggle-status"] },
+                    "description": "Set isEnabled to 0 or 1. Deleted categories cannot be enabled. Disabling only blocks new task selection/reassignment. Returns data.category."
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Delete Task Category",
+                  "request": {
+                    "method": "POST",
+                    "header": [{ "key": "Authorization", "value": "Bearer {{ADMIN_TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }, { "key": "Cookie", "value": "wd24_admin_csrf={{ADMIN_CSRF_TOKEN}}" }],
+                    "body": { "mode": "raw", "raw": "{\n  \"taskCategoryId\": 1\n}" },
+                    "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/task-categories/delete", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "task-categories", "delete"] },
+                    "description": "Soft deletion only. Any associated task prevents deletion with 409 TASK_CATEGORY_IN_USE; no tasks are modified. Returns data: { taskCategoryId }."
+                  },
+                  "response": []
+                }
+              ]
+            },
             {
               "name": "Kanban Board (Admin)",
               "request": {
@@ -468,9 +540,9 @@
               "request": {
                 "method": "POST",
                 "header": [{ "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
-                "body": { "mode": "raw", "raw": "{\n  \"title\": \"Prepare customer proposal\",\n  \"description\": \"Draft and review proposal\",\n  \"assignedToUserId\": 42,\n  \"customerId\": 12,\n  \"visitId\": 37,\n  \"priority\": \"HIGH\",\n  \"dueAt\": 1791853200\n}" },
+                "body": { "mode": "raw", "raw": "{\n  \"taskCategoryId\": 1,\n  \"title\": \"Prepare customer proposal\",\n  \"description\": \"Draft and review proposal\",\n  \"assignedToUserId\": 42,\n  \"customerId\": 12,\n  \"visitId\": 37,\n  \"priority\": \"HIGH\",\n  \"dueAt\": 1791853200\n}" },
                 "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/createTask", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "createTask"] },
-                "description": "Creates a PENDING task and CREATED activity record in one transaction. hostId and creator are derived from the token."
+                "description": "taskCategoryId is required: choose an enabled, non-deleted category in the authenticated host. Missing/invalid IDs return 400, missing/deleted/cross-host categories 404, disabled categories 400. Category prefix/counter allocation, PENDING task, CREATED log and optional attachment commit atomically under a category row lock. Existing task numbers are preserved. Historical number collisions return 409 TASK_NUMBER_CONFLICT and roll back without consuming a number. hostId and creator come only from the token. See Task_Management.postman_collection.json for detailed category examples."
               },
               "response": []
             },
@@ -482,6 +554,7 @@
                 "body": {
                   "mode": "formdata",
                   "formdata": [
+                    { "key": "taskCategoryId", "value": "1", "type": "text" },
                     { "key": "title", "value": "Prepare customer proposal", "type": "text" },
                     { "key": "description", "value": "Draft and review proposal", "type": "text" },
                     { "key": "assignedToUserId", "value": "42", "type": "text" },
@@ -494,7 +567,7 @@
                   ]
                 },
                 "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/createTaskWithAttachment", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "createTaskWithAttachment"] },
-                "description": "Use an admin JWT in TOKEN and the matching admin CSRF cookie/header (adjust the cookie name if configured). Send task fields directly as multipart text fields. title and assignedToUserId are required; description, customerId, visitId, priority, dueAt (Unix seconds), attachment remarks, and file are optional. Omit the file part to create a task without an attachment, or include one validated JPEG, PNG, WEBP, or PDF up to 10 MB under file. Let Postman set the multipart Content-Type boundary. Returns data.task and includes data.attachment only when a file is uploaded. Do not send taskId or taskCommentId. Task, activity, counter, and attachment metadata commit together; failures roll back and attempt uploaded-file cleanup. Notifications run only after commit. Existing standalone creation and upload APIs are unchanged."
+                "description": "Use an admin JWT and matching admin CSRF cookie/header. Send taskCategoryId (required, enabled/non-deleted category owned by the authenticated host), title and assignedToUserId as multipart text fields. Uses the same locked category allocator as createTask. Other task fields and file are optional. File supports JPEG/PNG/WEBP/PDF up to 10 MB; let Postman set Content-Type. Returns data.task and optional data.attachment. Task, activity, category counter and attachment metadata commit together; failures roll back and clean uploaded media. Notifications run after commit. Do not send taskId/taskCommentId."
               },
               "response": []
             },

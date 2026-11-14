@@ -1,6 +1,6 @@
 import { Op, QueryTypes, Transaction } from 'sequelize';
-import { Customer, sequelize, Task, TaskAttachments, TaskComments, TaskLogs, TaskSettings, User, Visit } from '../../../models';
-import { CONFIG } from '../../../config/constants';
+import { Customer, sequelize, Task, TaskAttachments, TaskCategory, TaskComments, TaskLogs, User, Visit } from '../../../models';
+import taskCategoryRepository from './task-category.repository';
 
 interface TaskDashboardUserRow {
   userId: number | string;
@@ -63,38 +63,25 @@ export class TaskRepository {
     }));
   }
 
-  async lockTaskSettings(hostId: number, now: number, transaction: Transaction): Promise<InstanceType<typeof TaskSettings> | null> {
-    // The unique hostId key serializes initialization, without a missing-row gap lock
-    // or overwriting an existing host's prefix, counter, or timestamps.
-    await sequelize.query(
-      `INSERT INTO wd_task_settings (hostId, taskNumberPrefix, nextTaskNumber, createdAt, updatedAt)
-       VALUES (:hostId, :prefix, :nextTaskNumber, :now, :now)
-       ON DUPLICATE KEY UPDATE hostId = wd_task_settings.hostId`,
-      {
-        replacements: {
-          hostId,
-          prefix: CONFIG.TASK_SETTINGS.DEFAULT_TASK_NUMBER_PREFIX,
-          nextTaskNumber: CONFIG.TASK_SETTINGS.DEFAULT_NEXT_TASK_NUMBER,
-          now,
-        },
-        transaction,
-      }
-    );
-    return TaskSettings.findOne({
-      where: { hostId },
-      transaction,
-      lock: transaction.LOCK.UPDATE,
-    });
+  lockTaskCategory(hostId: number, taskCategoryId: number, transaction: Transaction) {
+    return taskCategoryRepository.find(hostId, taskCategoryId, transaction);
   }
 
-  advanceTaskNumber(settings: InstanceType<typeof TaskSettings>, nextTaskNumber: string, now: number, transaction: Transaction): Promise<InstanceType<typeof TaskSettings>> {
-    return settings.update({ nextTaskNumber, updatedAt: now }, { transaction });
+  advanceTaskNumber(category: InstanceType<typeof TaskCategory>, nextTaskNumber: string, now: number, transaction: Transaction) {
+    return taskCategoryRepository.update(category, { nextTaskNumber, updatedAt: now }, transaction);
   }
 
   async getTask(hostId: number, taskId: number, transaction?: Transaction, lock = false): Promise<any> {
     return Task.findOne({
       where: { hostId, id: taskId, isDeleted: 0 },
       include: lock ? [] : [
+        {
+          model: TaskCategory,
+          as: 'taskCategory',
+          required: false,
+          where: { hostId },
+          attributes: ['id', 'name', 'taskNumberPrefix'],
+        },
         {
           model: User,
           as: 'assignedToUser',
@@ -146,6 +133,7 @@ export class TaskRepository {
     if (filters.createdByUserId !== undefined) where.createdByUserId = filters.createdByUserId;
     if (filters.customerId !== undefined) where.customerId = filters.customerId;
     if (filters.visitId !== undefined) where.visitId = filters.visitId;
+    if (filters.taskCategoryId !== undefined) where.taskCategoryId = filters.taskCategoryId;
     if (filters.dueFrom !== undefined || filters.dueTo !== undefined) {
       where.dueAt = {};
       if (filters.dueFrom !== undefined) where.dueAt[Op.gte] = filters.dueFrom;
@@ -173,6 +161,7 @@ export class TaskRepository {
     return {
       where,
       include: [
+        { model: TaskCategory, as: 'taskCategory', required: false, where: { hostId }, attributes: ['id', 'name', 'taskNumberPrefix'] },
         { model: User, as: 'assignedToUser', required: false, where: { hostId, isDeleted: 0 }, attributes: ['id', 'name'] },
         { model: User, as: 'createdByUser', required: false, where: { hostId, isDeleted: 0 }, attributes: ['id', 'name'] },
       ],

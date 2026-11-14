@@ -2,6 +2,7 @@ import { Model, DataTypes, Sequelize, Optional } from 'sequelize';
 interface TaskAttributes {
   id: number;
   hostId: number;
+  taskCategoryId?: number | null;
   taskNumber?: string;
   title: string;
   description?: string;
@@ -45,6 +46,7 @@ interface TaskCreationAttributes extends Optional<
 class Task extends Model<TaskAttributes, TaskCreationAttributes> implements TaskAttributes {
   public id!: number;
   public hostId!: number;
+  public taskCategoryId?: number | null;
   public taskNumber?: string;
   public title: string;
   public description?: string;
@@ -64,6 +66,11 @@ class Task extends Model<TaskAttributes, TaskCreationAttributes> implements Task
   public deletedAt?: number | null;
 
   public static associate(models: any): void {
+    Task.belongsTo(models.TaskCategory, {
+      foreignKey: 'taskCategoryId',
+      as: 'taskCategory',
+    });
+
     Task.belongsTo(models.User, {
       foreignKey: 'assignedToUserId',
       as: 'assignedToUser',
@@ -97,6 +104,10 @@ export function initTask(sequelize: Sequelize): typeof Task {
       hostId: {
         type: DataTypes.BIGINT,
         allowNull: false,
+      },
+      taskCategoryId: {
+        type: DataTypes.BIGINT,
+        allowNull: true,
       },
       taskNumber: {
         type: DataTypes.STRING(30),
@@ -178,6 +189,8 @@ export function initTask(sequelize: Sequelize): typeof Task {
       indexes: [
         { fields: ['taskNumber'] },
         { fields: ['hostId'] },
+        { fields: ['taskCategoryId'] },
+        { unique: true, fields: ['hostId', 'taskNumber'], name: 'uq_wd_tasks_host_taskNumber' },
         { fields: ['visitId'] },
         { fields: ['customerId'] },
         { fields: ['assignedToUserId'] },

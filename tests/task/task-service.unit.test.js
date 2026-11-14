@@ -83,8 +83,8 @@ class FakeTaskRepository {
     return this.task;
   }
 
-  async lockTaskSettings() {
-    return { taskNumberPrefix: 'TASK-', nextTaskNumber: 1 };
+  async lockTaskCategory() {
+    return { taskNumberPrefix: 'TASK-', nextTaskNumber: 1, isEnabled: 1 };
   }
 
   async advanceTaskNumber() {}
@@ -130,6 +130,7 @@ function makeHarness(taskNotifications) {
 }
 
 const admin = { hostId: 7, userId: 9, isAdmin: true };
+const taskAdmin = { ...admin, taskCategoryId: 1 };
 
 test('combined task comment links the attachment to the new comment in one transaction', async (context) => {
   const { service, repository, transaction } = makeHarness();
@@ -261,7 +262,7 @@ test('combined task creation saves task and attachment together and notifies aft
     return { url: 'https://example.com/proof.pdf', fileId: 'proof', raw: {} };
   });
   const result = await service.createTaskWithAttachment({
-    ...admin, title: 'Proposal', assignedToUserId: 22, remarks: ' Evidence ',
+    ...taskAdmin, title: 'Proposal', assignedToUserId: 22, remarks: ' Evidence ',
     taskId: 999, taskCommentId: 888,
     file: { buffer: Buffer.from('%PDF-1.7'), size: 8, mimetype: 'application/pdf', originalname: 'proof.pdf' },
   });
@@ -282,7 +283,7 @@ test('combined task creation validates inputs before uploading or creating a tas
     throw new Error('must not upload');
   });
   const payload = {
-    ...admin, title: 'Proposal', assignedToUserId: 22,
+    ...taskAdmin, title: 'Proposal', assignedToUserId: 22,
     file: { buffer: Buffer.from('%PDF-1.7'), size: 8, mimetype: 'application/pdf', originalname: 'proof.pdf' },
   };
   for (const [changes, message] of [
@@ -308,7 +309,7 @@ test('combined task creation creates a task without an attachment when no file i
   });
 
   const result = await service.createTaskWithAttachment({
-    ...admin, title: 'Proposal', assignedToUserId: 22,
+    ...taskAdmin, title: 'Proposal', assignedToUserId: 22,
   });
 
   assert.deepEqual(Object.keys(result), ['task']);
@@ -338,7 +339,7 @@ test('combined task creation rolls back and cleans uploaded media on persistence
       });
       const cleanup = context.mock.method(mediaStorage, 'deleteMediaFromStorage', async () => ({}));
       await assert.rejects(service.createTaskWithAttachment({
-        ...admin, title: 'Proposal', assignedToUserId: 22,
+        ...taskAdmin, title: 'Proposal', assignedToUserId: 22,
         file: { buffer: Buffer.from('%PDF-1.7'), size: 8, mimetype: 'application/pdf', originalname: 'proof.pdf' },
       }), /failed/);
       assert.equal(transaction.rolledBack, true);
@@ -353,7 +354,7 @@ test('combined task creation rolls back and cleans uploaded media on persistence
 
 test('task creation writes PENDING task and initial assignment log', async () => {
   const { service, repository, transaction } = makeHarness();
-  const result = await service.createTask({ ...admin, title: ' Proposal ', assignedToUserId: 22, customerId: 31 });
+  const result = await service.createTask({ ...taskAdmin, title: ' Proposal ', assignedToUserId: 22, customerId: 31 });
   assert.equal(result.task.status, 'PENDING');
   assert.equal(result.task.hostId, 7);
   assert.equal(result.task.createdByUserId, 9);
@@ -374,7 +375,7 @@ test('task creation triggers one notification after commit', async () => {
     async notifyTaskReassigned() {},
   };
   const { service, transaction } = makeHarness(notifications);
-  await service.createTask({ ...admin, title: 'Proposal', assignedToUserId: 22 });
+  await service.createTask({ ...taskAdmin, title: 'Proposal', assignedToUserId: 22 });
   assert.equal(committedWhenNotified, true);
 });
 
@@ -386,7 +387,7 @@ test('task creation rolls back when initial log insertion fails', async () => {
   };
   const { service, repository, transaction } = makeHarness(notifications);
   repository.failLog = true;
-  await assert.rejects(service.createTask({ ...admin, title: 'Proposal', assignedToUserId: 22 }), /log insert failed/);
+  await assert.rejects(service.createTask({ ...taskAdmin, title: 'Proposal', assignedToUserId: 22 }), /log insert failed/);
   assert.equal(transaction.rolledBack, true);
   assert.equal(notificationCount, 0);
 });
@@ -397,20 +398,20 @@ test('task creation remains successful when notification delivery throws', async
     async notifyTaskReassigned() {},
   };
   const { service, transaction } = makeHarness(notifications);
-  const result = await service.createTask({ ...admin, title: 'Proposal', assignedToUserId: 22 });
+  const result = await service.createTask({ ...taskAdmin, title: 'Proposal', assignedToUserId: 22 });
   assert.equal(result.task.id, 101);
   assert.equal(transaction.committed, true);
 });
 
 test('task creation rejects users outside the tenant', async () => {
   const { service, transaction } = makeHarness();
-  await assert.rejects(service.createTask({ ...admin, title: 'Proposal', assignedToUserId: 999 }), /eligible/);
+  await assert.rejects(service.createTask({ ...taskAdmin, title: 'Proposal', assignedToUserId: 999 }), /eligible/);
   assert.equal(transaction.rolledBack, true);
 });
 
 test('task creation rejects mismatched customer and visit references', async () => {
   const { service } = makeHarness();
-  await assert.rejects(service.createTask({ ...admin, title: 'Proposal', assignedToUserId: 22, customerId: 32, visitId: 41 }), /does not belong/);
+  await assert.rejects(service.createTask({ ...taskAdmin, title: 'Proposal', assignedToUserId: 22, customerId: 32, visitId: 41 }), /does not belong/);
 });
 
 test('task listing forces employees to their own assignments and preserves pagination', async (context) => {
@@ -771,7 +772,7 @@ test('combined task creation HTTP contract and standalone API compatibility', as
   const adminTaskRoutes = require('../../src/routes/v1/admin/tasks.routes').default;
   const taskService = require('../../src/modules/task/services/task.service').default;
   const { service, repository } = makeHarness();
-  let user = { id: 9, hostId: 7, isAdminUser: 1 };
+  let user = { id: 9, hostId: 7, isAdminUser: 1, accountStatus: 'ACTIVE' };
   context.mock.method(console, 'log', () => undefined);
   context.mock.method(console, 'error', () => undefined);
   context.mock.method(userRepository, 'findById', async () => user);
@@ -796,7 +797,7 @@ test('combined task creation HTTP contract and standalone API compatibility', as
     server.closeAllConnections();
     await new Promise((resolve) => server.close(resolve));
   });
-  const token = jwt.sign({ userId: 9 }, process.env.JWT_SECRET, { expiresIn: '5m' });
+  const token = jwt.sign({ userId: 9, tokenType: 'access' }, process.env.JWT_SECRET, { expiresIn: '5m' });
   const send = async (body, options = {}) => {
     const response = await fetch(`http://127.0.0.1:${server.address().port}/api/v1/admin/tasks/${options.endpoint || 'createTaskWithAttachment'}`, {
       method: 'POST',
@@ -813,6 +814,7 @@ test('combined task creation HTTP contract and standalone API compatibility', as
     const body = new FormData();
     for (const [key, value] of Object.entries({
       title: 'Proposal', assignedToUserId: '22', customerId: '31', visitId: '41',
+      taskCategoryId: '1',
       dueAt: '1791853200', priority: 'HIGH', remarks: 'Evidence',
       hostId: '999', userId: '999', isAdmin: 'false', taskId: '999', taskCommentId: '888',
     })) body.set(key, value);
@@ -907,7 +909,7 @@ test('combined task creation HTTP contract and standalone API compatibility', as
   assert.equal(standaloneComment.body.success, true);
   assert.deepEqual(Object.keys(standaloneComment.body.data), ['comment']);
 
-  const standaloneTask = await send({ title: 'Standalone', assignedToUserId: 22 }, { endpoint: 'createTask', json: true });
+  const standaloneTask = await send({ title: 'Standalone', assignedToUserId: 22, taskCategoryId: 1 }, { endpoint: 'createTask', json: true });
   assert.equal(standaloneTask.body.success, true);
   assert.deepEqual(Object.keys(standaloneTask.body.data), ['task']);
   const attachmentForm = new FormData();

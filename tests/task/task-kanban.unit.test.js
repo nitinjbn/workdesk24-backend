@@ -202,7 +202,9 @@ test('Kanban repository reuses list filtering and associations without paginatio
       { title: { [Op.like]: '%TASK-23%' } }, { taskNumber: { [Op.like]: '%TASK-23%' } },
     ]);
     assert.deepEqual(where.dueAt, { [Op.gte]: now - 100, [Op.lte]: now + 100 });
-    for (const include of options.include) assert.deepEqual(include.where, { hostId: 7, isDeleted: 0 });
+    for (const include of options.include) {
+      assert.deepEqual(include.where, include.as === 'taskCategory' ? { hostId: 7 } : { hostId: 7, isDeleted: 0 });
+    }
     return [];
   });
   assert.deepEqual(await repository.getKanbanTasks(params), []);

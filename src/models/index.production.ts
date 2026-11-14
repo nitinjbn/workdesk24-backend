@@ -67,6 +67,7 @@ import { initUserAttendanceSite } from './schemas/UserAttendanceSite';
 import { initCustomerUserAssignment } from './schemas/CustomerUserAssignment';
 import { initTask } from './schemas/Task';
 import { initTaskSettings } from './schemas/TaskSettings';
+import { initTaskCategory } from './schemas/TaskCategory';
 import { initTaskLogs } from './schemas/TaskLogs';
 import { initTaskComments } from './schemas/TaskComments';
 import { initTaskAttachments } from './schemas/TaskAttachments';
@@ -194,6 +195,7 @@ const UserAttendanceSite = initUserAttendanceSite(sequelize);
 const SubscriptionCycle = initSubscriptionCycle(sequelize);
 const Task = initTask(sequelize);
 const TaskSettings = initTaskSettings(sequelize);
+const TaskCategory = initTaskCategory(sequelize);
 const TaskLogs = initTaskLogs(sequelize);
 const TaskComments = initTaskComments(sequelize);
 const TaskAttachments = initTaskAttachments(sequelize);
@@ -263,6 +265,7 @@ const db: any = {
   SubscriptionCycle,
   Task,
   TaskSettings,
+  TaskCategory,
   TaskLogs,
   TaskComments,
   TaskAttachments,
@@ -382,6 +385,7 @@ export {
   SubscriptionCycle,
   Task,
   TaskSettings,
+  TaskCategory,
   TaskLogs,
   TaskComments,
   TaskAttachments,

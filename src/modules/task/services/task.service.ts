@@ -1,4 +1,4 @@
-import { Transaction } from 'sequelize';
+import { Transaction, UniqueConstraintError } from 'sequelize';
 import moment from 'moment-timezone';
 import { sequelize } from '../../../models';
 import { logger } from '../../../config/database';
@@ -15,6 +15,7 @@ import taskNotificationService, { TaskNotificationService } from '../../notifica
 import { getTaskTransition, isValidTaskFile, isValidUnixTimestamp } from './task-rules.util';
 import { getHostDateTimeSettings, HostDateTimeSettings } from '../../../shared/utils/host-settings.util';
 import { DateTimeFormatUtil, formatDateTimeFieldsBySettings } from '../../../shared/utils/date-time-format.util';
+import { taskCategoryId } from './task-category.service';
 
 type TaskStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
 type TaskPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
@@ -24,6 +25,7 @@ interface CreateTaskPayload {
   hostId: number; userId: number; isAdmin: boolean; title: string; description?: string;
   assignedToUserId: number; customerId?: number | null; visitId?: number | null;
   priority?: TaskPriority; dueAt?: number | null;
+  taskCategoryId: number | string;
 }
 
 interface TaskAttachmentPayload {
@@ -263,9 +265,15 @@ export class TaskService {
     if (payload.priority !== undefined && !TASK_PRIORITIES.includes(payload.priority)) {
       throw taskError('INVALID_TASK_PRIORITY', 'priority must be LOW, MEDIUM, HIGH, or URGENT');
     }
+    const categoryId = taskCategoryId(payload.taskCategoryId);
     const dueAt = payload.dueAt === undefined ? null : validateTimestamp(payload.dueAt, 'dueAt');
     let uploaded: MediaUploadResult | undefined;
     const result = await this.inTransaction(async (transaction) => {
+      const category = await this.repository.lockTaskCategory(payload.hostId, categoryId, transaction);
+      if (!category) throw taskError('TASK_CATEGORY_NOT_FOUND', 'Task category not found', 404);
+      if (Number(category.isEnabled) !== 1) {
+        throw taskError('TASK_CATEGORY_DISABLED', 'Disabled categories cannot be used for new tasks');
+      }
       const assignee = await this.repository.findAssignee(payload.hostId, payload.assignedToUserId, transaction);
       if (!assignee) throw taskError('INVALID_TASK_ASSIGNEE', 'Assigned user is not eligible for task assignment', 404);
       const refs = await this.validateReferences(payload.hostId, payload.customerId, payload.visitId, transaction);
@@ -273,11 +281,10 @@ export class TaskService {
         uploaded = await uploadBufferToMediaStorage(attachmentPayload.file, `${payload.hostId}/tasks`, { accessMode: 'authenticated' });
       }
       const now = Math.floor(Date.now() / 1000);
-      const settings = await this.repository.lockTaskSettings(payload.hostId, now, transaction);
-      if (!settings) throw taskError('TASK_SETTINGS_NOT_FOUND', 'Task settings could not be initialized', 500);
-      const { taskNumber, nextTaskNumber } = formatTaskNumber(settings.taskNumberPrefix, settings.nextTaskNumber);
+      const { taskNumber, nextTaskNumber } = formatTaskNumber(category.taskNumberPrefix, category.nextTaskNumber);
       const task = await this.repository.createTask({
         hostId: payload.hostId,
+        taskCategoryId: categoryId,
         taskNumber,
         title,
         description: payload.description?.trim() || null,
@@ -291,7 +298,12 @@ export class TaskService {
         isDeleted: 0,
         createdAt: now,
         updatedAt: now,
-      }, transaction);
+      }, transaction).catch((error: unknown) => {
+        if (error instanceof UniqueConstraintError) {
+          throw taskError('TASK_NUMBER_CONFLICT', 'Generated task number already exists; choose a different category prefix or reconcile its sequence', 409);
+        }
+        throw error;
+      });
       await this.repository.createLog({
         hostId: payload.hostId,
         taskId: task.id,
@@ -303,7 +315,7 @@ export class TaskService {
         newAssignedToUserId: payload.assignedToUserId,
         createdAt: now,
       }, transaction);
-      await this.repository.advanceTaskNumber(settings, nextTaskNumber, now, transaction);
+      await this.repository.advanceTaskNumber(category, nextTaskNumber, now, transaction);
       if (attachmentPayload && uploaded) {
         const attachment = await this.persistAttachment({ ...attachmentPayload, taskId: task.id }, uploaded, transaction);
         return { task: asPlain(task), attachment: asPlain(attachment) };
@@ -347,6 +359,7 @@ export class TaskService {
     for (const key of ['createdByUserId', 'customerId', 'visitId'] as const) {
       if (filters[key] !== undefined && !validId(filters[key])) throw taskError('INVALID_TASK_FILTER', `${key} must be a valid ID`);
     }
+    if (filters.taskCategoryId !== undefined) taskCategoryId(filters.taskCategoryId);
     if (filters.dueDate !== undefined && (filters.dueFrom !== undefined || filters.dueTo !== undefined)) {
       throw taskError('INVALID_TASK_DUE_RANGE', 'Use either dueDate or dueFrom/dueTo, not both');
     }
@@ -512,12 +525,21 @@ export class TaskService {
     hostId: number; taskId: number; userId: number; isAdmin: boolean;
     title?: string; description?: string | null; priority?: TaskPriority;
     dueAt?: number | null; customerId?: number | null; visitId?: number | null;
+    taskCategoryId?: number | string;
   }): Promise<any> {
     this.requireAdmin(payload.isAdmin);
+    const categoryId = payload.taskCategoryId === undefined ? undefined : taskCategoryId(payload.taskCategoryId);
     return this.inTransaction(async (transaction) => {
+      // Match creation/deletion lock ordering: category before task.
+      if (categoryId !== undefined) {
+        const category = await this.repository.lockTaskCategory(payload.hostId, categoryId, transaction);
+        if (!category) throw taskError('TASK_CATEGORY_NOT_FOUND', 'Task category not found', 404);
+        if (Number(category.isEnabled) !== 1) throw taskError('TASK_CATEGORY_DISABLED', 'Disabled categories cannot be selected');
+      }
       const task = await this.repository.getTask(payload.hostId, payload.taskId, transaction, true);
       if (!task) throw taskError('TASK_NOT_FOUND', 'Task not found', 404);
       const changes: Record<string, unknown> = {};
+      if (categoryId !== undefined) changes.taskCategoryId = categoryId;
       if (payload.title !== undefined) {
         if (typeof payload.title !== 'string') throw taskError('INVALID_TASK_TITLE', 'title must be a string');
         const value = payload.title.trim();

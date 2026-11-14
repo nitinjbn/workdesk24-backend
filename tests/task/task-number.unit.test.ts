@@ -3,14 +3,17 @@ import assert from 'node:assert/strict';
 import type { Transaction } from 'sequelize';
 import type { Response, NextFunction } from 'express';
 import { CONFIG } from '../../src/config/constants';
-import { sequelize, Task, TaskLogs, TaskSettings } from '../../src/models';
+import { Task, TaskLogs, TaskCategory } from '../../src/models';
 import { TaskRepository } from '../../src/modules/task/repositories/task.repository';
 import taskService, { TaskService } from '../../src/modules/task/services/task.service';
 import { TaskController } from '../../src/modules/task/controllers/task.controller';
 import type { AuthRequest } from '../../src/shared/types/auth.types';
 
 type Settings = {
+  id: number;
   hostId: number;
+  isEnabled: number;
+  isDeleted: number;
   taskNumberPrefix: string;
   nextTaskNumber: number | string;
   createdAt: number;
@@ -31,7 +34,7 @@ type MemoryTransaction = {
 };
 
 // These fakes exercise the real repository/service/controller with transaction-local
-// writes and per-host locking. Actual MySQL locking is covered by the opt-in suite.
+// writes and per-category locking. Actual MySQL locking is covered by the opt-in suite.
 function harness() {
   const settings = new Map<number, Settings>();
   const tasks: TaskRow[] = [];
@@ -42,39 +45,26 @@ function harness() {
   let failure: 'insert' | 'task' | 'log' | 'counter' | 'collision' | undefined;
   let notifications = 0;
 
-  mock.method(sequelize, 'query', async (sql: string, options: {
-    transaction: MemoryTransaction;
-    replacements: { hostId: number; prefix: string; nextTaskNumber: number; now: number };
+  settings.set(7, existingSettings(defaultPrefix, 1));
+  settings.set(8, { ...existingSettings(defaultPrefix, 1), id: 8, hostId: 8 });
+  mock.method(TaskCategory, 'findOne', async (options: {
+    where: { id: number; hostId: number; isDeleted: number }; transaction: MemoryTransaction; lock: string;
   }) => {
-    assert.match(sql, /INSERT INTO wd_task_settings/);
-    assert.match(sql, /ON DUPLICATE KEY UPDATE hostId = wd_task_settings.hostId\s*$/);
-    assert.doesNotMatch(sql, /IGNORE/);
-    if (failure === 'insert') throw new Error('settings insert failed');
-    const { transaction, replacements } = options;
+    if (failure === 'insert') throw new Error('category lookup failed');
+    const { transaction, where } = options;
     assert.ok(transactions.includes(transaction));
-    const previous = locks.get(replacements.hostId) || Promise.resolve();
+    assert.equal(options.lock, transaction.LOCK.UPDATE);
+    assert.equal(where.isDeleted, 0);
+    const previous = locks.get(where.id) || Promise.resolve();
     let release!: () => void;
     const held = new Promise<void>((resolve) => { release = resolve; });
-    locks.set(replacements.hostId, previous.then(() => held));
+    locks.set(where.id, previous.then(() => held));
     await previous;
     transaction.release = release;
-    transaction.hostId = replacements.hostId;
-    transaction.settings = { ...(settings.get(replacements.hostId) || {
-      hostId: replacements.hostId,
-      taskNumberPrefix: replacements.prefix,
-      nextTaskNumber: replacements.nextTaskNumber,
-      createdAt: replacements.now,
-      updatedAt: replacements.now,
-    }) };
-    return [];
-  });
-
-  mock.method(TaskSettings, 'findOne', async (options: {
-    where: { hostId: number }; transaction: MemoryTransaction; lock: string;
-  }) => {
-    const transaction = options.transaction;
-    assert.equal(options.where.hostId, transaction.hostId);
-    assert.equal(options.lock, transaction.LOCK.UPDATE);
+    const category = settings.get(where.id);
+    if (!category || category.hostId !== where.hostId || category.isDeleted !== 0) return null;
+    transaction.hostId = where.id;
+    transaction.settings = { ...category };
     return {
       ...transaction.settings,
       async update(data: Partial<Settings>, updateOptions: { transaction: MemoryTransaction }) {
@@ -136,20 +126,21 @@ function harness() {
   };
 }
 
-const payload = { hostId: 7, userId: 9, isAdmin: true, title: ' Proposal ', assignedToUserId: 22 };
+const payload = { hostId: 7, userId: 9, isAdmin: true, title: ' Proposal ', assignedToUserId: 22, taskCategoryId: 7 };
 const defaultPrefix = CONFIG.TASK_SETTINGS.DEFAULT_TASK_NUMBER_PREFIX;
 const defaultNumber = (counter: number) => `${defaultPrefix}${defaultPrefix.endsWith('-') ? '' : '-'}${counter}`;
 const existingSettings = (prefix = 'PRODISSUE', counter: number | string = 41): Settings => ({
-  hostId: 7, taskNumberPrefix: prefix, nextTaskNumber: counter, createdAt: 100, updatedAt: 100,
+  id: 7, hostId: 7, isEnabled: 1, isDeleted: 0,
+  taskNumberPrefix: prefix, nextTaskNumber: counter, createdAt: 100, updatedAt: 100,
 });
 
 test.afterEach(() => mock.restoreAll());
 
-test('first and second tasks persist sequential numbers; each host has its own settings', async () => {
+test('first and second tasks persist sequential numbers; each host has its own category', async () => {
   const h = harness();
   const first = await h.service.createTask(payload);
   const second = await h.service.createTask(payload);
-  const other = await h.service.createTask({ ...payload, hostId: 8 });
+  const other = await h.service.createTask({ ...payload, hostId: 8, taskCategoryId: 8 });
   assert.equal(first.task.taskNumber, defaultNumber(1));
   assert.equal(second.task.taskNumber, defaultNumber(2));
   assert.equal(other.task.taskNumber, defaultNumber(1));
@@ -186,6 +177,42 @@ test('stored trailing separator is not duplicated', async () => {
   assert.equal((await h.service.createTask(payload)).task.taskNumber, 'CUSTOM-3');
 });
 
+test('categories in one host maintain independent sequences', async () => {
+  const h = harness();
+  h.settings.set(9, { ...existingSettings('PROJECT', 1), id: 9 });
+  const results = await Promise.all([
+    h.service.createTask(payload),
+    h.service.createTask({ ...payload, taskCategoryId: 9 }),
+    h.service.createTask({ ...payload, taskCategoryId: 9 }),
+  ]);
+  assert.deepEqual(results.map((result) => result.task.taskNumber), [defaultNumber(1), 'PROJECT-1', 'PROJECT-2']);
+  assert.deepEqual(results.map((result) => result.task.taskCategoryId), [7, 9, 9]);
+  assert.equal(h.settings.get(7)!.nextTaskNumber, '2');
+  assert.equal(h.settings.get(9)!.nextTaskNumber, '3');
+});
+
+for (const state of ['missing', 'deleted', 'disabled', 'cross-host'] as const) {
+  test(`task creation rejects a ${state} category atomically`, async () => {
+    const h = harness();
+    if (state === 'missing') h.settings.delete(7);
+    if (state === 'deleted') h.settings.get(7)!.isDeleted = 1;
+    if (state === 'disabled') h.settings.get(7)!.isEnabled = 0;
+    if (state === 'cross-host') h.settings.get(7)!.hostId = 8;
+    await assert.rejects(h.service.createTask(payload), /category|Disabled/);
+    assert.equal(h.tasks.length, 0);
+    assert.equal(h.notifications, 0);
+    assert.equal(h.transactions[0].rolledBack, true);
+  });
+}
+
+for (const id of [undefined, null, '', true, [], {}, 0, -1, 1.5, '1e2', Number.MAX_SAFE_INTEGER + 1]) {
+  test(`missing or invalid taskCategoryId ${JSON.stringify(id)} is rejected before a transaction`, async () => {
+    const h = harness();
+    await assert.rejects(h.service.createTask({ ...payload, taskCategoryId: id as number }), /taskCategoryId/);
+    assert.equal(h.transactions.length, 0);
+  });
+}
+
 for (const initialized of [false, true]) {
   test(`concurrent requests serialize ${initialized ? 'existing' : 'first-time'} host allocation`, async () => {
     const h = harness();
@@ -194,7 +221,7 @@ for (const initialized of [false, true]) {
     const expected = Array.from({ length: 12 }, (_, index) => initialized ? `CUSTOM-${index + 10}` : defaultNumber(index + 1));
     assert.deepEqual(results.map((result) => result.task.taskNumber), expected);
     assert.equal(new Set(h.tasks.map((task) => task.taskNumber)).size, 12);
-    assert.equal(h.settings.size, 1);
+    assert.equal(h.settings.size, 2);
     assert.equal(h.settings.get(7)!.nextTaskNumber, initialized ? '22' : '13');
   });
 
@@ -209,7 +236,7 @@ for (const initialized of [false, true]) {
       assert.equal(h.notifications, 0);
       assert.equal(h.transactions[0].rolledBack, true);
       assert.equal(h.transactions[0].committed, false);
-      assert.deepEqual(h.settings.get(7), initialized ? existingSettings() : undefined);
+      assert.deepEqual(h.settings.get(7), initialized ? existingSettings() : existingSettings(defaultPrefix, 1));
       h.fail(undefined);
       assert.equal((await h.service.createTask(payload)).task.taskNumber, initialized ? 'PRODISSUE-41' : defaultNumber(1));
     });
@@ -270,7 +297,7 @@ test('controller uses authenticated identity, ignores client taskNumber, and ret
   assert.equal(body!.data.task.taskNumber, defaultNumber(1));
   assert.equal(body!.data.task.hostId, 7);
   assert.equal(body!.data.task.createdByUserId, 9);
-  assert.equal(h.settings.has(8), false);
+  assert.equal(h.settings.get(8)!.nextTaskNumber, 1);
 });
 
 test('body-supplied admin privilege cannot authorize task creation', async () => {

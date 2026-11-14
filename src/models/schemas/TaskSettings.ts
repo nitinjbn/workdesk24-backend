@@ -15,6 +15,7 @@ interface TaskCreationAttributes extends Optional<
   | 'updatedAt'
 > {}
 
+// Retained for migration rollback only; task numbering now uses TaskCategory.
 class TaskSettings extends Model<TaskSettingsAttributes, TaskCreationAttributes> implements TaskSettingsAttributes {
   public id!: number;
   public hostId!: number;

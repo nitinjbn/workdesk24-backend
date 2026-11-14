@@ -8,7 +8,7 @@
   "item": [
     {
       "name": "Admin APIs",
-      "description": "Admin-only routes under /api/v1/admin/tasks. Uses ADMIN_TOKEN and requires admin CSRF validation.",
+      "description": "Admin-only routes under /api/v1/admin/tasks. Uses ADMIN_TOKEN and requires admin CSRF validation. Creation requires taskCategoryId. Task list/detail/Kanban responses add taskCategoryId and taskCategory: { id, name, taskNumberPrefix } (or null for legacy uncategorized tasks); disabled categories remain readable. Optional filters.taskCategoryId narrows task lists/Kanban without changing existing filters/pagination.",
       "auth": {
         "type": "bearer",
         "bearer": [{ "key": "token", "value": "{{ADMIN_TOKEN}}", "type": "string" }]
@@ -25,6 +25,80 @@
         }
       }],
       "item": [
+        {
+          "name": "Task Categories",
+          "description": "Admin task categories. All requests use inherited ADMIN_TOKEN and the matching admin CSRF cookie/header. hostId is derived from authentication. List/detail include taskCount (all associated tasks, including deleted tasks) and Unix timestamps. Prefixes use the existing 1-20 trimmed character convention; PRJ and PRJ- share the same numbering namespace. Duplicate non-deleted names/prefixes return 409, including disabled categories. Category updates never reset counters or renumber tasks.",
+          "item": [
+            {
+              "name": "List Task Categories",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
+                "body": { "mode": "raw", "raw": "{}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/task-categories/list", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "task-categories", "list"] },
+                "description": "All fields optional. Default {} returns ALL matching categories without a pagination key. Supply page or limit to opt into pagination, e.g. { page: 1, limit: 20 }; the omitted parameter defaults to page 1 or limit 20 (limit max 100). Paginated responses include pagination: { page, limit, total, totalPages }. Optional search is a name substring (max 100 characters); isEnabled is 0/1 (omit for both). sortBy: id/name/createdAt/updatedAt; default name ASC. Stores the first enabled category ID for subsequent task requests."
+              },
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["const r = pm.response.json();", "const category = r.success && r.data.categories.find(c => Number(c.isEnabled) === 1); if (category) pm.environment.set('TASK_CATEGORY_ID', category.id);", "pm.test('Category list contract', () => { pm.expect(r.success).to.eql(true); pm.expect(r.data.categories).to.be.an('array'); const p = JSON.parse(pm.variables.replaceIn(pm.request.body.raw || '{}')); if (p.page !== undefined || p.limit !== undefined) pm.expect(r.data.pagination).to.have.all.keys('page', 'limit', 'total', 'totalPages'); else pm.expect(r.data).to.not.have.property('pagination'); r.data.categories.forEach(c => pm.expect(c.taskCount).to.be.a('number')); });"] } }],
+              "response": []
+            },
+            {
+              "name": "Create Task Category",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
+                "body": { "mode": "raw", "raw": "{\n  \"name\": \"Projects\",\n  \"description\": \"Project tasks\",\n  \"taskNumberPrefix\": \"PRJ\",\n  \"isEnabled\": 1\n}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/task-categories/create", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "task-categories", "create"] },
+                "description": "name (1-100 characters) and taskNumberPrefix (1-20) are required and trimmed. description is optional/null, max 500 characters. isEnabled is optional, 0/1 (default 1). nextTaskNumber is server-owned and starts at 1. Returns data.category."
+              },
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["const r = pm.response.json(); if (r.success) pm.environment.set('TASK_CATEGORY_ID', r.data.category.id);"] } }],
+              "response": []
+            },
+            {
+              "name": "Update Task Category",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
+                "body": { "mode": "raw", "raw": "{\n  \"taskCategoryId\": {{TASK_CATEGORY_ID}},\n  \"name\": \"Updated Projects\",\n  \"description\": null,\n  \"taskNumberPrefix\": \"PROJ\"\n}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/task-categories/update", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "task-categories", "update"] },
+                "description": "Requires taskCategoryId and at least one editable field: name, description, taskNumberPrefix. Cannot directly change nextTaskNumber or isEnabled. Prefix changes only affect future tasks. Returns data.category."
+              },
+              "response": []
+            },
+            {
+              "name": "Task Category Detail",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
+                "body": { "mode": "raw", "raw": "{\n  \"taskCategoryId\": {{TASK_CATEGORY_ID}}\n}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/task-categories/detail", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "task-categories", "detail"] },
+                "description": "Returns data.category including taskCount. Missing, deleted, or cross-host IDs return 404."
+              },
+              "response": []
+            },
+            {
+              "name": "Toggle Task Category Status",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
+                "body": { "mode": "raw", "raw": "{\n  \"taskCategoryId\": {{TASK_CATEGORY_ID}},\n  \"isEnabled\": 0\n}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/task-categories/toggle-status", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "task-categories", "toggle-status"] },
+                "description": "Set isEnabled explicitly to 0 or 1. Disabled categories cannot be used for task creation/reassignment; existing tasks remain readable. Deleted/missing/cross-host categories return 404. Returns data.category."
+              },
+              "response": []
+            },
+            {
+              "name": "Delete Task Category",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
+                "body": { "mode": "raw", "raw": "{\n  \"taskCategoryId\": {{TASK_CATEGORY_ID}}\n}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/task-categories/delete", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "task-categories", "delete"] },
+                "description": "Soft-deletes an unused category. Any associated task, including soft-deleted tasks, prevents deletion with 409 TASK_CATEGORY_IN_USE. Returns data: { taskCategoryId }. No tasks are deleted or changed."
+              },
+              "response": []
+            }
+          ]
+        },
         {
           "name": "Kanban Board",
           "request": {
@@ -63,9 +137,9 @@
               { "key": "Content-Type", "value": "application/json" },
               { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }
             ],
-            "body": { "mode": "raw", "raw": "{\n  \"title\": \"Prepare customer proposal\",\n  \"description\": \"Draft and review the proposal\",\n  \"assignedToUserId\": 22,\n  \"priority\": \"HIGH\",\n  \"dueAt\": 1791853200\n}", "options": { "raw": { "language": "json" } } },
+            "body": { "mode": "raw", "raw": "{\n  \"taskCategoryId\": {{TASK_CATEGORY_ID}},\n  \"title\": \"Prepare customer proposal\",\n  \"description\": \"Draft and review the proposal\",\n  \"assignedToUserId\": 22,\n  \"priority\": \"HIGH\",\n  \"dueAt\": 1791853200\n}", "options": { "raw": { "language": "json" } } },
             "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/createTask", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "createTask"] },
-            "description": "Creates a PENDING task and its CREATED activity log. Replace assignedToUserId with an active field-app user in this tenant. data.task.taskNumber is generated automatically from the authenticated host's settings (default TASK-1, TASK-2, ...). Do not send hostId or taskNumber. A trailing hyphen in the stored prefix is used as the separator; otherwise a hyphen is added. Task, activity log, and counter advancement commit together; failures do not consume a number. Existing host prefixes and counters are preserved."
+            "description": "Creates a PENDING task and CREATED log. taskCategoryId is now required; select an enabled category in this authenticated host (List Task Categories stores TASK_CATEGORY_ID). Missing/invalid category IDs return 400, unavailable/cross-host IDs 404, disabled categories 400. assignedToUserId must be an active field-app user. taskNumber comes only from the locked category's prefix/counter; PRJ yields PRJ-1 and PRJ- also yields PRJ-1. Task, log and counter commit together; failures consume no number. Existing task numbers are never changed. Historical collisions after prefix reuse/change return 409 TASK_NUMBER_CONFLICT and roll back; choose another prefix. Do not send hostId, taskNumber or nextTaskNumber."
           },
           "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["const result = pm.response.json();", "if (result.success && result.data && result.data.task && result.data.task.id) pm.environment.set('TASK_ID', result.data.task.id);", "pm.test('Created task includes an automatic task number', function () { pm.expect(result.success).to.eql(true); pm.expect(result.data.task.taskNumber).to.be.a('string').and.match(/.+-[1-9][0-9]*$/); pm.expect(Array.from(result.data.task.taskNumber).length).to.be.at.most(30); });"] } }],
           "response": []
@@ -78,6 +152,7 @@
             "body": {
               "mode": "formdata",
               "formdata": [
+                { "key": "taskCategoryId", "value": "{{TASK_CATEGORY_ID}}", "type": "text" },
                 { "key": "title", "value": "Prepare customer proposal", "type": "text" },
                 { "key": "description", "value": "Draft and review the proposal", "type": "text" },
                 { "key": "assignedToUserId", "value": "22", "type": "text" },
@@ -90,7 +165,7 @@
               ]
             },
             "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/createTaskWithAttachment", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "createTaskWithAttachment"] },
-            "description": "Requires the inherited admin bearer token and matching CSRF cookie/header. Send task fields directly as multipart text fields. title and assignedToUserId are required; description, customerId, visitId, priority, dueAt (Unix seconds), attachment remarks, and the file are optional. Omit the file part to create a task without an attachment, or include one validated JPEG, PNG, WEBP, or PDF file up to 10 MB under file. Do not set Content-Type manually. Returns data.task and includes data.attachment only when a file is uploaded. The server links the attachment to the newly created task; do not send taskId or taskCommentId. Task, activity, counter, and attachment metadata commit together; failures roll back and attempt uploaded-file cleanup. Notifications run only after commit. The separate creation and upload endpoints remain available."
+            "description": "Requires inherited admin bearer token and matching CSRF cookie/header. Send taskCategoryId (required, enabled category owned by the authenticated host), title and assignedToUserId as multipart text fields. Uses the same locked category allocator as Create Task; missing category is rejected. description, customerId, visitId, priority, dueAt (Unix seconds), remarks and file are optional. Omit file or send one JPEG/PNG/WEBP/PDF up to 10 MB. Do not set Content-Type manually. Returns data.task and optional data.attachment. Task, activity, category counter and attachment metadata commit together; failures roll back and clean uploaded media. Notifications run after commit. Do not send taskId/taskCommentId."
           },
           "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["const result = pm.response.json();", "if (result.success && result.data && result.data.task) pm.environment.set('TASK_ID', result.data.task.id);", "if (result.success && result.data && result.data.attachment) pm.environment.set('ATTACHMENT_ID', result.data.attachment.id);", "pm.test('Task is created and attachment is optional', function () { pm.expect(result.success).to.eql(true); pm.expect(result.data.task).to.be.an('object'); if (result.data.attachment) pm.expect(String(result.data.attachment.taskId)).to.eql(String(result.data.task.id)); });"] } }],
           "response": []
@@ -122,8 +197,9 @@
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
-            "body": { "mode": "raw", "raw": "{\n  \"taskId\": {{TASK_ID}},\n  \"title\": \"Prepare revised customer proposal\",\n  \"description\": \"Update the pricing section and review\",\n  \"priority\": \"URGENT\",\n  \"dueAt\": 1791856800\n}", "options": { "raw": { "language": "json" } } },
-            "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/updateTask", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "updateTask"] }
+            "body": { "mode": "raw", "raw": "{\n  \"taskId\": {{TASK_ID}},\n  \"taskCategoryId\": {{TASK_CATEGORY_ID}},\n  \"title\": \"Prepare revised customer proposal\",\n  \"description\": \"Update the pricing section and review\",\n  \"priority\": \"URGENT\",\n  \"dueAt\": 1791856800\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/updateTask", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "updateTask"] },
+            "description": "taskCategoryId is optional on update. When supplied it must belong to this host and be enabled/non-deleted. Reassignment never changes taskNumber or either category's counter. Existing metadata/lifecycle behavior is unchanged."
           },
           "response": []
         },
@@ -267,7 +343,7 @@
     },
     {
       "name": "App APIs",
-      "description": "Employee task routes under /api/v1/app/task. Uses TOKEN from the active Postman environment. Employees can only access tasks assigned to them.",
+      "description": "Employee task routes under /api/v1/app/task. Uses TOKEN from the active Postman environment. Employees can only access tasks assigned to them. Task list/detail responses include taskCategoryId and taskCategory: { id, name, taskNumberPrefix }; disabled categories remain readable. Optional filters.taskCategoryId narrows the task list.",
       "auth": {
         "type": "bearer",
         "bearer": [{ "key": "token", "value": "{{TOKEN}}", "type": "string" }]

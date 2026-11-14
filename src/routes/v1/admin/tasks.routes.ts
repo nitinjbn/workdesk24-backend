@@ -1,8 +1,16 @@
 import { Router } from 'express';
 import taskController from '../../../modules/task/controllers/task.controller';
+import taskCategoryController from '../../../modules/task/controllers/task-category.controller';
 import { taskUpload, taskUploadErrorHandler } from '../../../modules/task/middleware/task-upload.middleware';
 
 const router = Router();
+
+router.post('/task-categories/list', taskCategoryController.list);
+router.post('/task-categories/create', taskCategoryController.create);
+router.post('/task-categories/update', taskCategoryController.update);
+router.post('/task-categories/detail', taskCategoryController.detail);
+router.post('/task-categories/delete', taskCategoryController.remove);
+router.post('/task-categories/toggle-status', taskCategoryController.toggleStatus);
 
 router.post('/dashboard-stats', taskController.dashboardStats);
 router.post('/kanban-board', taskController.kanbanBoard);

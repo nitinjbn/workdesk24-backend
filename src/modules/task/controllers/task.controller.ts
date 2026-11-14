@@ -91,6 +91,7 @@ export class TaskController {
         title: req.body.title,
         description: req.body.description,
         assignedToUserId: Number(req.body.assignedToUserId),
+        taskCategoryId: req.body.taskCategoryId,
         customerId: req.body.customerId === undefined ? undefined : Number(req.body.customerId),
         visitId: req.body.visitId === undefined ? undefined : Number(req.body.visitId),
         priority: req.body.priority,

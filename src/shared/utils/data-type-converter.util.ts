@@ -21,6 +21,7 @@ export const NUMERIC_FIELD_CONFIG: Record<string, 'number' | 'bigint'> = {
   feedbackId: 'bigint',
   imageId: 'bigint',
   productId: 'bigint',
+  taskCategoryId: 'bigint',
 
   // Timestamps (stored as Unix timestamps)
   createdAt: 'number',
