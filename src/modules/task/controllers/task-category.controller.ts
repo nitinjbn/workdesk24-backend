@@ -4,7 +4,7 @@ import { createConfiguredError } from '../../../shared/utils/error.util';
 import categoryService from '../services/task-category.service';
 
 export class TaskCategoryController {
-  private async respond(req: AuthRequest, res: Response, next: NextFunction, action: 'list' | 'create' | 'update' | 'detail' | 'remove' | 'toggleStatus', message: string): Promise<void> {
+  private async respond(req: AuthRequest, res: Response, next: NextFunction, action: 'list' | 'listForApp' | 'create' | 'update' | 'detail' | 'remove' | 'toggleStatus', message: string): Promise<void> {
     try {
       const body = req.body === undefined ? {} : req.body;
       if (!body || typeof body !== 'object' || Array.isArray(body)) {
@@ -23,6 +23,8 @@ export class TaskCategoryController {
 
   list = (req: AuthRequest, res: Response, next: NextFunction) =>
     this.respond(req, res, next, 'list', 'Task categories retrieved successfully');
+  listForApp = (req: AuthRequest, res: Response, next: NextFunction) =>
+    this.respond(req, res, next, 'listForApp', 'Task categories retrieved successfully');
   create = (req: AuthRequest, res: Response, next: NextFunction) =>
     this.respond(req, res, next, 'create', 'Task category created successfully');
   update = (req: AuthRequest, res: Response, next: NextFunction) =>

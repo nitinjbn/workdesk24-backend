@@ -534,6 +534,17 @@
               "description": "Uses ADMIN_TOKEN and matching CSRF cookie/header. All scope comes from authentication. Unix timestamps, active name/prefix uniqueness per host, read-only nextTaskNumber. No category operation renumbers existing tasks.",
               "item": [
                 {
+                  "name": "List Task Categories (Employee)",
+                  "request": {
+                    "method": "POST",
+                    "header": [{ "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }],
+                    "body": { "mode": "raw", "raw": "{}" },
+                    "url": { "raw": "{{BASE_URL}}/api/v1/app/task/task-categories/list", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "task", "task-categories", "list"] },
+                    "description": "Returns data.categories for the authenticated host, including enabled and disabled non-deleted categories and taskCount. Supports the admin list's optional search, isEnabled, sorting and pagination."
+                  },
+                  "response": []
+                },
+                {
                   "name": "List Task Categories",
                   "request": {
                     "method": "POST",

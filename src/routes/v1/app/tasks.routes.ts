@@ -1,11 +1,13 @@
 import { Router } from 'express';
 import taskController from '../../../modules/task/controllers/task.controller';
+import taskCategoryController from '../../../modules/task/controllers/task-category.controller';
 import taskTagController from '../../../modules/task/controllers/task-tag.controller';
 import { taskUpload, taskUploadErrorHandler } from '../../../modules/task/middleware/task-upload.middleware';
 
 const router = Router();
 
 router.post('/task-tags/list', taskTagController.listEnabled);
+router.post('/task-categories/list', taskCategoryController.listForApp);
 router.post('/update-tags', taskController.updateTags);
 
 router.post('/getTasks', taskController.getTasks);

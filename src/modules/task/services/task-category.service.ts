@@ -8,6 +8,9 @@ interface CategoryFields {
   name?: unknown; description?: unknown; taskNumberPrefix?: unknown;
   nextTaskNumber?: unknown; isEnabled?: unknown;
 }
+type CategoryListPayload = CategoryScope & {
+  page?: unknown; limit?: unknown; search?: unknown; isEnabled?: unknown; sortBy?: unknown; sortOrder?: unknown;
+};
 
 function categoryError(code: string, message: string, status = 400) {
   return createConfiguredError(code, message, status, code);
@@ -36,8 +39,8 @@ export class TaskCategoryService {
     private readonly transactionFactory: () => Promise<Transaction> = () => sequelize.transaction()
   ) {}
 
-  private requireAdmin(scope: CategoryScope) {
-    if (!scope.isAdmin) throw categoryError('TASK_ADMIN_REQUIRED', 'Admin access is required for this operation', 403);
+  private requireScope(scope: CategoryScope, adminOnly = true) {
+    if (adminOnly && !scope.isAdmin) throw categoryError('TASK_ADMIN_REQUIRED', 'Admin access is required for this operation', 403);
     if (!Number.isSafeInteger(scope.hostId) || scope.hostId <= 0) {
       throw categoryError('INVALID_HOST_ID', 'Valid authenticated host is required', 401);
     }
@@ -103,10 +106,17 @@ export class TaskCategoryService {
     return category;
   }
 
-  async list(payload: CategoryScope & {
-    page?: unknown; limit?: unknown; search?: unknown; isEnabled?: unknown; sortBy?: unknown; sortOrder?: unknown;
-  }) {
-    this.requireAdmin(payload);
+  async list(payload: CategoryListPayload) {
+    this.requireScope(payload);
+    return this.listCategories(payload);
+  }
+
+  async listForApp(payload: CategoryListPayload) {
+    this.requireScope(payload, false);
+    return this.listCategories(payload);
+  }
+
+  private async listCategories(payload: CategoryListPayload) {
     const paginated = payload.page !== undefined || payload.limit !== undefined;
     for (const value of [payload.page, payload.limit]) {
       if (value !== undefined && ((typeof value !== 'number' && typeof value !== 'string')
@@ -144,7 +154,7 @@ export class TaskCategoryService {
   }
 
   async create(payload: CategoryScope & CategoryFields) {
-    this.requireAdmin(payload);
+    this.requireScope(payload);
     const data = this.fields(payload, true);
     try {
       const category = await this.repository.create({
@@ -160,14 +170,14 @@ export class TaskCategoryService {
   }
 
   async detail(payload: CategoryScope & { taskCategoryId: unknown }) {
-    this.requireAdmin(payload);
+    this.requireScope(payload);
     const category = await this.repository.detail(payload.hostId, taskCategoryId(payload.taskCategoryId));
     if (!category) throw categoryError('TASK_CATEGORY_NOT_FOUND', 'Task category not found', 404);
     return { category: categoryData(category) };
   }
 
   async update(payload: CategoryScope & CategoryFields & { taskCategoryId: unknown }) {
-    this.requireAdmin(payload);
+    this.requireScope(payload);
     const data = this.fields(payload, false);
     if (payload.isEnabled !== undefined) throw categoryError('INVALID_TASK_CATEGORY', 'Use toggle-status to change isEnabled');
     if (!Object.keys(data).length) throw categoryError('INVALID_TASK_CATEGORY', 'At least one category field is required');
@@ -178,7 +188,7 @@ export class TaskCategoryService {
   }
 
   async remove(payload: CategoryScope & { taskCategoryId: unknown }) {
-    this.requireAdmin(payload);
+    this.requireScope(payload);
     return this.inTransaction(async (transaction) => {
       const category = await this.locked(payload, payload.taskCategoryId, transaction);
       if (await this.repository.countTasks(payload.hostId, category.id, transaction)) {
@@ -191,7 +201,7 @@ export class TaskCategoryService {
   }
 
   async toggleStatus(payload: CategoryScope & { taskCategoryId: unknown; isEnabled: unknown }) {
-    this.requireAdmin(payload);
+    this.requireScope(payload);
     const isEnabled = this.enabled(payload.isEnabled);
     return this.inTransaction(async (transaction) => {
       const category = await this.locked(payload, payload.taskCategoryId, transaction);

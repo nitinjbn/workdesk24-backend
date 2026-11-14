@@ -231,6 +231,57 @@ test('unpaginated category list returns an empty array without pagination for an
   });
 });
 
+test('employee category list is authenticated, host-scoped and preserves list filters and pagination', async (t) => {
+  const express = require('express');
+  const jwt = require('jsonwebtoken');
+  const { once } = require('node:events');
+  const userRepository = require('../../src/modules/auth/repositories/user.repository').default;
+  const { authMiddleware } = require('../../src/shared/middleware/auth.middleware');
+  const { errorHandler } = require('../../src/shared/middleware/error-handler.middleware');
+  const h = harness(t);
+  await h.create({ name: 'Active', taskNumberPrefix: 'ACTIVE' });
+  await h.create({ name: 'Disabled', taskNumberPrefix: 'DISABLED', isEnabled: 0 });
+  await h.create({ hostId: 8, name: 'Other host', taskNumberPrefix: 'OTHER' });
+  const { category: deleted } = await h.create({ name: 'Deleted', taskNumberPrefix: 'DELETED' });
+  await h.service.remove({ ...admin, taskCategoryId: deleted.id });
+  stubCategoryQueries(t, h.database);
+  const service = new TaskCategoryService(new TaskCategoryRepository());
+  t.mock.method(categoryService, 'listForApp', (payload) => service.listForApp(payload));
+  t.mock.method(userRepository, 'findById', async () => ({ id: 9, hostId: '7', isAdminUser: 0, accountStatus: 'ACTIVE' }));
+
+  const app = express();
+  app.use(express.json());
+  app.use('/api/v1/app/task', authMiddleware, require('../../src/routes/v1/app/tasks.routes').default);
+  app.use((_req, res) => res.status(404).json({ success: false }));
+  app.use(errorHandler);
+  const server = app.listen(0, '127.0.0.1');
+  await once(server, 'listening');
+  t.after(async () => { server.closeAllConnections(); await new Promise((resolve) => server.close(resolve)); });
+  const token = jwt.sign({ userId: 9, tokenType: 'access' }, process.env.JWT_SECRET, { expiresIn: '5m' });
+  async function send(action, body, authenticated = true) {
+    const response = await fetch(`http://127.0.0.1:${server.address().port}/api/v1/app/task/task-categories/${action}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(authenticated ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify(body),
+    });
+    return { status: response.status, body: await response.json() };
+  }
+  assert.equal((await send('list', {}, false)).status, 401);
+  const all = await send('list', { hostId: 8, isAdmin: true });
+  assert.equal(all.status, 200);
+  assert.equal(all.body.success, true);
+  assert.deepEqual(all.body.data.categories.map((category) => category.name), ['Active', 'Disabled']);
+  assert.ok(all.body.data.categories.every((category) => Number(category.hostId) === 7 && category.taskCount === 0));
+  assert.equal(Object.hasOwn(all.body.data, 'pagination'), false);
+  const filtered = await send('list', { page: 1, limit: 1, isEnabled: 0, search: 'Dis' });
+  assert.deepEqual(filtered.body.data.categories.map((category) => category.name), ['Disabled']);
+  assert.deepEqual(filtered.body.data.pagination, { page: 1, limit: 1, total: 1, totalPages: 1 });
+  assert.equal((await send('list', { limit: 101 })).status, 400);
+  assert.equal((await send('create', {})).status, 404);
+  await assert.rejects(service.list({ hostId: 7, isAdmin: false }), { statusCode: 403 });
+  await assert.rejects(service.listForApp({ hostId: 0, isAdmin: false }), { code: 'INVALID_HOST_ID' });
+});
+
 test('task category reassignment keeps task number/counters and validates target category', async () => {
   const task = { id: 1, hostId: 7, taskCategoryId: 1, taskNumber: 'OLD-41', status: 'PENDING' };
   let increments = 0;

@@ -438,6 +438,16 @@
           }, "response": []
         },
         {
+          "name": "List Task Categories",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{}" },
+            "url": { "raw": "{{BASE_URL}}/api/v1/app/task/task-categories/list", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "task", "task-categories", "list"] },
+            "description": "Returns data.categories for the authenticated host, including enabled and disabled non-deleted categories and taskCount. Optional search, isEnabled (0/1), sortBy and sortOrder match the admin list. Supply page or limit for pagination; otherwise all matches are returned."
+          }, "response": []
+        },
+        {
           "name": "Replace My Task Tags",
           "request": {
             "method": "POST",
