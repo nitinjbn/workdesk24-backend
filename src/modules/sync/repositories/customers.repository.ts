@@ -33,12 +33,7 @@ export class CustomerRepository {
         isEnabled: 1,
         [Op.and]: [
           {
-            [Op.or]: [
-              { approvalStatus: 'APPROVED' },
-              {
-                [Op.and]: [{ createdByUserId: userId }, { approvalStatus: 'PENDING' }],
-              },
-            ],
+            approvalStatus: ['APPROVED', 'PENDING'],
           },
           {
             [Op.or]: [
