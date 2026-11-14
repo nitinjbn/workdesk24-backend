@@ -1,3 +1,5 @@
+import { createConfiguredError } from '../../../shared/utils/error.util';
+
 export type TaskStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
 export type TaskAction = 'STARTED' | 'COMPLETED' | 'CANCELLED';
 
@@ -22,4 +24,21 @@ export function isValidTaskFile(buffer: Buffer, mimeType: string): boolean {
 
 export function isValidUnixTimestamp(value: unknown): boolean {
   return Number.isSafeInteger(Number(value)) && Number(value) > 0;
+}
+
+export function parseTaskEntityId(value: unknown, field: 'taskId' | 'tagId'): number {
+  if ((typeof value !== 'number' && typeof value !== 'string')
+    || (typeof value === 'string' && (value !== value.trim() || !/^[1-9]\d*$/.test(value)))
+    || !Number.isSafeInteger(Number(value)) || Number(value) <= 0) {
+    const code = field === 'tagId' ? 'INVALID_TASK_TAG_ID' : 'INVALID_TASK_ID';
+    throw createConfiguredError(code, `${field} must be a positive integer`, 400, code);
+  }
+  return Number(value);
+}
+
+export function parseTaskTagIds(value: unknown): number[] {
+  if (!Array.isArray(value)) {
+    throw createConfiguredError('INVALID_TASK_TAG_IDS', 'tagIds must be an array of positive integers', 400, 'INVALID_TASK_TAG_IDS');
+  }
+  return [...new Set(value.map((id) => parseTaskEntityId(id, 'tagId')))];
 }

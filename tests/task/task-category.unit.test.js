@@ -252,8 +252,9 @@ test('task category reassignment keeps task number/counters and validates target
 });
 
 test('task list/detail category includes stay host-scoped and preserve tasks with disabled categories', async (t) => {
-  t.mock.method(Task, 'findOne', async (options) => options);
-  const options = await new TaskRepository().getTask(7, 1);
+  let options;
+  t.mock.method(Task, 'findOne', async (query) => { options = query; return null; });
+  await new TaskRepository().getTask(7, 1);
   const include = options.include.find((item) => item.as === 'taskCategory');
   assert.deepEqual(include.where, { hostId: 7 });
   assert.equal(include.required, false);

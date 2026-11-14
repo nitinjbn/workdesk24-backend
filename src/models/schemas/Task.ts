@@ -1,4 +1,5 @@
 import { Model, DataTypes, Sequelize, Optional } from 'sequelize';
+import type { TaskTagSummary } from './TaskTag';
 interface TaskAttributes {
   id: number;
   hostId: number;
@@ -20,6 +21,7 @@ interface TaskAttributes {
   createdAt: number;
   updatedAt?: number;
   deletedAt?: number | null;
+  tags?: TaskTagSummary[];
 }
 
 interface TaskCreationAttributes extends Optional<
@@ -64,8 +66,10 @@ class Task extends Model<TaskAttributes, TaskCreationAttributes> implements Task
   public createdAt!: number;
   public updatedAt!: number;
   public deletedAt?: number | null;
+  public tags?: TaskTagSummary[];
 
   public static associate(models: any): void {
+    Task.hasMany(models.TaskTagMapping, { foreignKey: 'taskId', as: 'tagMappings' });
     Task.belongsTo(models.TaskCategory, {
       foreignKey: 'taskCategoryId',
       as: 'taskCategory',
@@ -113,6 +117,7 @@ export function initTask(sequelize: Sequelize): typeof Task {
         type: DataTypes.STRING(30),
         allowNull: true,
       },
+      tags: { type: DataTypes.VIRTUAL },
       title: {
         type: DataTypes.STRING(100),
         allowNull: false,

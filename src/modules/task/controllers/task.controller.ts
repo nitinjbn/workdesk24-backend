@@ -128,6 +128,16 @@ export class TaskController {
       'Task updated successfully'
     );
 
+  updateTags = (req: AuthRequest, res: Response, next: NextFunction): Promise<void> =>
+    this.respond(
+      () => taskService.updateTags({
+        ...identity(req), hostId: Number(req.user!.hostId), taskId: req.body?.taskId, tagIds: req.body?.tagIds,
+      }),
+      res,
+      next,
+      'Task tags updated successfully'
+    );
+
   assignTask = (req: AuthRequest, res: Response, next: NextFunction): Promise<void> =>
     this.respond(
       () => taskService.assignTask({ ...req.body, ...identity(req) }),

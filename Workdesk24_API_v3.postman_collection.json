@@ -429,8 +429,106 @@
         },
         {
           "name": "Task Management",
-          "description": "Admin management operations use /api/v1/admin/tasks and the existing admin role/CSRF middleware. Employee operations use /api/v1/app/task. Task responses retain { success, message, data }. Creation now requires taskCategoryId. Task list/detail/Kanban include taskCategoryId and taskCategory: { id, name, taskNumberPrefix }, or null for legacy uncategorized tasks. Disabled categories remain readable. Optional filters.taskCategoryId narrows lists/Kanban. See Task_Management.postman_collection.json for detailed category examples.",
+          "description": "Admin management operations use /api/v1/admin/tasks and the existing admin role/CSRF middleware. Employee operations use /api/v1/app/task. Task responses retain { success, message, data }. Creation requires taskCategoryId. Task list/detail/Kanban include taskCategoryId, taskCategory and tags: [{ id, name, color, isEnabled, isDeleted }]. Historical disabled/deleted tag references remain readable. Optional filters.taskCategoryId, filters.tagId or filters.tagIds (OR matching) narrow lists/Kanban without duplicate tasks or changed pagination. [] means no tag filter. Run docs/TASK_TAGS.sql manually before deploying the tag-enabled backend; do not also run its migration. See Task_Management.postman_collection.json for detailed examples.",
           "item": [
+            {
+              "name": "Task Tags",
+              "description": "Admin-only master; authenticated host scope, existing support and CSRF policies. Trimmed names max 50, color #RRGGBB, description max 255. Names are case-insensitively unique within a host INCLUDING soft-deleted tags. Physical deletes are never used. Assignment soft-removes only enabled/non-deleted tag mappings; disabled/deleted historical references are preserved, including when tagIds is []. Task fields and lifecycle timestamps never change.",
+              "item": [
+                {
+                  "name": "List Task Tags (Admin)",
+                  "request": {
+                    "method": "POST",
+                    "header": [{ "key": "Authorization", "value": "Bearer {{ADMIN_TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }, { "key": "Cookie", "value": "wd24_admin_csrf={{ADMIN_CSRF_TOKEN}}" }],
+                    "body": { "mode": "raw", "raw": "{}" },
+                    "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/task-tags/list", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "task-tags", "list"] },
+                    "description": "Returns all non-deleted data.tags sorted by name ASC. Optional search (max 50) and numeric isEnabled (0/1). No pagination."
+                  }, "response": []
+                },
+                {
+                  "name": "Create Task Tag (Admin)",
+                  "request": {
+                    "method": "POST",
+                    "header": [{ "key": "Authorization", "value": "Bearer {{ADMIN_TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }, { "key": "Cookie", "value": "wd24_admin_csrf={{ADMIN_CSRF_TOKEN}}" }],
+                    "body": { "mode": "raw", "raw": "{\"name\":\"Follow up\",\"color\":\"#FF8800\",\"description\":\"Customer follow-up\",\"isEnabled\":1}" },
+                    "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/task-tags/create", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "task-tags", "create"] },
+                    "description": "name/color required; description/isEnabled optional. Returns data.tag. Duplicate names return 409."
+                  },
+                  "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["const r = pm.response.json(); if (r.success) pm.environment.set('TASK_TAG_ID', r.data.tag.id);"] } }],
+                  "response": []
+                },
+                {
+                  "name": "Update Task Tag (Admin)",
+                  "request": {
+                    "method": "POST",
+                    "header": [{ "key": "Authorization", "value": "Bearer {{ADMIN_TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }, { "key": "Cookie", "value": "wd24_admin_csrf={{ADMIN_CSRF_TOKEN}}" }],
+                    "body": { "mode": "raw", "raw": "{\"tagId\":{{TASK_TAG_ID}},\"name\":\"Follow up\",\"color\":\"#0088FF\",\"description\":null}" },
+                    "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/task-tags/update", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "task-tags", "update"] },
+                    "description": "tagId plus at least one of name/color/description. Returns data.tag. Use toggle-status to change isEnabled."
+                  }, "response": []
+                },
+                {
+                  "name": "Task Tag Detail (Admin)",
+                  "request": {
+                    "method": "POST",
+                    "header": [{ "key": "Authorization", "value": "Bearer {{ADMIN_TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }, { "key": "Cookie", "value": "wd24_admin_csrf={{ADMIN_CSRF_TOKEN}}" }],
+                    "body": { "mode": "raw", "raw": "{\"tagId\":{{TASK_TAG_ID}}}" },
+                    "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/task-tags/detail", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "task-tags", "detail"] },
+                    "description": "Returns data.tag for a non-deleted tag, including disabled tags."
+                  }, "response": []
+                },
+                {
+                  "name": "Soft Delete Task Tag (Admin)",
+                  "request": {
+                    "method": "POST",
+                    "header": [{ "key": "Authorization", "value": "Bearer {{ADMIN_TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }, { "key": "Cookie", "value": "wd24_admin_csrf={{ADMIN_CSRF_TOKEN}}" }],
+                    "body": { "mode": "raw", "raw": "{\"tagId\":{{TASK_TAG_ID}}}" },
+                    "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/task-tags/delete", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "task-tags", "delete"] },
+                    "description": "Returns data.tagId. Historical mappings remain readable with isDeleted: 1; deleted names remain reserved."
+                  }, "response": []
+                },
+                {
+                  "name": "Toggle Task Tag Status (Admin)",
+                  "request": {
+                    "method": "POST",
+                    "header": [{ "key": "Authorization", "value": "Bearer {{ADMIN_TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }, { "key": "Cookie", "value": "wd24_admin_csrf={{ADMIN_CSRF_TOKEN}}" }],
+                    "body": { "mode": "raw", "raw": "{\"tagId\":{{TASK_TAG_ID}},\"isEnabled\":0}" },
+                    "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/task-tags/toggle-status", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "task-tags", "toggle-status"] },
+                    "description": "Explicit numeric isEnabled 0/1. Returns data.tag. Disabled tags cannot be newly assigned."
+                  }, "response": []
+                },
+                {
+                  "name": "Replace Task Tags (Admin)",
+                  "request": {
+                    "method": "POST",
+                    "header": [{ "key": "Authorization", "value": "Bearer {{ADMIN_TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }, { "key": "Cookie", "value": "wd24_admin_csrf={{ADMIN_CSRF_TOKEN}}" }],
+                    "body": { "mode": "raw", "raw": "{\"taskId\":{{TASK_ID}},\"tagIds\":[{{TASK_TAG_ID}}]}" },
+                    "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/update-tags", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "update-tags"] },
+                    "description": "Returns data: { taskId, tags }. Replaces active assignments in a transaction; [] removes all active assignments. Historical disabled/deleted references remain, and may be retained in tagIds only if already linked. Removed mappings are restored rather than duplicated on reassignment. No task fields or timestamps change."
+                  }, "response": []
+                },
+                {
+                  "name": "List Enabled Task Tags (Employee)",
+                  "request": {
+                    "method": "POST",
+                    "header": [{ "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }],
+                    "body": { "mode": "raw", "raw": "{}" },
+                    "url": { "raw": "{{BASE_URL}}/api/v1/app/task/task-tags/list", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "task", "task-tags", "list"] },
+                    "description": "Returns data.tags: [{ id, name, color }], enabled and non-deleted only, sorted by name ASC. Optional search max 50; no pagination. Employee JWT required; no master mutations are exposed."
+                  }, "response": []
+                },
+                {
+                  "name": "Replace My Task Tags (Employee)",
+                  "request": {
+                    "method": "POST",
+                    "header": [{ "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }],
+                    "body": { "mode": "raw", "raw": "{\"taskId\":{{TASK_ID}},\"tagIds\":[{{TASK_TAG_ID}}]}" },
+                    "url": { "raw": "{{BASE_URL}}/api/v1/app/task/update-tags", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "task", "update-tags"] },
+                    "description": "Same replacement/history contract as admin, restricted to tasks assigned to the authenticated employee. Empty tagIds removes active assignments; disabled/deleted historical references remain. Returns data: { taskId, tags }."
+                  }, "response": []
+                }
+              ]
+            },
             {
               "name": "Task Categories (Admin)",
               "description": "Uses ADMIN_TOKEN and matching CSRF cookie/header. All scope comes from authentication. Unix timestamps, active name/prefix uniqueness per host, read-only nextTaskNumber. No category operation renumbers existing tasks.",
@@ -576,7 +674,7 @@
               "request": {
                 "method": "POST",
                 "header": [{ "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{\n  \"filters\": {\n    \"status\": \"PENDING\",\n    \"priority\": \"HIGH\",\n    \"search\": \"proposal\",\n    \"overdueOnly\": false\n  },\n  \"page\": 1,\n  \"limit\": 20,\n  \"sortBy\": \"createdAt\",\n  \"sortOrder\": \"DESC\"\n}" },
+                "body": { "mode": "raw", "raw": "{\n  \"filters\": {\n    \"status\": \"PENDING\",\n    \"priority\": \"HIGH\",\n    \"search\": \"proposal\",\n    \"overdueOnly\": false,\n    \"tagIds\": []\n  },\n  \"page\": 1,\n  \"limit\": 20,\n  \"sortBy\": \"createdAt\",\n  \"sortOrder\": \"DESC\"\n}" },
                 "url": { "raw": "{{BASE_URL}}/api/v1/app/task/getTasks", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "task", "getTasks"] },
                 "description": "Returns { success, message, data: { tasks, pagination } }. Non-admin users see only their assigned tasks. Optional filters.dueDate and filters.completedDate accept YYYY-MM-DD or DD/MM/YYYY strings, for example 2026-10-23 or 23/10/2026. Formats can be mixed in one request. The client's configured host timezone (HostSettings timezone, also used for response formatting) determines inclusive start/end-of-day Unix seconds for dueAt/completedAt comparisons, including DST. Both filters combine with AND; omit unused dates. Invalid dates, timestamps or null return HTTP 400. Legacy dueFrom/dueTo Unix bounds remain supported but cannot be combined with dueDate."
               },

@@ -26,6 +26,84 @@
       }],
       "item": [
         {
+          "name": "Task Tags",
+          "description": "Host-scoped tag master; admin authorization and existing support/CSRF policies apply. Names are trimmed, max 50 characters, and case-insensitively unique per host INCLUDING soft-deleted tags. Color is #RRGGBB; description max 255. No physical deletion. Task list/detail/Kanban include tags: [{ id, name, color, isEnabled, isDeleted }], retaining disabled/deleted-tag history. List/Kanban support filters.tagId or filters.tagIds (OR matching); [] means no tag filter. See docs/TASK_TAGS.sql for manual deployment before starting the updated backend.",
+          "item": [
+            {
+              "name": "List Task Tags",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
+                "body": { "mode": "raw", "raw": "{}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/task-tags/list", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "task-tags", "list"] },
+                "description": "Returns data.tags, all non-deleted tags sorted by name ASC. Optional search (max 50) and isEnabled (numeric 0/1). No pagination."
+              }, "response": []
+            },
+            {
+              "name": "Create Task Tag",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
+                "body": { "mode": "raw", "raw": "{\"name\":\"Follow up\",\"color\":\"#FF8800\",\"description\":\"Customer follow-up\",\"isEnabled\":1}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/task-tags/create", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "task-tags", "create"] },
+                "description": "name and color required; description and isEnabled optional. Returns data.tag. Duplicate names return 409. Never send hostId as scope."
+              },
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["const r = pm.response.json(); if (r.success) pm.environment.set('TASK_TAG_ID', r.data.tag.id);"] } }],
+              "response": []
+            },
+            {
+              "name": "Update Task Tag",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
+                "body": { "mode": "raw", "raw": "{\"tagId\":{{TASK_TAG_ID}},\"name\":\"Follow up\",\"color\":\"#0088FF\",\"description\":null}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/task-tags/update", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "task-tags", "update"] },
+                "description": "tagId and at least one of name/color/description required. Color changes apply to linked tasks. Use toggle-status for isEnabled. Returns data.tag."
+              }, "response": []
+            },
+            {
+              "name": "Task Tag Detail",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
+                "body": { "mode": "raw", "raw": "{\"tagId\":{{TASK_TAG_ID}}}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/task-tags/detail", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "task-tags", "detail"] },
+                "description": "Returns data.tag for this host's non-deleted tag, including disabled tags."
+              }, "response": []
+            },
+            {
+              "name": "Soft Delete Task Tag",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
+                "body": { "mode": "raw", "raw": "{\"tagId\":{{TASK_TAG_ID}}}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/task-tags/delete", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "task-tags", "delete"] },
+                "description": "Returns data.tagId. Soft-deletes the master without removing task mappings. Historical task tags expose isDeleted: 1. Its name remains reserved."
+              }, "response": []
+            },
+            {
+              "name": "Toggle Task Tag Status",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
+                "body": { "mode": "raw", "raw": "{\"tagId\":{{TASK_TAG_ID}},\"isEnabled\":0}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/task-tags/toggle-status", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "task-tags", "toggle-status"] },
+                "description": "Explicit numeric isEnabled: 0 or 1. Disabling prevents new assignments but retains historical mappings. Returns data.tag."
+              }, "response": []
+            },
+            {
+              "name": "Replace Task Tags (Admin)",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
+                "body": { "mode": "raw", "raw": "{\"taskId\":{{TASK_ID}},\"tagIds\":[{{TASK_TAG_ID}}]}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/update-tags", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "update-tags"] },
+                "description": "Returns data: { taskId, tags }. Replaces active enabled/non-deleted tag assignments transactionally; [] removes all active assignments. Historical disabled/deleted references remain in tags with status flags, even for []. Already-linked historical IDs may be retained, but disabled/deleted tags cannot be newly assigned/restored. IDs are deduplicated. Removed mappings are soft-deleted and reused on reassignment. Does not change any task field, lifecycle timestamp, priority, status, number or counter."
+              }, "response": []
+            }
+          ]
+        },
+        {
           "name": "Task Categories",
           "description": "Admin task categories. All requests use inherited ADMIN_TOKEN and the matching admin CSRF cookie/header. hostId is derived from authentication. List/detail include taskCount (all associated tasks, including deleted tasks) and Unix timestamps. Prefixes use the existing 1-20 trimmed character convention; PRJ and PRJ- share the same numbering namespace. Duplicate non-deleted names/prefixes return 409, including disabled categories. Category updates never reset counters or renumber tasks.",
           "item": [
@@ -175,7 +253,7 @@
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
-            "body": { "mode": "raw", "raw": "{\n  \"filters\": {\n    \"status\": \"PENDING\",\n    \"priority\": \"HIGH\",\n    \"search\": \"proposal\",\n    \"overdueOnly\": false\n  },\n  \"page\": 1,\n  \"limit\": 20,\n  \"sortBy\": \"createdAt\",\n  \"sortOrder\": \"DESC\"\n}", "options": { "raw": { "language": "json" } } },
+            "body": { "mode": "raw", "raw": "{\n  \"filters\": {\n    \"status\": \"PENDING\",\n    \"priority\": \"HIGH\",\n    \"search\": \"proposal\",\n    \"overdueOnly\": false,\n    \"tagIds\": []\n  },\n  \"page\": 1,\n  \"limit\": 20,\n  \"sortBy\": \"createdAt\",\n  \"sortOrder\": \"DESC\"\n}", "options": { "raw": { "language": "json" } } },
             "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/getTasks", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "getTasks"] },
             "description": "Filters also support assignedToUserId, createdByUserId, customerId, visitId, dueDate and completedDate. Date filters are optional YYYY-MM-DD or DD/MM/YYYY strings, for example filters: { dueDate: '2026-10-23', completedDate: '23/10/2026' }. Formats can be mixed in one request. Each date is interpreted in the authenticated client's configured host timezone (HostSettings timezone), the same timezone used for response formatting, and converted to inclusive start/end-of-day Unix seconds for dueAt/completedAt comparisons, including DST. Both filters combine with AND. Omit unused date filters; null, timestamps and invalid dates return HTTP 400. Legacy dueFrom/dueTo Unix-second bounds remain supported but cannot be combined with dueDate. Success retains { success, message, data: { tasks, pagination } }. assignedToUserId accepts a single positive ID or an array of positive IDs (for example [47, 48]); array values match ANY selected employee, while all other filters combine with AND. An empty array [] means no employee filter. Duplicate IDs are deduplicated; invalid IDs or array entries return HTTP 400."
           },
@@ -343,18 +421,38 @@
     },
     {
       "name": "App APIs",
-      "description": "Employee task routes under /api/v1/app/task. Uses TOKEN from the active Postman environment. Employees can only access tasks assigned to them. Task list/detail responses include taskCategoryId and taskCategory: { id, name, taskNumberPrefix }; disabled categories remain readable. Optional filters.taskCategoryId narrows the task list.",
+      "description": "Employee task routes under /api/v1/app/task. Uses TOKEN from the active Postman environment. Employees can only access tasks assigned to them. Task list/detail include taskCategoryId, taskCategory and tags: [{ id, name, color, isEnabled, isDeleted }]. Disabled/deleted tag history remains readable. Optional filters.taskCategoryId, filters.tagId or filters.tagIds (OR matching) narrow the task list; [] means no tag filter.",
       "auth": {
         "type": "bearer",
         "bearer": [{ "key": "token", "value": "{{TOKEN}}", "type": "string" }]
       },
       "item": [
         {
+          "name": "List Enabled Task Tags",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{}" },
+            "url": { "raw": "{{BASE_URL}}/api/v1/app/task/task-tags/list", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "task", "task-tags", "list"] },
+            "description": "Returns data.tags: [{ id, name, color }] for enabled, non-deleted tags in the authenticated host, sorted by name ASC. Optional search (max 50). No pagination. Employees cannot access tag master CRUD."
+          }, "response": []
+        },
+        {
+          "name": "Replace My Task Tags",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"taskId\":{{TASK_ID}},\"tagIds\":[{{TASK_TAG_ID}}]}" },
+            "url": { "raw": "{{BASE_URL}}/api/v1/app/task/update-tags", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "task", "update-tags"] },
+            "description": "Existing employee task access restrictions apply: only assigned tasks are accessible. Same replace semantics as admin: [] soft-removes active enabled/non-deleted assignments; disabled/deleted historical references are preserved with flags. Returns data: { taskId, tags }. Does not modify task fields or lifecycle timestamps."
+          }, "response": []
+        },
+        {
           "name": "List My Tasks",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"filters\": {\n    \"status\": \"PENDING\",\n    \"priority\": \"HIGH\",\n    \"search\": \"proposal\",\n    \"overdueOnly\": false\n  },\n  \"page\": 1,\n  \"limit\": 20,\n  \"sortBy\": \"createdAt\",\n  \"sortOrder\": \"DESC\"\n}", "options": { "raw": { "language": "json" } } },
+            "body": { "mode": "raw", "raw": "{\n  \"filters\": {\n    \"status\": \"PENDING\",\n    \"priority\": \"HIGH\",\n    \"search\": \"proposal\",\n    \"overdueOnly\": false,\n    \"tagIds\": []\n  },\n  \"page\": 1,\n  \"limit\": 20,\n  \"sortBy\": \"createdAt\",\n  \"sortOrder\": \"DESC\"\n}", "options": { "raw": { "language": "json" } } },
             "url": { "raw": "{{BASE_URL}}/api/v1/app/task/getTasks", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "task", "getTasks"] },
             "description": "Uses inherited employee bearer authentication. Optional filters.dueDate and filters.completedDate accept YYYY-MM-DD or DD/MM/YYYY, for example 2026-10-23 or 23/10/2026. Formats can be mixed in one request. The server uses the client's configured host timezone (HostSettings timezone) to compare inclusive local-day Unix-second bounds against dueAt/completedAt. Both filters combine with AND; omit unused filters. Invalid dates and null return HTTP 400. Legacy dueFrom/dueTo Unix bounds remain supported but cannot be combined with dueDate. Employees still see only their assigned tasks. Success retains { success, message, data: { tasks, pagination } }."
           },

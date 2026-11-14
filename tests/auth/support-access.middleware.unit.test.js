@@ -78,3 +78,19 @@ test('read-only support allows category reads but blocks every category mutation
     assert.equal(response.statusCode, allowed ? 200 : 403);
   }
 });
+
+test('read-only support permits tag reads but rejects tag writes and assignment', () => {
+  for (const [path, allowed] of [
+    ['/tasks/task-tags/list', true], ['/tasks/task-tags/detail', true],
+    ...['create', 'update', 'delete', 'toggle-status'].map((action) => [`/tasks/task-tags/${action}`, false]),
+    ['/tasks/update-tags', false],
+  ]) {
+    const response = createResponse();
+    let continued = false;
+    requireSupportReadOnlyPolicy({
+      path, authContext: { isSupportSession: true, accessMode: 'SUPPORT_READ_ONLY' },
+    }, response, () => { continued = true; });
+    assert.equal(continued, allowed);
+    assert.equal(response.statusCode, allowed ? 200 : 403);
+  }
+});

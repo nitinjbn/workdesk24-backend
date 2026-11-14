@@ -36,7 +36,7 @@ test('task reads and mutations use the support host, original user, and support 
     'getDashboardStats', 'getKanbanBoard', 'listTasks', 'getTaskDetails',
     'listActivity', 'addComment', 'listComments', 'uploadAttachment',
     'listAttachments', 'getAttachment', 'createTask', 'updateTask',
-    'assignTask', 'startTask', 'completeTask', 'cancelTask',
+    'assignTask', 'startTask', 'completeTask', 'cancelTask', 'updateTags',
   ];
   for (const method of serviceMethods) {
     context.mock.method(taskService, method, async (payload) => {
@@ -65,6 +65,7 @@ test('task reads and mutations use the support host, original user, and support 
   await invoke(taskController.startTask);
   await invoke(taskController.completeTask);
   await invoke(taskController.cancelTask);
+  await invoke(taskController.updateTags);
 
   assert.equal(calls.length, serviceMethods.length);
   for (const { payload } of calls) {

@@ -68,6 +68,8 @@ import { initCustomerUserAssignment } from './schemas/CustomerUserAssignment';
 import { initTask } from './schemas/Task';
 import { initTaskSettings } from './schemas/TaskSettings';
 import { initTaskCategory } from './schemas/TaskCategory';
+import { initTaskTag } from './schemas/TaskTag';
+import { initTaskTagMapping } from './schemas/TaskTagMapping';
 import { initTaskLogs } from './schemas/TaskLogs';
 import { initTaskComments } from './schemas/TaskComments';
 import { initTaskAttachments } from './schemas/TaskAttachments';
@@ -196,6 +198,8 @@ const SubscriptionCycle = initSubscriptionCycle(sequelize);
 const Task = initTask(sequelize);
 const TaskSettings = initTaskSettings(sequelize);
 const TaskCategory = initTaskCategory(sequelize);
+const TaskTag = initTaskTag(sequelize);
+const TaskTagMapping = initTaskTagMapping(sequelize);
 const TaskLogs = initTaskLogs(sequelize);
 const TaskComments = initTaskComments(sequelize);
 const TaskAttachments = initTaskAttachments(sequelize);
@@ -266,6 +270,8 @@ const db: any = {
   Task,
   TaskSettings,
   TaskCategory,
+  TaskTag,
+  TaskTagMapping,
   TaskLogs,
   TaskComments,
   TaskAttachments,
@@ -386,6 +392,8 @@ export {
   Task,
   TaskSettings,
   TaskCategory,
+  TaskTag,
+  TaskTagMapping,
   TaskLogs,
   TaskComments,
   TaskAttachments,

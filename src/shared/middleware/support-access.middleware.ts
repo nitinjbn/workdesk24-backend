@@ -48,6 +48,8 @@ const READ_ONLY_SUPPORT_ROUTES = new Set([
   '/tasks/getTaskAttachment',
   '/tasks/task-categories/list',
   '/tasks/task-categories/detail',
+  '/tasks/task-tags/list',
+  '/tasks/task-tags/detail',
   '/getLeaveYears',
   '/getLeaveYearById',
   '/getHolidayCalendars',

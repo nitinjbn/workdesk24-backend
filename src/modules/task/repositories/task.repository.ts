@@ -1,6 +1,8 @@
-import { Op, QueryTypes, Transaction } from 'sequelize';
+import { literal, Op, QueryTypes, Transaction } from 'sequelize';
 import { Customer, sequelize, Task, TaskAttachments, TaskCategory, TaskComments, TaskLogs, User, Visit } from '../../../models';
 import taskCategoryRepository from './task-category.repository';
+import taskTagRepository from './task-tag.repository';
+import { parseTaskTagIds } from '../services/task-rules.util';
 
 interface TaskDashboardUserRow {
   userId: number | string;
@@ -72,7 +74,7 @@ export class TaskRepository {
   }
 
   async getTask(hostId: number, taskId: number, transaction?: Transaction, lock = false): Promise<any> {
-    return Task.findOne({
+    const task = await Task.findOne({
       where: { hostId, id: taskId, isDeleted: 0 },
       include: lock ? [] : [
         {
@@ -114,6 +116,13 @@ export class TaskRepository {
       transaction,
       lock: lock && transaction ? transaction.LOCK.UPDATE : undefined,
     } as any);
+    if (task && !lock) await this.attachTags(hostId, [task], transaction);
+    return task;
+  }
+
+  private async attachTags(hostId: number, tasks: InstanceType<typeof Task>[], transaction?: Transaction) {
+    const tags = await taskTagRepository.tagsForTasks(hostId, tasks.map((task) => task.id), transaction);
+    for (const task of tasks) task.setDataValue('tags', tags.get(String(task.id)) || []);
   }
 
   private taskListOptions(params: TaskListScope) {
@@ -150,6 +159,21 @@ export class TaskRepository {
         { status: { [Op.notIn]: ['COMPLETED', 'CANCELLED'] } },
       ];
     }
+    if (filters.tagIds !== undefined) {
+      const tagIds = parseTaskTagIds(filters.tagIds);
+      if (tagIds.length) {
+        const conditions = where[Op.and];
+        where[Op.and] = [
+          ...(Array.isArray(conditions) ? conditions : []),
+          literal(`EXISTS (
+            SELECT 1 FROM wd_task_tag_mappings AS tagMapping
+            INNER JOIN wd_task_tags AS filterTag ON filterTag.id = tagMapping.tagId AND filterTag.hostId = tagMapping.hostId
+            WHERE tagMapping.taskId = Task.id AND tagMapping.hostId = ${sequelize.escape(hostId)}
+              AND tagMapping.isDeleted = 0 AND tagMapping.tagId IN (${tagIds.join(',')})
+          )`),
+        ];
+      }
+    }
     if (typeof filters.search === 'string' && filters.search.trim()) {
       const search = `%${filters.search.trim()}%`;
       where[Op.or] = [
@@ -170,20 +194,24 @@ export class TaskRepository {
   }
 
   async listTasks(params: TaskListScope & { page: number; limit: number }): Promise<{ rows: any[]; count: number }> {
-    return Task.findAndCountAll({
+    const result = await Task.findAndCountAll({
       ...this.taskListOptions(params),
       limit: params.limit,
       offset: (params.page - 1) * params.limit,
       distinct: true,
     });
+    await this.attachTags(params.hostId, result.rows);
+    return result;
   }
 
   async getKanbanTasks(params: TaskListScope) {
     const options = this.taskListOptions(params);
-    return Task.findAll({
+    const rows = await Task.findAll({
       ...options,
       where: { [Op.and]: [options.where, { status: { [Op.ne]: 'CANCELLED' } }] },
     });
+    await this.attachTags(params.hostId, rows);
+    return rows;
   }
 
   async findUser(hostId: number, userId: number, transaction?: Transaction): Promise<any> {

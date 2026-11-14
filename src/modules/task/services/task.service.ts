@@ -12,10 +12,11 @@ import {
 } from '../../../shared/utils/media-storage.util';
 import taskRepository, { TaskRepository } from '../repositories/task.repository';
 import taskNotificationService, { TaskNotificationService } from '../../notifications/task/taskNotificationService';
-import { getTaskTransition, isValidTaskFile, isValidUnixTimestamp } from './task-rules.util';
+import { getTaskTransition, isValidTaskFile, isValidUnixTimestamp, parseTaskEntityId, parseTaskTagIds } from './task-rules.util';
 import { getHostDateTimeSettings, HostDateTimeSettings } from '../../../shared/utils/host-settings.util';
 import { DateTimeFormatUtil, formatDateTimeFieldsBySettings } from '../../../shared/utils/date-time-format.util';
 import { taskCategoryId } from './task-category.service';
+import taskTagRepository, { TaskTagRepository } from '../repositories/task-tag.repository';
 
 type TaskStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
 type TaskPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
@@ -112,7 +113,8 @@ export class TaskService {
     private readonly taskNotifications: Pick<
       TaskNotificationService,
       'notifyTaskCreated' | 'notifyTaskReassigned'
-    > = taskNotificationService
+    > = taskNotificationService,
+    private readonly tags: TaskTagRepository = taskTagRepository
   ) {}
 
   private async inTransaction<T>(callback: (transaction: Transaction) => Promise<T>): Promise<T> {
@@ -200,9 +202,12 @@ export class TaskService {
     };
   }
 
-  private async getVisibleTask(hostId: number, taskId: number, userId: number, isAdmin: boolean): Promise<any> {
+  private async getVisibleTask(
+    hostId: number, taskId: number, userId: number, isAdmin: boolean,
+    transaction?: Transaction, lock = false
+  ): Promise<any> {
     if (!validId(taskId)) throw taskError('INVALID_TASK_ID', 'A valid taskId is required');
-    const task = await this.repository.getTask(hostId, taskId);
+    const task = await this.repository.getTask(hostId, taskId, transaction, lock);
     if (!task || (!isAdmin && Number(task.assignedToUserId) !== Number(userId))) {
       throw taskError('TASK_NOT_FOUND', 'Task not found', 404);
     }
@@ -360,6 +365,12 @@ export class TaskService {
       if (filters[key] !== undefined && !validId(filters[key])) throw taskError('INVALID_TASK_FILTER', `${key} must be a valid ID`);
     }
     if (filters.taskCategoryId !== undefined) taskCategoryId(filters.taskCategoryId);
+    if (filters.tagId !== undefined && filters.tagIds !== undefined) {
+      throw taskError('INVALID_TASK_TAG_FILTER', 'Use either tagId or tagIds, not both');
+    }
+    const tagIds = filters.tagId !== undefined
+      ? [parseTaskEntityId(filters.tagId, 'tagId')]
+      : filters.tagIds === undefined ? undefined : parseTaskTagIds(filters.tagIds);
     if (filters.dueDate !== undefined && (filters.dueFrom !== undefined || filters.dueTo !== undefined)) {
       throw taskError('INVALID_TASK_DUE_RANGE', 'Use either dueDate or dueFrom/dueTo, not both');
     }
@@ -375,12 +386,12 @@ export class TaskService {
     if (filters.search !== undefined && (typeof filters.search !== 'string' || filters.search.length > 100)) {
       throw taskError('INVALID_TASK_SEARCH', 'search must be a string of at most 100 characters');
     }
-    return { dueFrom, dueTo };
+    return { dueFrom, dueTo, tagIds };
   }
 
   private normalizeTaskFilters(
     filters: Record<string, unknown>,
-    bounds: { dueFrom?: number; dueTo?: number },
+    bounds: { dueFrom?: number; dueTo?: number; tagIds?: number[] },
     settings: HostDateTimeSettings
   ): Record<string, unknown> {
     let { dueFrom, dueTo } = bounds;
@@ -400,6 +411,9 @@ export class TaskService {
     };
     delete normalizedFilters.dueDate;
     delete normalizedFilters.completedDate;
+    delete normalizedFilters.tagId;
+    delete normalizedFilters.tagIds;
+    if (bounds.tagIds?.length) normalizedFilters.tagIds = bounds.tagIds;
     if (Array.isArray(filters.assignedToUserId)) {
       if (filters.assignedToUserId.length === 0) delete normalizedFilters.assignedToUserId;
       else normalizedFilters.assignedToUserId = [...new Set(filters.assignedToUserId.map(Number))];
@@ -519,6 +533,45 @@ export class TaskService {
         activity: formatDateTimeFieldsBySettings(logs.rows.map(asPlain), dateTimeSettings),
       },
     };
+  }
+
+  async updateTags(payload: {
+    hostId: number; userId: number; isAdmin: boolean; taskId: unknown; tagIds: unknown;
+  }) {
+    const taskId = parseTaskEntityId(payload.taskId, 'taskId');
+    const tagIds = parseTaskTagIds(payload.tagIds);
+    return this.inTransaction(async (transaction) => {
+      await this.getVisibleTask(payload.hostId, taskId, payload.userId, payload.isAdmin, transaction, true);
+      const mappings = await this.tags.findMappings(payload.hostId, taskId, transaction);
+      const current = new Map(mappings.map((mapping) => [Number(mapping.tagId), mapping]));
+      const lockedTags = await this.tags.lockTags(payload.hostId,
+        [...new Set([...tagIds, ...mappings.filter((mapping) => Number(mapping.isDeleted) === 0).map((mapping) => Number(mapping.tagId))])],
+        transaction);
+      const tags = new Map(lockedTags.map((tag) => [Number(tag.id), tag]));
+      const requested = new Set(tagIds);
+      const changes = { removeIds: [] as number[], restoreIds: [] as number[], newTagIds: [] as number[] };
+      for (const tagId of tagIds) {
+        const tag = tags.get(tagId);
+        if (!tag) throw taskError('TASK_TAG_NOT_FOUND', 'A task tag was not found in this host', 404);
+        const mapping = current.get(tagId);
+        if (mapping && Number(mapping.isDeleted) === 0) continue;
+        if (Number(tag.isEnabled) !== 1 || Number(tag.isDeleted) !== 0) {
+          throw taskError('TASK_TAG_UNAVAILABLE', 'Disabled or deleted tags cannot be newly assigned');
+        }
+        if (mapping) changes.restoreIds.push(mapping.id);
+        else changes.newTagIds.push(tagId);
+      }
+      for (const mapping of mappings) {
+        const tag = tags.get(Number(mapping.tagId));
+        if (Number(mapping.isDeleted) === 0 && !requested.has(Number(mapping.tagId))
+          && tag && Number(tag.isEnabled) === 1 && Number(tag.isDeleted) === 0) {
+          changes.removeIds.push(mapping.id);
+        }
+      }
+      await this.tags.replaceMappings(payload.hostId, taskId, changes, Math.floor(Date.now() / 1000), transaction);
+      const assigned = await this.tags.tagsForTasks(payload.hostId, [taskId], transaction);
+      return { taskId, tags: assigned.get(String(taskId)) || [] };
+    });
   }
 
   async updateTask(payload: {

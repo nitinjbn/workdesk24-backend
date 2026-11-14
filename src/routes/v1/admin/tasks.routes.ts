@@ -1,9 +1,18 @@
 import { Router } from 'express';
 import taskController from '../../../modules/task/controllers/task.controller';
 import taskCategoryController from '../../../modules/task/controllers/task-category.controller';
+import taskTagController from '../../../modules/task/controllers/task-tag.controller';
 import { taskUpload, taskUploadErrorHandler } from '../../../modules/task/middleware/task-upload.middleware';
 
 const router = Router();
+
+router.post('/task-tags/list', taskTagController.list);
+router.post('/task-tags/create', taskTagController.create);
+router.post('/task-tags/update', taskTagController.update);
+router.post('/task-tags/detail', taskTagController.detail);
+router.post('/task-tags/delete', taskTagController.remove);
+router.post('/task-tags/toggle-status', taskTagController.toggleStatus);
+router.post('/update-tags', taskController.updateTags);
 
 router.post('/task-categories/list', taskCategoryController.list);
 router.post('/task-categories/create', taskCategoryController.create);

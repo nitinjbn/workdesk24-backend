@@ -1,8 +1,12 @@
 import { Router } from 'express';
 import taskController from '../../../modules/task/controllers/task.controller';
+import taskTagController from '../../../modules/task/controllers/task-tag.controller';
 import { taskUpload, taskUploadErrorHandler } from '../../../modules/task/middleware/task-upload.middleware';
 
 const router = Router();
+
+router.post('/task-tags/list', taskTagController.listEnabled);
+router.post('/update-tags', taskController.updateTags);
 
 router.post('/getTasks', taskController.getTasks);
 router.post('/getTaskDetails', taskController.getTaskDetails);
