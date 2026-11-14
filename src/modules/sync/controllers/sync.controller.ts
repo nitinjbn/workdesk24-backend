@@ -458,6 +458,8 @@ export class SyncController {
         customerMedia = [],
         customerAttribute = [],
         assignedUserIds,
+        latitude,
+        longitude,
       } = req.body;
 
       const result = await customerService.createCustomer({
@@ -485,6 +487,8 @@ export class SyncController {
         customerMedia,
         customerAttribute,
         assignedUserIds: assignedUserIds || [],
+        latitude,
+        longitude,
         createdByUserType: 'USER',
         createdByUserId: userId,
         approvalStatus: 'PENDING',

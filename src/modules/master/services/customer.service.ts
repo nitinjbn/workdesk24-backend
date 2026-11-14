@@ -402,6 +402,8 @@ export class CustomerService {
       createdByUserType: otherPayload.createdByUserType || 'ADMIN',
       createdByUserId: otherPayload.createdByUserId || null,
       approvalStatus: otherPayload.approvalStatus || 'APPROVED',
+      latitude: otherPayload.latitude,
+      longitude: otherPayload.longitude,
     });
 
     if (createCustomerResult?.id) {

@@ -525,6 +525,8 @@ export class customerRepository {
       createdByUserType,
       createdByUserId,
       approvalStatus,
+      latitude,
+      longitude,
     } = params;
     const newCustomer = await Customer.create({
       localId,
@@ -551,6 +553,8 @@ export class customerRepository {
       createdByUserType,
       createdByUserId,
       approvalStatus,
+      latitude,
+      longitude,
       createdAt: DateTimeFormatUtil.getCurrentUnixTime(),
     });
 
