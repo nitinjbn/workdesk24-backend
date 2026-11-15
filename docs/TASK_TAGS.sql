@@ -4,7 +4,8 @@
 -- First-time installation only. Do not run this AND the Sequelize migration.
 -- No existing task fields, numbers, counters or timestamps are modified.
 --
--- Names are case-insensitively unique per host, INCLUDING soft-deleted tags.
+-- Names are case-insensitively unique per host among non-deleted tags.
+-- For existing installations, run the task-tag-active-name-uniqueness migration.
 -- Mappings have the additional soft-delete fields required to remove assignments
 -- without physically deleting records. Reassignment restores the existing row.
 -- Replacing assignments only removes enabled/non-deleted tag assignments;
@@ -18,11 +19,12 @@ CREATE TABLE wd_task_tags (
     description VARCHAR(255) NULL,
     isEnabled TINYINT NOT NULL DEFAULT 1,
     isDeleted TINYINT NOT NULL DEFAULT 0,
+    activeName VARCHAR(50) GENERATED ALWAYS AS (CASE WHEN isDeleted = 0 THEN name ELSE NULL END) STORED,
     createdAt BIGINT NOT NULL,
     updatedAt BIGINT NULL,
     deletedAt BIGINT NULL DEFAULT NULL,
     PRIMARY KEY (id),
-    UNIQUE KEY uq_task_tags_host_name (hostId, name),
+    UNIQUE KEY uq_task_tags_host_active_name (hostId, activeName),
     KEY idx_task_tags_host_status (hostId, isDeleted, isEnabled),
     CONSTRAINT fk_task_tags_host FOREIGN KEY (hostId)
         REFERENCES wd_hosts (id) ON DELETE RESTRICT ON UPDATE CASCADE

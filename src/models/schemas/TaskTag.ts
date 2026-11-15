@@ -53,7 +53,6 @@ export function initTaskTag(sequelize: Sequelize): typeof TaskTag {
     sequelize, tableName: 'wd_task_tags', timestamps: false,
     charset: 'utf8mb4', collate: 'utf8mb4_unicode_ci',
     indexes: [
-      { unique: true, fields: ['hostId', 'name'], name: 'uq_task_tags_host_name' },
       { fields: ['hostId', 'isDeleted', 'isEnabled'], name: 'idx_task_tags_host_status' },
     ],
   });

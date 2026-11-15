@@ -452,7 +452,7 @@
                     "header": [{ "key": "Authorization", "value": "Bearer {{ADMIN_TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }, { "key": "Cookie", "value": "wd24_admin_csrf={{ADMIN_CSRF_TOKEN}}" }],
                     "body": { "mode": "raw", "raw": "{\"name\":\"Follow up\",\"color\":\"#FF8800\",\"description\":\"Customer follow-up\",\"isEnabled\":1}" },
                     "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/task-tags/create", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "task-tags", "create"] },
-                    "description": "name/color required; description/isEnabled optional. Returns data.tag. Duplicate names return 409."
+                    "description": "name/color required; description/isEnabled optional. Returns data.tag. Duplicate non-deleted names for this host return 409, including disabled tags; deleted names can be reused."
                   },
                   "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["const r = pm.response.json(); if (r.success) pm.environment.set('TASK_TAG_ID', r.data.tag.id);"] } }],
                   "response": []
@@ -484,7 +484,7 @@
                     "header": [{ "key": "Authorization", "value": "Bearer {{ADMIN_TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }, { "key": "Cookie", "value": "wd24_admin_csrf={{ADMIN_CSRF_TOKEN}}" }],
                     "body": { "mode": "raw", "raw": "{\"tagId\":{{TASK_TAG_ID}}}" },
                     "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/task-tags/delete", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "task-tags", "delete"] },
-                    "description": "Returns data.tagId. Historical mappings remain readable with isDeleted: 1; deleted names remain reserved."
+                    "description": "Returns data.tagId. Historical mappings remain readable with isDeleted: 1; deleted names can be reused."
                   }, "response": []
                 },
                 {

@@ -64,7 +64,7 @@ export class TaskTagService {
 
   private duplicate(error: unknown): never {
     if (error instanceof UniqueConstraintError) {
-      throw tagError('TASK_TAG_NAME_EXISTS', 'A tag with this name already exists in this host, including deleted tags', 409);
+      throw tagError('TASK_TAG_NAME_EXISTS', 'A non-deleted tag with this name already exists in this host', 409);
     }
     throw error;
   }

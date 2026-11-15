@@ -3,6 +3,7 @@ process.env.JWT_SECRET = 'task-tag-test-signing-key';
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const { DatabaseSync } = require('node:sqlite');
 const { Op, UniqueConstraintError } = require('sequelize');
 const { Task, TaskTag, TaskTagMapping, sequelize } = require('../../src/models');
 const { TaskTagService } = require('../../src/modules/task/services/task-tag.service');
@@ -49,7 +50,7 @@ function harness() {
     return transaction;
   };
   const duplicate = (data, excluding) => {
-    if ([...tags.values()].some((tag) => tag.id !== excluding && tag.hostId === data.hostId
+    if (data.isDeleted === 0 && [...tags.values()].some((tag) => tag.isDeleted === 0 && tag.id !== excluding && tag.hostId === data.hostId
       && tag.name.toLowerCase() === data.name.toLowerCase())) throw new UniqueConstraintError({ errors: [] });
   };
   const repository = {
@@ -120,7 +121,7 @@ function harness() {
   return { tags, mappings, tasks, master, service, repository, transactions, create, assign, fail() { failWrite = true; } };
 }
 
-test('tag CRUD validates fields, reserves case-insensitive names, changes colors, and soft-deletes', async () => {
+test('tag CRUD validates fields, enforces non-deleted names, changes colors, and soft-deletes', async () => {
   const h = harness();
   const { tag } = await h.create({ name: ' Urgent ', description: ' Details ' });
   assert.equal(tag.name, 'Urgent');
@@ -141,14 +142,19 @@ test('tag CRUD validates fields, reserves case-insensitive names, changes colors
     await assert.rejects(h.master.update({ ...admin, tagId: tag.id, isEnabled }), { code: 'INVALID_TASK_TAG_STATUS' });
   }
   await h.master.toggleStatus({ ...admin, tagId: tag.id, isEnabled: 0 });
+  await assert.rejects(h.create({ name: 'urgent' }), { code: 'TASK_TAG_NAME_EXISTS', statusCode: 409 });
   assert.deepEqual((await h.master.listEnabled(employee)).tags, []);
   await h.master.remove({ ...admin, tagId: tag.id });
   assert.equal(h.tags.get(tag.id).isDeleted, 1);
   assert.ok(h.tags.get(tag.id).deletedAt > 0);
   assert.equal(h.tags.size, 2);
   assert.deepEqual((await h.master.list(admin)).tags, []);
-  await assert.rejects(h.create(), { code: 'TASK_TAG_NAME_EXISTS' });
   await assert.rejects(h.master.detail({ ...admin, tagId: tag.id }), { statusCode: 404 });
+  const replacement = (await h.create()).tag;
+  assert.notEqual(replacement.id, tag.id);
+  await assert.rejects(h.create({ name: 'urgent' }), { code: 'TASK_TAG_NAME_EXISTS', statusCode: 409 });
+  await h.master.remove({ ...admin, tagId: replacement.id });
+  assert.notEqual((await h.create()).tag.id, replacement.id);
 });
 
 test('all master operations reject employees and cross-host access', async () => {
@@ -217,6 +223,11 @@ test('disabled/deleted tags cannot be newly assigned; historical references surv
   assert.equal(h.mappings.size, 3);
   await h.assign([disabled, deleted]);
   assert.equal(h.tags.get(disabled).isEnabled, 0);
+  const replacement = (await h.create({ name: 'Deleted' })).tag.id;
+  const withReplacement = await h.assign([disabled, deleted, replacement]);
+  assert.deepEqual(withReplacement.tags.map((tag) => tag.id), [disabled, deleted, replacement]);
+  assert.equal(withReplacement.tags[1].isDeleted, 1);
+  assert.equal(withReplacement.tags[2].isDeleted, 0);
   for (const tagId of [disabled, deleted]) {
     await assert.rejects(h.assign([tagId], employee, 127), { statusCode: 404 });
     await assert.rejects(h.assign([tagId], admin, 127), { code: 'TASK_TAG_UNAVAILABLE' });
@@ -411,8 +422,57 @@ test('manual SQL and migration define matching schemas without executing databas
   });
   assert.equal(statements.length, 2);
   assert.match(statements[0], /COLLATE=utf8mb4_unicode_ci/);
-  assert.match(statements[0], /UNIQUE KEY uq_task_tags_host_name \(hostId, name\)/);
+  assert.match(statements[0], /GENERATED ALWAYS AS \(CASE WHEN isDeleted = 0 THEN name ELSE NULL END\)/);
+  assert.match(statements[0], /UNIQUE KEY uq_task_tags_host_active_name \(hostId, activeName\)/);
   assert.match(statements[1], /UNIQUE KEY uq_task_tag_mappings_host_task_tag \(hostId, taskId, tagId\)/);
   assert.match(statements[1], /isDeleted TINYINT NOT NULL DEFAULT 0/);
   await assert.rejects(require('../../src/migrations/20261114130000-create-task-tags').down(), /historical mappings/);
+});
+
+test('active-name migration preserves historical rows, enforces uniqueness and resumes after interruption', async (t) => {
+  const db = new DatabaseSync(':memory:');
+  t.after(() => db.close());
+  db.exec(`
+    CREATE TABLE wd_task_tags (id INTEGER PRIMARY KEY, hostId INTEGER, name TEXT COLLATE NOCASE, isDeleted INTEGER NOT NULL);
+    CREATE UNIQUE INDEX uq_task_tags_host_name ON wd_task_tags (hostId, name);
+    INSERT INTO wd_task_tags VALUES (1, 7, 'Urgent', 1), (2, 7, 'Review', 0), (3, 8, 'Review', 0);
+  `);
+  let interrupt = true;
+  const qi = {
+    sequelize: {
+      async query(sql) {
+        db.exec(sql.replace('VARCHAR(50)', 'TEXT COLLATE NOCASE').replace(' STORED', ' VIRTUAL'));
+      },
+    },
+    async describeTable(table) {
+      return Object.fromEntries(db.prepare(`PRAGMA table_xinfo(${table})`).all().map((column) => [column.name, column]));
+    },
+    async showIndex(table) {
+      return db.prepare(`PRAGMA index_list(${table})`).all().map((index) => ({ name: index.name }));
+    },
+    async addIndex(table, fields, options) {
+      db.exec(`CREATE ${options.unique ? 'UNIQUE' : ''} INDEX ${options.name} ON ${table} (${fields.join(',')})`);
+    },
+    async removeIndex(table, name) {
+      if (interrupt) {
+        interrupt = false;
+        throw new Error('interrupted');
+      }
+      db.exec(`DROP INDEX ${name}`);
+    },
+  };
+  const migration = require('../../src/migrations/20261115210000-task-tag-active-name-uniqueness');
+  await assert.rejects(migration.up(qi), /interrupted/);
+  await migration.up(qi);
+  await migration.up(qi);
+  const insert = db.prepare('INSERT INTO wd_task_tags (hostId, name, isDeleted) VALUES (?, ?, ?)');
+  insert.run(7, 'urgent', 0);
+  assert.throws(() => insert.run(7, 'URGENT', 0), /UNIQUE constraint/);
+  assert.throws(() => insert.run(7, 'review', 0), /UNIQUE constraint/);
+  insert.run(8, 'urgent', 0);
+  db.prepare('UPDATE wd_task_tags SET isDeleted = 1 WHERE hostId = 7 AND name = ?').run('urgent');
+  insert.run(7, 'Urgent', 0);
+  assert.equal(db.prepare("SELECT COUNT(*) AS count FROM wd_task_tags WHERE hostId = 7 AND name = 'Urgent' AND isDeleted = 1").get().count, 2);
+  assert.equal(db.prepare('SELECT isDeleted FROM wd_task_tags WHERE id = 1').get().isDeleted, 1);
+  await assert.rejects(migration.down(), /rollback is not supported/);
 });
