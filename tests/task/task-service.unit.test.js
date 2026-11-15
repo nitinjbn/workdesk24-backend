@@ -764,6 +764,82 @@ const { errorHandler } = require('../../src/shared/middleware/error-handler.midd
 const serializer = require('../../src/shared/middleware/response-serializer.middleware').default;
 const taskRoutes = require('../../src/routes/v1/app/tasks.routes').default;
 
+test('app users can create tasks and update or reassign only their assigned tasks', async (context) => {
+  const taskService = require('../../src/modules/task/services/task.service').default;
+  const { service, repository } = makeHarness();
+  const user = { id: 9, hostId: 7, isAdminUser: 0, accountStatus: 'ACTIVE' };
+  context.mock.method(console, 'error', () => undefined);
+  context.mock.method(userRepository, 'findById', async () => user);
+  for (const action of ['createTask', 'createTaskWithAttachment', 'updateTask', 'assignTask']) {
+    context.mock.method(taskService, action, service[action].bind(service));
+  }
+  context.mock.method(mediaStorage, 'uploadBufferToMediaStorage', async () => ({
+    url: 'https://example.com/proof.pdf', fileId: 'proof', raw: {},
+  }));
+  repository.createAttachment = async (data) => ({ id: 123, ...data });
+  const app = express();
+  app.use(express.json(), serializer);
+  app.use('/api/v1/app/task', authMiddleware, taskRoutes);
+  app.use(errorHandler);
+  const server = app.listen(0, '127.0.0.1');
+  await once(server, 'listening');
+  context.after(async () => { server.closeAllConnections(); await new Promise((resolve) => server.close(resolve)); });
+  const token = jwt.sign({ userId: 9, tokenType: 'access' }, process.env.JWT_SECRET, { expiresIn: '5m' });
+  async function send(action, body, { auth = true, multipart = false } = {}) {
+    const response = await fetch(`http://127.0.0.1:${server.address().port}/api/v1/app/task/${action}`, {
+      method: 'POST',
+      headers: { ...(auth ? { Authorization: `Bearer ${token}` } : {}), ...(multipart ? {} : { 'Content-Type': 'application/json' }) },
+      body: multipart ? body : JSON.stringify(body),
+    });
+    return { status: response.status, body: await response.json() };
+  }
+  const create = { title: 'Proposal', taskCategoryId: 1, assignedToUserId: 22, hostId: 8, userId: 99, isAdmin: true };
+  for (const action of ['createTask', 'createTaskWithAttachment', 'updateTask', 'assignTask']) {
+    assert.equal((await send(action, {}, { auth: false })).status, 401);
+  }
+  const created = await send('createTask', create);
+  assert.equal(created.status, 200);
+  assert.equal(created.body.success, true);
+  assert.equal(created.body.data.task.hostId, 7);
+  assert.equal(created.body.data.task.createdByUserId, 9);
+  assert.equal(created.body.data.task.assignedToUserId, 22);
+  assert.equal((await send('createTask', { ...create, assignedToUserId: 999 })).status, 404);
+
+  const form = new FormData();
+  for (const [key, value] of Object.entries(create)) form.set(key, String(value));
+  form.set('file', new Blob([Buffer.from('%PDF-1.7')], { type: 'application/pdf' }), 'proof.pdf');
+  const combined = await send('createTaskWithAttachment', form, { multipart: true });
+  assert.equal(combined.status, 200);
+  assert.equal(combined.body.data.task.createdByUserId, 9);
+  assert.equal(combined.body.data.attachment.hostId, 7);
+  assert.equal(combined.body.data.attachment.uploadedByUserId, 9);
+  const invalidFile = new FormData();
+  for (const [key, value] of Object.entries(create)) invalidFile.set(key, String(value));
+  invalidFile.set('file', new Blob([Buffer.from('bad')], { type: 'application/pdf' }), 'bad.pdf');
+  assert.equal((await send('createTaskWithAttachment', invalidFile, { multipart: true })).status, 400);
+
+  const update = { taskId: 101, title: 'Changed', hostId: 8, userId: 22, isAdmin: true };
+  assert.equal((await send('updateTask', update)).status, 404);
+  assert.equal((await send('assignTask', { ...update, assignedToUserId: 22 })).status, 404);
+  repository.task.assignedToUserId = 9;
+  const updated = await send('updateTask', update);
+  assert.equal(updated.status, 200);
+  assert.equal(updated.body.data.task.title, 'Changed');
+  assert.equal(repository.logs.at(-1).performedByUserId, 9);
+  assert.equal((await send('assignTask', { ...update, assignedToUserId: 999 })).status, 404);
+  const reassigned = await send('assignTask', { ...update, assignedToUserId: 22 });
+  assert.equal(reassigned.status, 200);
+  assert.equal(reassigned.body.data.task.assignedToUserId, 22);
+  assert.equal(repository.logs.at(-1).performedByUserId, 9);
+  assert.equal((await send('updateTask', update)).status, 404);
+  repository.task.hostId = 8;
+  repository.task.assignedToUserId = 9;
+  assert.equal((await send('updateTask', update)).status, 404);
+  assert.equal((await send('assignTask', { ...update, assignedToUserId: 22 })).status, 404);
+  await assert.rejects(service.updateTask({ ...update, hostId: 7, userId: 9, isAdmin: false }), { code: 'TASK_ADMIN_REQUIRED' });
+  await assert.rejects(service.assignTask({ ...update, hostId: 7, userId: 9, isAdmin: false, assignedToUserId: 22 }), { code: 'TASK_ADMIN_REQUIRED' });
+});
+
 test('combined task creation HTTP contract and standalone API compatibility', async (context) => {
   const cookieParser = require('cookie-parser');
   const { requireAdminRole } = require('../../src/shared/middleware/auth.middleware');

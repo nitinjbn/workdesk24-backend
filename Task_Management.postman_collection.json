@@ -421,12 +421,62 @@
     },
     {
       "name": "App APIs",
-      "description": "Employee task routes under /api/v1/app/task. Uses TOKEN from the active Postman environment. Employees can only access tasks assigned to them. Task list/detail include taskCategoryId, taskCategory and tags: [{ id, name, color, isEnabled, isDeleted }]. Disabled/deleted tag history remains readable. Optional filters.taskCategoryId, filters.tagId or filters.tagIds (OR matching) narrow the task list; [] means no tag filter.",
+      "description": "Employee task routes under /api/v1/app/task. Uses TOKEN from the active Postman environment. Employees can create tasks for eligible users in their host; existing task access, updates and reassignment are restricted to tasks currently assigned to them. A creator loses access if assigned to someone else. Task list/detail include taskCategoryId, taskCategory and tags: [{ id, name, color, isEnabled, isDeleted }]. Disabled/deleted tag history remains readable. Optional filters.taskCategoryId, filters.tagId or filters.tagIds (OR matching) narrow the task list; [] means no tag filter.",
       "auth": {
         "type": "bearer",
         "bearer": [{ "key": "token", "value": "{{TOKEN}}", "type": "string" }]
       },
       "item": [
+        {
+          "name": "Create Task",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"taskCategoryId\":{{TASK_CATEGORY_ID}},\"title\":\"Prepare customer proposal\",\"assignedToUserId\":22,\"priority\":\"HIGH\"}" },
+            "url": { "raw": "{{BASE_URL}}/api/v1/app/task/createTask", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "task", "createTask"] },
+            "description": "Creates a PENDING task for an eligible field-app user in the authenticated host. Requires title, enabled taskCategoryId and assignedToUserId. Returns data.task; creator and host come from authentication."
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["const r = pm.response.json(); if (r.success) pm.environment.set('TASK_ID', r.data.task.id);"] } }],
+          "response": []
+        },
+        {
+          "name": "Create Task With Attachment",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": { "mode": "formdata", "formdata": [
+              { "key": "taskCategoryId", "value": "{{TASK_CATEGORY_ID}}", "type": "text" },
+              { "key": "title", "value": "Prepare customer proposal", "type": "text" },
+              { "key": "assignedToUserId", "value": "22", "type": "text" },
+              { "key": "remarks", "value": "Proposal reference", "type": "text", "disabled": true },
+              { "key": "file", "type": "file", "src": "", "disabled": true }
+            ] },
+            "url": { "raw": "{{BASE_URL}}/api/v1/app/task/createTaskWithAttachment", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "task", "createTaskWithAttachment"] },
+            "description": "Multipart task creation with an optional JPEG, PNG, WEBP or PDF file up to 10 MB. Do not set Content-Type manually. Returns data.task and optional data.attachment; task and attachment metadata commit together."
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["const r = pm.response.json(); if (r.success) pm.environment.set('TASK_ID', r.data.task.id);"] } }],
+          "response": []
+        },
+        {
+          "name": "Update My Task",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"taskId\":{{TASK_ID}},\"title\":\"Revised proposal\",\"priority\":\"URGENT\"}" },
+            "url": { "raw": "{{BASE_URL}}/api/v1/app/task/updateTask", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "task", "updateTask"] },
+            "description": "Updates an assigned task's editable fields. Optional taskCategoryId must be enabled and belong to the authenticated host. Unassigned and cross-host tasks return 404."
+          }, "response": []
+        },
+        {
+          "name": "Reassign My Task",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"taskId\":{{TASK_ID}},\"assignedToUserId\":22}" },
+            "url": { "raw": "{{BASE_URL}}/api/v1/app/task/assignTask", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "task", "assignTask"] },
+            "description": "Reassigns a currently assigned task to an eligible user in the authenticated host. The previous assignee loses access after reassignment. Unassigned and cross-host tasks return 404."
+          }, "response": []
+        },
         {
           "name": "List Enabled Task Tags",
           "request": {

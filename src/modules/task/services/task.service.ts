@@ -240,27 +240,28 @@ export class TaskService {
     return { customerId: resolvedCustomerId, visitId: resolvedVisitId };
   }
 
-  async createTask(payload: CreateTaskPayload): Promise<any> {
-    return this.createTaskInternal(payload);
+  async createTask(payload: CreateTaskPayload, allowEmployee = false): Promise<any> {
+    return this.createTaskInternal(payload, undefined, allowEmployee);
   }
 
   async createTaskWithAttachment(payload: CreateTaskPayload & {
     remarks?: string; file?: Express.Multer.File;
-  }): Promise<any> {
-    this.requireAdmin(payload.isAdmin);
+  }, allowEmployee = false): Promise<any> {
+    if (!allowEmployee) this.requireAdmin(payload.isAdmin);
     const attachmentPayload = {
       hostId: payload.hostId, userId: payload.userId, isAdmin: payload.isAdmin,
       taskId: 0, remarks: payload.remarks, file: payload.file,
     };
     const file = payload.file ? this.validateAttachment(attachmentPayload) : undefined;
-    return this.createTaskInternal(payload, file ? { ...attachmentPayload, file } : undefined);
+    return this.createTaskInternal(payload, file ? { ...attachmentPayload, file } : undefined, allowEmployee);
   }
 
   private async createTaskInternal(
     payload: CreateTaskPayload,
-    attachmentPayload?: TaskAttachmentPayload & { file: Express.Multer.File }
+    attachmentPayload?: TaskAttachmentPayload & { file: Express.Multer.File },
+    allowEmployee = false
   ): Promise<any> {
-    this.requireAdmin(payload.isAdmin);
+    if (!allowEmployee) this.requireAdmin(payload.isAdmin);
     const title = typeof payload.title === 'string' ? payload.title.trim() : '';
     if (!title || title.length > 100) throw taskError('INVALID_TASK_TITLE', 'title must contain 1-100 characters');
     if (payload.description !== undefined && (typeof payload.description !== 'string' || payload.description.length > 500)) {
@@ -579,8 +580,8 @@ export class TaskService {
     title?: string; description?: string | null; priority?: TaskPriority;
     dueAt?: number | null; customerId?: number | null; visitId?: number | null;
     taskCategoryId?: number | string;
-  }): Promise<any> {
-    this.requireAdmin(payload.isAdmin);
+  }, allowEmployee = false): Promise<any> {
+    if (!allowEmployee) this.requireAdmin(payload.isAdmin);
     const categoryId = payload.taskCategoryId === undefined ? undefined : taskCategoryId(payload.taskCategoryId);
     return this.inTransaction(async (transaction) => {
       // Match creation/deletion lock ordering: category before task.
@@ -589,7 +590,9 @@ export class TaskService {
         if (!category) throw taskError('TASK_CATEGORY_NOT_FOUND', 'Task category not found', 404);
         if (Number(category.isEnabled) !== 1) throw taskError('TASK_CATEGORY_DISABLED', 'Disabled categories cannot be selected');
       }
-      const task = await this.repository.getTask(payload.hostId, payload.taskId, transaction, true);
+      const task = allowEmployee
+        ? await this.getVisibleTask(payload.hostId, payload.taskId, payload.userId, payload.isAdmin, transaction, true)
+        : await this.repository.getTask(payload.hostId, payload.taskId, transaction, true);
       if (!task) throw taskError('TASK_NOT_FOUND', 'Task not found', 404);
       const changes: Record<string, unknown> = {};
       if (categoryId !== undefined) changes.taskCategoryId = categoryId;
@@ -630,11 +633,13 @@ export class TaskService {
     });
   }
 
-  async assignTask(payload: { hostId: number; taskId: number; userId: number; isAdmin: boolean; assignedToUserId: number }): Promise<any> {
-    this.requireAdmin(payload.isAdmin);
+  async assignTask(payload: { hostId: number; taskId: number; userId: number; isAdmin: boolean; assignedToUserId: number }, allowEmployee = false): Promise<any> {
+    if (!allowEmployee) this.requireAdmin(payload.isAdmin);
     if (!validId(payload.assignedToUserId)) throw taskError('INVALID_ASSIGNEE_ID', 'assignedToUserId is required');
     const transactionResult = await this.inTransaction(async (transaction) => {
-      const task = await this.repository.getTask(payload.hostId, payload.taskId, transaction, true);
+      const task = allowEmployee
+        ? await this.getVisibleTask(payload.hostId, payload.taskId, payload.userId, payload.isAdmin, transaction, true)
+        : await this.repository.getTask(payload.hostId, payload.taskId, transaction, true);
       if (!task) throw taskError('TASK_NOT_FOUND', 'Task not found', 404);
       const assignee = await this.repository.findAssignee(payload.hostId, payload.assignedToUserId, transaction);
       if (!assignee) throw taskError('INVALID_TASK_ASSIGNEE', 'Assigned user is not eligible for task assignment', 404);

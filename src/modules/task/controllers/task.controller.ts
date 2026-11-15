@@ -84,8 +84,22 @@ export class TaskController {
       'Task created successfully'
     );
 
-  createTaskWithAttachment = (req: AuthRequest, res: Response, next: NextFunction): Promise<void> =>
+  createTaskForApp = (req: AuthRequest, res: Response, next: NextFunction): Promise<void> =>
     this.respond(
+      () => taskService.createTask({ ...req.body, ...identity(req) }, true),
+      res,
+      next,
+      'Task created successfully'
+    );
+
+  createTaskWithAttachment = (req: AuthRequest, res: Response, next: NextFunction): Promise<void> =>
+    this.createTaskWithAttachmentResponse(req, res, next, false);
+
+  createTaskWithAttachmentForApp = (req: AuthRequest, res: Response, next: NextFunction): Promise<void> =>
+    this.createTaskWithAttachmentResponse(req, res, next, true);
+
+  private createTaskWithAttachmentResponse(req: AuthRequest, res: Response, next: NextFunction, allowEmployee: boolean): Promise<void> {
+    return this.respond(
       () => taskService.createTaskWithAttachment({
         ...identity(req),
         title: req.body.title,
@@ -98,11 +112,12 @@ export class TaskController {
         dueAt: req.body.dueAt === undefined ? undefined : Number(req.body.dueAt),
         remarks: req.body.remarks,
         file: req.file,
-      }),
+      }, allowEmployee),
       res,
       next,
       req.file ? 'Task created with attachment successfully' : 'Task created successfully'
     );
+  }
 
   getTasks = (req: AuthRequest, res: Response, next: NextFunction): Promise<void> =>
     this.respond(
@@ -128,6 +143,14 @@ export class TaskController {
       'Task updated successfully'
     );
 
+  updateTaskForApp = (req: AuthRequest, res: Response, next: NextFunction): Promise<void> =>
+    this.respond(
+      () => taskService.updateTask({ ...req.body, ...identity(req) }, true),
+      res,
+      next,
+      'Task updated successfully'
+    );
+
   updateTags = (req: AuthRequest, res: Response, next: NextFunction): Promise<void> =>
     this.respond(
       () => taskService.updateTags({
@@ -141,6 +164,14 @@ export class TaskController {
   assignTask = (req: AuthRequest, res: Response, next: NextFunction): Promise<void> =>
     this.respond(
       () => taskService.assignTask({ ...req.body, ...identity(req) }),
+      res,
+      next,
+      'Task assignment updated successfully'
+    );
+
+  assignTaskForApp = (req: AuthRequest, res: Response, next: NextFunction): Promise<void> =>
+    this.respond(
+      () => taskService.assignTask({ ...req.body, ...identity(req) }, true),
       res,
       next,
       'Task assignment updated successfully'

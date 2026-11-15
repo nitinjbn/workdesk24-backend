@@ -10,8 +10,12 @@ router.post('/task-tags/list', taskTagController.listEnabled);
 router.post('/task-categories/list', taskCategoryController.listForApp);
 router.post('/update-tags', taskController.updateTags);
 
+router.post('/createTask', taskController.createTaskForApp);
+router.post('/createTaskWithAttachment', taskUpload.single('file'), taskUploadErrorHandler, taskController.createTaskWithAttachmentForApp);
 router.post('/getTasks', taskController.getTasks);
 router.post('/getTaskDetails', taskController.getTaskDetails);
+router.post('/updateTask', taskController.updateTaskForApp);
+router.post('/assignTask', taskController.assignTaskForApp);
 router.post('/startTask', taskController.startTask);
 router.post('/completeTask', taskController.completeTask);
 router.post('/cancelTask', taskController.cancelTask);

@@ -692,6 +692,52 @@
               "response": []
             },
             {
+              "name": "Create Task (Employee)",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\"taskCategoryId\":1,\"title\":\"Prepare customer proposal\",\"assignedToUserId\":42}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/app/task/createTask", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "task", "createTask"] },
+                "description": "Creates a PENDING task for an eligible field-app user in the authenticated host. Requires title, enabled taskCategoryId and assignedToUserId. Returns data.task. Creating for someone else does not grant ongoing access."
+              }, "response": []
+            },
+            {
+              "name": "Create Task With Attachment (Employee)",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{TOKEN}}" }],
+                "body": { "mode": "formdata", "formdata": [
+                  { "key": "taskCategoryId", "value": "1", "type": "text" },
+                  { "key": "title", "value": "Prepare customer proposal", "type": "text" },
+                  { "key": "assignedToUserId", "value": "42", "type": "text" },
+                  { "key": "remarks", "value": "Proposal reference", "type": "text", "disabled": true },
+                  { "key": "file", "type": "file", "src": "", "disabled": true }
+                ] },
+                "url": { "raw": "{{BASE_URL}}/api/v1/app/task/createTaskWithAttachment", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "task", "createTaskWithAttachment"] },
+                "description": "Multipart creation for an eligible user in the authenticated host. Optional JPEG, PNG, WEBP or PDF file up to 10 MB. Let Postman set Content-Type. Returns data.task and optional data.attachment."
+              }, "response": []
+            },
+            {
+              "name": "Update My Task (Employee)",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\"taskId\":1001,\"title\":\"Revised proposal\",\"priority\":\"URGENT\"}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/app/task/updateTask", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "task", "updateTask"] },
+                "description": "Updates editable fields only for a task currently assigned to the employee. Unassigned or cross-host tasks return 404."
+              }, "response": []
+            },
+            {
+              "name": "Reassign My Task (Employee)",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\"taskId\":1001,\"assignedToUserId\":43}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/app/task/assignTask", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "task", "assignTask"] },
+                "description": "Reassigns a currently assigned task to an eligible user in the authenticated host. The previous assignee loses access after reassignment. Unassigned or cross-host tasks return 404."
+              }, "response": []
+            },
+            {
               "name": "List All Tasks (Admin)",
               "request": {
                 "method": "POST",
