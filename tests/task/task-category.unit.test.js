@@ -124,9 +124,14 @@ test('category updates preserve sequence and existing task numbers; conflicts ro
   assert.equal(updated.category.nextTaskNumber, 41);
   assert.equal(updated.category.taskNumberPrefix, 'NEW');
   assert.equal(h.database.prepare('SELECT taskNumber FROM wd_tasks WHERE id = 1').get().taskNumber, 'PRJ-40');
+  assert.equal((await h.service.update({ ...admin, taskCategoryId: category.id, isEnabled: 0 })).category.isEnabled, 0);
+  assert.equal((await h.service.update({ ...admin, taskCategoryId: category.id, name: 'Updated again', isEnabled: 1 })).category.isEnabled, 1);
   await assert.rejects(h.service.update({ ...admin, taskCategoryId: category.id, taskNumberPrefix: 'OTHER-' }), { statusCode: 409 });
   assert.equal((await h.service.detail({ ...admin, taskCategoryId: category.id })).category.taskNumberPrefix, 'NEW');
   await assert.rejects(h.service.update({ ...admin, taskCategoryId: category.id, nextTaskNumber: 1 }), { code: 'CATEGORY_COUNTER_READ_ONLY' });
+  for (const isEnabled of [true, 2]) {
+    await assert.rejects(h.service.update({ ...admin, taskCategoryId: category.id, isEnabled }), { code: 'INVALID_CATEGORY_STATUS' });
+  }
 });
 
 test('soft deletion releases active unique keys but never modifies tasks; used categories cannot be deleted', async (t) => {

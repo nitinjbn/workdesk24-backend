@@ -462,9 +462,9 @@
                   "request": {
                     "method": "POST",
                     "header": [{ "key": "Authorization", "value": "Bearer {{ADMIN_TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }, { "key": "Cookie", "value": "wd24_admin_csrf={{ADMIN_CSRF_TOKEN}}" }],
-                    "body": { "mode": "raw", "raw": "{\"tagId\":{{TASK_TAG_ID}},\"name\":\"Follow up\",\"color\":\"#0088FF\",\"description\":null}" },
+                    "body": { "mode": "raw", "raw": "{\"tagId\":{{TASK_TAG_ID}},\"name\":\"Follow up\",\"color\":\"#0088FF\",\"description\":null,\"isEnabled\":1}" },
                     "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/task-tags/update", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "task-tags", "update"] },
-                    "description": "tagId plus at least one of name/color/description. Returns data.tag. Use toggle-status to change isEnabled."
+                    "description": "tagId plus at least one of name/color/description/isEnabled. isEnabled is optional numeric 0/1 and can be changed alongside other fields. Returns data.tag."
                   }, "response": []
                 },
                 {
@@ -571,9 +571,9 @@
                   "request": {
                     "method": "POST",
                     "header": [{ "key": "Authorization", "value": "Bearer {{ADMIN_TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }, { "key": "Cookie", "value": "wd24_admin_csrf={{ADMIN_CSRF_TOKEN}}" }],
-                    "body": { "mode": "raw", "raw": "{\n  \"taskCategoryId\": 1,\n  \"name\": \"Projects\",\n  \"description\": null,\n  \"taskNumberPrefix\": \"PROJ\"\n}" },
+                    "body": { "mode": "raw", "raw": "{\n  \"taskCategoryId\": 1,\n  \"name\": \"Projects\",\n  \"description\": null,\n  \"taskNumberPrefix\": \"PROJ\",\n  \"isEnabled\": 1\n}" },
                     "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/task-categories/update", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "task-categories", "update"] },
-                    "description": "Requires at least one editable field: name, description, prefix. nextTaskNumber is read-only. Prefix changes only affect future tasks and never reset the sequence. Returns data.category."
+                    "description": "Requires at least one editable field: name, description, prefix, isEnabled. isEnabled is optional numeric 0/1 and can be changed alongside other fields. nextTaskNumber is read-only. Prefix changes only affect future tasks and never reset the sequence. Returns data.category."
                   },
                   "response": []
                 },

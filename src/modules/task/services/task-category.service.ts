@@ -58,11 +58,13 @@ export class TaskCategoryService {
     return value.trim();
   }
 
-  private fields(payload: CategoryFields, creating: boolean) {
+  private fields(payload: CategoryFields, creating: boolean): {
+    name?: string; description?: string | null; taskNumberPrefix?: string; isEnabled?: number;
+  } {
     if (payload.nextTaskNumber !== undefined) {
       throw categoryError('CATEGORY_COUNTER_READ_ONLY', 'nextTaskNumber cannot be modified directly');
     }
-    const data: { name?: string; description?: string | null; taskNumberPrefix?: string } = {};
+    const data: { name?: string; description?: string | null; taskNumberPrefix?: string; isEnabled?: number } = {};
     if (creating || payload.name !== undefined) data.name = this.text(payload.name, 'name', 100);
     if (creating || payload.taskNumberPrefix !== undefined) {
       data.taskNumberPrefix = this.text(payload.taskNumberPrefix, 'taskNumberPrefix', 20);
@@ -179,7 +181,7 @@ export class TaskCategoryService {
   async update(payload: CategoryScope & CategoryFields & { taskCategoryId: unknown }) {
     this.requireScope(payload);
     const data = this.fields(payload, false);
-    if (payload.isEnabled !== undefined) throw categoryError('INVALID_TASK_CATEGORY', 'Use toggle-status to change isEnabled');
+    if (payload.isEnabled !== undefined) data.isEnabled = this.enabled(payload.isEnabled);
     if (!Object.keys(data).length) throw categoryError('INVALID_TASK_CATEGORY', 'At least one category field is required');
     return this.inTransaction(async (transaction) => {
       const category = await this.locked(payload, payload.taskCategoryId, transaction);

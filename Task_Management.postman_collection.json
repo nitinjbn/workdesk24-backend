@@ -56,9 +56,9 @@
               "request": {
                 "method": "POST",
                 "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
-                "body": { "mode": "raw", "raw": "{\"tagId\":{{TASK_TAG_ID}},\"name\":\"Follow up\",\"color\":\"#0088FF\",\"description\":null}" },
+                "body": { "mode": "raw", "raw": "{\"tagId\":{{TASK_TAG_ID}},\"name\":\"Follow up\",\"color\":\"#0088FF\",\"description\":null,\"isEnabled\":1}" },
                 "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/task-tags/update", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "task-tags", "update"] },
-                "description": "tagId and at least one of name/color/description required. Color changes apply to linked tasks. Use toggle-status for isEnabled. Returns data.tag."
+                "description": "tagId and at least one of name/color/description/isEnabled required. isEnabled is optional numeric 0/1 and can be changed alongside other fields. Color changes apply to linked tasks. Returns data.tag."
               }, "response": []
             },
             {
@@ -136,9 +136,9 @@
               "request": {
                 "method": "POST",
                 "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" }],
-                "body": { "mode": "raw", "raw": "{\n  \"taskCategoryId\": {{TASK_CATEGORY_ID}},\n  \"name\": \"Updated Projects\",\n  \"description\": null,\n  \"taskNumberPrefix\": \"PROJ\"\n}" },
+                "body": { "mode": "raw", "raw": "{\n  \"taskCategoryId\": {{TASK_CATEGORY_ID}},\n  \"name\": \"Updated Projects\",\n  \"description\": null,\n  \"taskNumberPrefix\": \"PROJ\",\n  \"isEnabled\": 1\n}" },
                 "url": { "raw": "{{BASE_URL}}/api/v1/admin/tasks/task-categories/update", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "tasks", "task-categories", "update"] },
-                "description": "Requires taskCategoryId and at least one editable field: name, description, taskNumberPrefix. Cannot directly change nextTaskNumber or isEnabled. Prefix changes only affect future tasks. Returns data.category."
+                "description": "Requires taskCategoryId and at least one editable field: name, description, taskNumberPrefix, isEnabled. isEnabled is optional numeric 0/1 and can be changed alongside other fields. nextTaskNumber is read-only. Prefix changes only affect future tasks. Returns data.category."
               },
               "response": []
             },

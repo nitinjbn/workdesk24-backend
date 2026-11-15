@@ -37,8 +37,10 @@ export class TaskTagService {
     return value.trim();
   }
 
-  private fields(payload: TagFields, creating: boolean) {
-    const data: { name?: string; color?: string; description?: string | null } = {};
+  private fields(payload: TagFields, creating: boolean): {
+    name?: string; color?: string; description?: string | null; isEnabled?: number;
+  } {
+    const data: { name?: string; color?: string; description?: string | null; isEnabled?: number } = {};
     if (creating || payload.name !== undefined) {
       if (typeof payload.name !== 'string' || !payload.name.trim() || Array.from(payload.name.trim()).length > 50) {
         throw tagError('INVALID_TASK_TAG_NAME', 'name must contain 1-50 characters');
@@ -122,8 +124,8 @@ export class TaskTagService {
 
   async update(payload: TagScope & TagFields & { tagId: unknown }) {
     this.requireScope(payload);
-    if (payload.isEnabled !== undefined) throw tagError('INVALID_TASK_TAG_STATUS', 'Use toggle-status to change isEnabled');
     const data = this.fields(payload, false);
+    if (payload.isEnabled !== undefined) data.isEnabled = this.enabled(payload.isEnabled);
     if (!Object.keys(data).length) throw tagError('INVALID_TASK_TAG', 'At least one tag field is required');
     return this.mutate(payload, data);
   }

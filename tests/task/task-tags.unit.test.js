@@ -135,6 +135,11 @@ test('tag CRUD validates fields, reserves case-insensitive names, changes colors
   const changed = await h.master.update({ ...admin, tagId: tag.id, color: '#abcdef', description: null });
   assert.equal(changed.tag.color, '#ABCDEF');
   assert.equal(changed.tag.description, null);
+  assert.equal((await h.master.update({ ...admin, tagId: tag.id, isEnabled: 0 })).tag.isEnabled, 0);
+  assert.equal((await h.master.update({ ...admin, tagId: tag.id, name: 'Urgent', isEnabled: 1 })).tag.isEnabled, 1);
+  for (const isEnabled of [true, 2]) {
+    await assert.rejects(h.master.update({ ...admin, tagId: tag.id, isEnabled }), { code: 'INVALID_TASK_TAG_STATUS' });
+  }
   await h.master.toggleStatus({ ...admin, tagId: tag.id, isEnabled: 0 });
   assert.deepEqual((await h.master.listEnabled(employee)).tags, []);
   await h.master.remove({ ...admin, tagId: tag.id });
