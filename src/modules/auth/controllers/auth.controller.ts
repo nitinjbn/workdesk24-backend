@@ -249,6 +249,8 @@ export class AuthController {
           user: result.user,
           accessToken: result.accessToken,
           refreshToken: result.refreshToken,
+          subscription: result.subscription,
+          hostSettings: result.hostSettings,
           permissions: result.permissionsByModule,
         },
       } as ApiResponse);

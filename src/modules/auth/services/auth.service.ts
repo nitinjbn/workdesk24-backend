@@ -311,7 +311,12 @@ export class AuthService {
       throw createConfiguredError('USER_NOT_FOUND', 'User not found', 404, 'NOT_FOUND');
     }
 
-    return this.buildAppLoginResponse(loginUser as unknown as LoginUser, payload.deviceDetails);
+    return this.buildAppLoginResponse(
+      loginUser as unknown as LoginUser,
+      payload.deviceDetails,
+      undefined,
+      true
+    );
   }
 
   async updateUserDeviceDetails(payload: {

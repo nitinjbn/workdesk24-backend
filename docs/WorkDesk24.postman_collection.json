@@ -1406,6 +1406,7 @@
                                                    },
                                                    {
                                                        "name":  "Verify OTP",
+                                                       "description":  "Successful responses include user, subscription, hostSettings from APP_HOST_SETTINGS, and permissions.",
                                                        "event":  [
                                                                      {
                                                                          "listen":  "test",

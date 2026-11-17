@@ -72,13 +72,6 @@ function mockAppAuthDependencies(context, user) {
 test('login and refresh return host settings from the current authenticated host', async (context) => {
   const hostId = 17;
   const user = createUser(hostId);
-  const keyValueSettings = {
-    timezone: 'Asia/Kolkata',
-    dateTimeFormat: 'DD-MMM-YYYY hh:mm A',
-    dateFormat: 'DD-MMM-YYYY',
-    timeFormat: 'hh:mm A',
-    overtimeCalculationType: 'DAILY',
-  };
   let hostSettings = {
     orderShareHeaderText: 'Initial header',
     orderShareFooterText: 'Initial footer',
@@ -100,9 +93,10 @@ test('login and refresh return host settings from the current authenticated host
     assert.equal(options.where.isEnabled, 1);
     assert.equal(options.where.isDeleted, 0);
     assert.deepEqual(options.where.settingName[Op.in], APP_HOST_SETTINGS);
-    return Object.entries({ ...keyValueSettings, ...hostSettings }).map(
-      ([settingName, settingValue]) => ({ settingName, settingValue })
-    );
+    return Object.entries(hostSettings).map(([settingName, settingValue]) => ({
+      settingName,
+      settingValue,
+    }));
   });
 
   const loginResponse = createResponse();
@@ -122,11 +116,7 @@ test('login and refresh return host settings from the current authenticated host
   );
 
   assert.equal(loginResponse.body.success, true);
-  assert.deepEqual(loginResponse.body.data.hostSettings, {
-    orderShareHeaderText: 'Initial header',
-    orderShareFooterText: 'Initial footer',
-    ...keyValueSettings,
-  });
+  assert.deepEqual(loginResponse.body.data.hostSettings, hostSettings);
   assert.equal(loginResponse.body.data.user.settings.attendanceSelfieRequired, 1);
   assert.deepEqual(loginResponse.body.data.subscription, subscription);
 
@@ -144,10 +134,7 @@ test('login and refresh return host settings from the current authenticated host
   );
 
   assert.equal(refreshResponse.body.success, true);
-  assert.deepEqual(refreshResponse.body.data.hostSettings, {
-    ...hostSettings,
-    ...keyValueSettings,
-  });
+  assert.deepEqual(refreshResponse.body.data.hostSettings, hostSettings);
   assert.equal(refreshResponse.body.data.user.settings.attendanceSelfieRequired, 1);
   assert.deepEqual(refreshResponse.body.data.subscription, subscription);
   assert.deepEqual(queriedHostIds, [hostId, hostId]);
@@ -162,14 +149,12 @@ test('app host settings are host-scoped and return a stable nullable shape', asy
     [
       4,
       [
-        { settingName: 'timezone', settingValue: 'Host/Four' },
         { settingName: 'orderShareHeaderText', settingValue: 'Host four' },
       ],
     ],
     [
       5,
       [
-        { settingName: 'timezone', settingValue: 'Host/Five' },
         { settingName: 'orderShareFooterText', settingValue: 'Host five' },
       ],
     ],
@@ -191,13 +176,69 @@ test('app host settings are host-scoped and return a stable nullable shape', asy
     ...emptySettings,
     orderShareHeaderText: 'Host four',
     orderShareFooterText: null,
-    timezone: 'Host/Four',
   });
   assert.deepEqual(hostFiveSettings, {
     ...emptySettings,
     orderShareHeaderText: null,
     orderShareFooterText: 'Host five',
-    timezone: 'Host/Five',
   });
   assert.deepEqual(missingHostSettings, emptySettings);
+});
+
+test('verify OTP returns the same app authentication fields as login and refresh', async (context) => {
+  const hostId = 24;
+  const user = createUser(hostId);
+  const hostSettings = {
+    orderShareHeaderText: 'OTP header',
+    orderShareFooterText: 'OTP footer',
+  };
+  const otpEntry = {
+    id: 8,
+    status: 'PENDING',
+    expiresAt: Math.floor(Date.now() / 1000) + 600,
+    attemptCount: 1,
+    maxAttempts: 5,
+    async reload() {},
+    async compareOtp() {
+      return true;
+    },
+  };
+
+  mockAppAuthDependencies(context, user);
+  context.mock.method(authService, 'getUserByIdentifier', async () => user);
+  context.mock.method(userRepository, 'findLatestOtpByIdentifier', async (options) => {
+    assert.equal(options.hostId, hostId);
+    return otpEntry;
+  });
+  context.mock.method(userRepository, 'incrementOtpAttempt', async () => ({}));
+  context.mock.method(userRepository, 'updateOtpStatus', async () => ({}));
+  context.mock.method(models.HostSettings, 'findAll', async (options) => {
+    assert.equal(options.where.hostId, hostId);
+    assert.deepEqual(options.where.settingName[Op.in], APP_HOST_SETTINGS);
+    return Object.entries(hostSettings).map(([settingName, settingValue]) => ({
+      settingName,
+      settingValue,
+    }));
+  });
+
+  const response = createResponse();
+  await authController.verifyOtp(
+    {
+      body: {
+        identifier: user.email,
+        otpCode: '123456',
+        deviceDetails: { deviceId: 'device-47' },
+      },
+    },
+    response,
+    (error) => {
+      if (error) throw error;
+    }
+  );
+
+  assert.equal(response.body.success, true);
+  assert.deepEqual(response.body.data.hostSettings, hostSettings);
+  assert.deepEqual(response.body.data.subscription, subscription);
+  assert.deepEqual(response.body.data.permissions, []);
+  assert.equal(response.body.data.user.settings.attendanceSelfieRequired, 1);
 });
