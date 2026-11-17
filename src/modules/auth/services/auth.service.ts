@@ -27,13 +27,17 @@ import {
 import { createConfiguredError } from '../../../shared/utils/error.util';
 import { validatePasswordPattern } from '../../../shared/utils/password.util';
 import { CommonUtil } from '../../../shared/utils/common.util';
-import { CONFIG } from '../../../config/constants';
+import { APP_HOST_SETTINGS, CONFIG } from '../../../config/constants';
 import {
   DateTimeFormatUtil,
   formatDateTimeFieldsBySettings,
 } from '../../../shared/utils/date-time-format.util';
 import { formatStorageFieldsByConfig } from '../../../shared/utils/storage-format.util';
-import { getHostDateTimeSettings } from '../../../shared/utils/host-settings.util';
+import {
+  getHostDateTimeSettings,
+  getHostSettingsValues,
+  HostSettingsMap,
+} from '../../../shared/utils/host-settings.util';
 import hostService from '../../master/services/host.service';
 import { JwtPayload } from '../../../shared/types/auth.types';
 
@@ -98,6 +102,7 @@ interface VerifyOtpDto {
 
 interface AuthResponse {
   user: unknown;
+  hostSettings?: HostSettingsMap;
   subscription: {
     status: string;
     canUseApp: boolean;
@@ -222,7 +227,7 @@ export class AuthService {
 
   async login(data: LoginDto): Promise<AuthResponse> {
     const user = await this.validateCredentials(data);
-    return this.buildAppLoginResponse(user, data.deviceDetails || {}, user.password);
+    return this.buildAppLoginResponse(user, data.deviceDetails || {}, user.password, true);
   }
 
   async verifyOtp(payload: VerifyOtpDto): Promise<AuthResponse> {
@@ -335,7 +340,8 @@ export class AuthService {
   private async buildAppLoginResponse(
     user: any,
     deviceDetails?: any,
-    expectedPasswordHash?: string
+    expectedPasswordHash?: string,
+    includeHostSettings = false
   ): Promise<AuthResponse> {
     // Try to get plain object if method exists, otherwise use as-is
     user = (user?.get ? user.get({ plain: true }) : user) as unknown as LoginUser;
@@ -372,6 +378,9 @@ export class AuthService {
 
     // Attach settings array to user object
     (user as any).settings = userSettings || [];
+    const hostSettings = includeHostSettings
+      ? await getHostSettingsValues(user.hostId, [...APP_HOST_SETTINGS])
+      : undefined;
 
     // Attach active attendance locations (used for geo-fencing on attendance marking)
     (user as any).attendanceLocations = await userRepository.getAttendanceSitesForUser(user.id);
@@ -404,6 +413,7 @@ export class AuthService {
       refreshToken: sessionTokens.refreshToken,
       permissionsByModule,
       subscription,
+      ...(hostSettings ? { hostSettings } : {}),
     };
   }
 
@@ -1157,6 +1167,7 @@ export class AuthService {
 
     // Attach settings array to user object
     (user as any).settings = userSettings || [];
+    const hostSettings = await getHostSettingsValues(user.hostId, [...APP_HOST_SETTINGS]);
 
     // Attach active attendance locations (used for geo-fencing on attendance marking)
     (user as any).attendanceLocations = await userRepository.getAttendanceSitesForUser(user.id);
@@ -1173,6 +1184,7 @@ export class AuthService {
       refreshToken: rotatedTokens.refreshToken,
       permissionsByModule,
       subscription,
+      hostSettings,
     };
   }
 

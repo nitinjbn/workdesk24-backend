@@ -1195,6 +1195,7 @@
                                       "item":  [
                                                    {
                                                        "name":  "Login",
+                                                       "description":  "Successful responses include the app-allowed host settings in data.hostSettings (APP_HOST_SETTINGS); unset settings are null.",
                                                        "event":  [
                                                                      {
                                                                          "listen":  "test",
@@ -1252,6 +1253,7 @@
                                                    },
                                                    {
                                                        "name":  "Refresh Token",
+                                                       "description":  "Successful responses include the app-allowed host settings in data.hostSettings (APP_HOST_SETTINGS); unset settings are null.",
                                                        "event":  [
                                                                      {
                                                                          "listen":  "test",

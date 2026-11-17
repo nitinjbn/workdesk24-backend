@@ -1,9 +1,10 @@
 import { Op, WhereOptions } from 'sequelize';
 import HostSettings from '../../models/schemas/HostSettings';
 import { CONFIG } from '../../config/constants';
+import { CommonUtil } from './common.util';
 
 export interface HostSettingsMap {
-  [settingName: string]: string;
+  [settingName: string]: any;
 }
 
 export interface HostDateTimeSettings {
@@ -23,17 +24,18 @@ export const getHostSettingsValues = async (
   settingNames: string[]
 ): Promise<HostSettingsMap> => {
   const normalizedHostId = Number(hostId);
-  if (!Number.isFinite(normalizedHostId) || normalizedHostId <= 0) {
-    return {};
-  }
-
   const normalizedSettingNames = settingNames
     .map((settingName) => settingName?.trim())
     .filter((settingName): settingName is string => !!settingName);
 
-  if (!normalizedSettingNames.length) {
-    return {};
+  const values: HostSettingsMap = Object.fromEntries(
+    normalizedSettingNames.map((settingName) => [settingName, null])
+  );
+  if (!Number.isFinite(normalizedHostId) || normalizedHostId <= 0 || !normalizedSettingNames.length) {
+    return values;
   }
+
+  const assignedKeyValueSettings = new Set<string>();
 
   const rows = await HostSettings.findAll({
     where: {
@@ -44,26 +46,33 @@ export const getHostSettingsValues = async (
       isEnabled: 1,
       isDeleted: 0,
     } as WhereOptions<HostSettings>,
-    attributes: ['settingName', 'settingValue', 'updatedAt', 'createdAt'],
+    attributes: ['settingName', 'settingValue', 'updatedAt', 'createdAt', 'id'],
     order: [
       ['updatedAt', 'DESC'],
       ['createdAt', 'DESC'],
       ['id', 'DESC'],
     ],
+    raw: true,
   });
-
-  const values: HostSettingsMap = {};
 
   rows.forEach((row) => {
     const settingName = row.settingName;
-    if (!settingName || values[settingName] !== undefined) {
-      return;
+    if (
+      settingName &&
+      normalizedSettingNames.includes(settingName) &&
+      !assignedKeyValueSettings.has(settingName)
+    ) {
+      values[settingName] = row.settingValue ?? null;
+      assignedKeyValueSettings.add(settingName);
     }
-
-    values[settingName] = row.settingValue;
   });
 
-  return values;
+  return CommonUtil.convertSettingsToObject(
+    normalizedSettingNames.map((settingName) => ({
+      settingName,
+      settingValue: values[settingName],
+    }))
+  );
 };
 
 export const getHostDateTimeSettings = async (hostId: number): Promise<HostDateTimeSettings> => {

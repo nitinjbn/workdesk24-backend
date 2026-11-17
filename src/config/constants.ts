@@ -1,6 +1,8 @@
 import cacheConfig from './cache';
 import dashboardConfig from './dashboard';
 
+export const APP_HOST_SETTINGS = ['orderShareHeaderText', 'orderShareFooterText'] as const;
+
 export const CONFIG = {
   APP_CONFIG: {
     NAME: process.env.APP_NAME || 'WorkDesk24',
