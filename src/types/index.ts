@@ -233,6 +233,7 @@ export interface ProductAttributes {
   hsnCode?: string;
   purchasePrice?: number;
   sellingPrice?: number;
+  lastSellingPrice?: number;
   mrp?: number;
   taxPercentage?: number;
   isEnabled?: number;

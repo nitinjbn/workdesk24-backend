@@ -317,6 +317,7 @@ export class ProductService {
       hsnCode: otherPayload.hsnCode,
       purchasePrice: otherPayload.purchasePrice,
       sellingPrice: otherPayload.sellingPrice,
+      lastSellingPrice: otherPayload.lastSellingPrice,
       mrp: otherPayload.mrp,
       taxPercentage: otherPayload.taxPercentage || 0,
       remarks: otherPayload.remarks,
@@ -391,6 +392,7 @@ export class ProductService {
         hsnCode: otherPayload.hsnCode,
         purchasePrice: otherPayload.purchasePrice,
         sellingPrice: otherPayload.sellingPrice,
+        lastSellingPrice: otherPayload.lastSellingPrice,
         mrp: otherPayload.mrp,
         taxPercentage: otherPayload.taxPercentage || 0,
         isEnabled:

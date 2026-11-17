@@ -1,9 +1,34 @@
 import { Model, DataTypes, Sequelize, Optional } from 'sequelize';
 import { ProductAttributes } from '../../types';
 
-interface ProductCreationAttributes extends Optional<ProductAttributes, 'id' | 'productCode' | 'shortName' | 'remarks' | 'categoryId' | 'brandId' | 'uomId' | 'sku' | 'barcode' | 'hsnCode' | 'purchasePrice' | 'sellingPrice' | 'mrp' | 'taxPercentage' | 'isEnabled' | 'isDeleted' | 'createdAt' | 'updatedAt' | 'deletedAt'> {}
+interface ProductCreationAttributes extends Optional<
+  ProductAttributes,
+  | 'id'
+  | 'productCode'
+  | 'shortName'
+  | 'remarks'
+  | 'categoryId'
+  | 'brandId'
+  | 'uomId'
+  | 'sku'
+  | 'barcode'
+  | 'hsnCode'
+  | 'purchasePrice'
+  | 'sellingPrice'
+  | 'lastSellingPrice'
+  | 'mrp'
+  | 'taxPercentage'
+  | 'isEnabled'
+  | 'isDeleted'
+  | 'createdAt'
+  | 'updatedAt'
+  | 'deletedAt'
+> {}
 
-class Product extends Model<ProductAttributes, ProductCreationAttributes> implements ProductAttributes {
+class Product
+  extends Model<ProductAttributes, ProductCreationAttributes>
+  implements ProductAttributes
+{
   public id!: number;
   public hostId!: number;
   public productCode?: string;
@@ -18,6 +43,7 @@ class Product extends Model<ProductAttributes, ProductCreationAttributes> implem
   public hsnCode?: string;
   public purchasePrice?: number;
   public sellingPrice?: number;
+  public lastSellingPrice?: number;
   public mrp?: number;
   public taxPercentage?: number;
   public isEnabled?: number;
@@ -50,12 +76,12 @@ class Product extends Model<ProductAttributes, ProductCreationAttributes> implem
     Product.hasMany(models.ProductMedia, {
       foreignKey: 'productId',
       as: 'productMedia',
-    })
+    });
 
     Product.hasMany(models.ProductAttribute, {
       foreignKey: 'productId',
       as: 'productAttribute',
-    })
+    });
   }
 }
 
@@ -116,6 +142,10 @@ export function initProduct(sequelize: Sequelize): typeof Product {
         allowNull: true,
       },
       sellingPrice: {
+        type: DataTypes.DECIMAL(12, 2),
+        allowNull: true,
+      },
+      lastSellingPrice: {
         type: DataTypes.DECIMAL(12, 2),
         allowNull: true,
       },
