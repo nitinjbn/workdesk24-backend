@@ -23,6 +23,11 @@ import { deleteMediaFromStorage } from '../../../shared/utils/media-storage.util
 
 type ProductInstance = typeof Product.prototype;
 
+const normalizeOptionalPrice = (
+  value: string | number | null | undefined
+): string | number | null | undefined =>
+  typeof value === 'string' && value.trim() === '' ? null : value;
+
 export class ProductService {
   async getCategories(
     payload: {
@@ -315,9 +320,9 @@ export class ProductService {
       sku: otherPayload.sku,
       barcode: otherPayload.barcode,
       hsnCode: otherPayload.hsnCode,
-      purchasePrice: otherPayload.purchasePrice,
+      purchasePrice: normalizeOptionalPrice(otherPayload.purchasePrice),
       sellingPrice: otherPayload.sellingPrice,
-      lastSellingPrice: otherPayload.lastSellingPrice,
+      lastSellingPrice: normalizeOptionalPrice(otherPayload.lastSellingPrice),
       mrp: otherPayload.mrp,
       taxPercentage: otherPayload.taxPercentage || 0,
       remarks: otherPayload.remarks,
@@ -390,9 +395,9 @@ export class ProductService {
         sku: otherPayload.sku,
         barcode: otherPayload.barcode,
         hsnCode: otherPayload.hsnCode,
-        purchasePrice: otherPayload.purchasePrice,
+        purchasePrice: normalizeOptionalPrice(otherPayload.purchasePrice),
         sellingPrice: otherPayload.sellingPrice,
-        lastSellingPrice: otherPayload.lastSellingPrice,
+        lastSellingPrice: normalizeOptionalPrice(otherPayload.lastSellingPrice),
         mrp: otherPayload.mrp,
         taxPercentage: otherPayload.taxPercentage || 0,
         isEnabled:

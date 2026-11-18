@@ -41,9 +41,9 @@ class Product
   public sku?: string;
   public barcode?: string;
   public hsnCode?: string;
-  public purchasePrice?: number;
+  public purchasePrice?: number | null;
   public sellingPrice?: number;
-  public lastSellingPrice?: number;
+  public lastSellingPrice?: number | null;
   public mrp?: number;
   public taxPercentage?: number;
   public isEnabled?: number;

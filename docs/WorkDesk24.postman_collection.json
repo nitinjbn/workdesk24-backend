@@ -3006,6 +3006,7 @@
                                                                     },
                                                                     {
                                                                         "name":  "Create Product",
+                                                                        "description":  "Blank purchasePrice and lastSellingPrice values, including whitespace-only strings, are saved as null.",
                                                                         "request":  {
                                                                                         "method":  "POST",
                                                                                         "header":  [
@@ -3043,6 +3044,7 @@
                                                                     },
                                                                     {
                                                                         "name":  "Update Product",
+                                                                        "description":  "Blank purchasePrice and lastSellingPrice values, including whitespace-only strings, are saved as null.",
                                                                         "request":  {
                                                                                         "method":  "POST",
                                                                                         "header":  [

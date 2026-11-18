@@ -233,9 +233,9 @@ export interface ProductAttributes {
   sku?: string;
   barcode?: string;
   hsnCode?: string;
-  purchasePrice?: number;
+  purchasePrice?: number | null;
   sellingPrice?: number;
-  lastSellingPrice?: number;
+  lastSellingPrice?: number | null;
   mrp?: number;
   taxPercentage?: number;
   isEnabled?: number;
