@@ -1,7 +1,11 @@
 import cacheConfig from './cache';
 import dashboardConfig from './dashboard';
 
-export const APP_HOST_SETTINGS = ['orderShareHeaderText', 'orderShareFooterText'] as const;
+export const APP_HOST_SETTINGS = [
+  'orderShareHeaderText',
+  'orderShareFooterText',
+  'allowOrderEdit',
+] as const;
 
 export const CONFIG = {
   APP_CONFIG: {
