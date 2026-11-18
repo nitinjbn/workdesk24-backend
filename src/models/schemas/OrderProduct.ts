@@ -1,9 +1,26 @@
 import { Model, DataTypes, Sequelize, Optional } from 'sequelize';
 import { OrderProductAttributes } from '../../types';
 
-interface OrderProductCreationAttributes extends Optional<OrderProductAttributes, 'id' | 'localId' | 'productId' | 'productCode' | 'taxAmount' | 'discountAmount' | 'totalAmount' | 'syncedAt' | 'createdAt' | 'updatedAt' | 'isDeleted' | 'deletedAt'> {}
+interface OrderProductCreationAttributes extends Optional<
+  OrderProductAttributes,
+  | 'id'
+  | 'localId'
+  | 'productId'
+  | 'productCode'
+  | 'taxAmount'
+  | 'discountAmount'
+  | 'totalAmount'
+  | 'syncedAt'
+  | 'createdAt'
+  | 'updatedAt'
+  | 'isDeleted'
+  | 'deletedAt'
+> {}
 
-class OrderProduct extends Model<OrderProductAttributes, OrderProductCreationAttributes> implements OrderProductAttributes {
+class OrderProduct
+  extends Model<OrderProductAttributes, OrderProductCreationAttributes>
+  implements OrderProductAttributes
+{
   public id!: number;
   public orderId!: number;
   public userId!: number;
@@ -54,7 +71,7 @@ export function initOrderProduct(sequelize: Sequelize): typeof OrderProduct {
       },
       hostId: {
         type: DataTypes.BIGINT,
-        allowNull: false
+        allowNull: false,
       },
       userId: {
         type: DataTypes.BIGINT,
@@ -91,6 +108,15 @@ export function initOrderProduct(sequelize: Sequelize): typeof OrderProduct {
       mrp: {
         type: DataTypes.DECIMAL(10, 2),
         allowNull: true,
+      },
+      originalSellingPrice: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: true,
+      },
+      priceModified: {
+        type: DataTypes.TINYINT,
+        allowNull: true,
+        defaultValue: 0,
       },
       discountPercentage: {
         type: DataTypes.DECIMAL(5, 2),

@@ -206,6 +206,8 @@ export interface OrderProductAttributes {
   description?: string;
   quantity: number;
   mrp?: number;
+  originalSellingPrice?: number;
+  priceModified?: number;
   discountPercentage?: number;
   discountAmount?: number;
   taxAmount?: number;
