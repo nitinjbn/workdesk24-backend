@@ -496,6 +496,34 @@
                                                                     ]
                                                    },
                                                    {
+                                                       "name":  "Revise Order",
+                                                       "request":  {
+                                                                       "method":  "POST",
+                                                                       "header":  [
+                                                                                      {
+                                                                                          "key":  "Authorization",
+                                                                                          "value":  "Bearer {{TOKEN}}",
+                                                                                          "type":  "text"
+                                                                                      },
+                                                                                      {
+                                                                                          "key":  "Content-Type",
+                                                                                          "value":  "application/json"
+                                                                                      }
+                                                                                  ],
+                                                                       "body":  {
+                                                                                    "mode":  "raw",
+                                                                                    "raw":  "{\n  \"orderId\": 103,\n  \"hostId\": 1,\n  \"visitId\": 317,\n  \"customerId\": 125,\n  \"totalAmount\": 1575,\n  \"taxAmount\": 75,\n  \"totalDiscount\": 0,\n  \"totalUniqueProducts\": 1,\n  \"totalQuantity\": 100,\n  \"orderTime\": \"1794969842\",\n  \"remarks\": \"Updated order\",\n  \"orderProducts\": [\n    {\n      \"id\": 126,\n      \"productId\": 6,\n      \"productName\": \"Paracetamol 500mg\",\n      \"productCode\": \"PROD0006\",\n      \"quantity\": 100,\n      \"mrp\": 15,\n      \"discountPercentage\": 0,\n      \"discountAmount\": 0,\n      \"taxAmount\": 75,\n      \"totalAmount\": 1575\n    }\n  ]\n}"
+                                                                                },
+                                                                       "url":  {
+                                                                                   "raw":  "{{BASE_URL}}/api/v1/app/sync/revisedOrder",
+                                                                                   "host":  ["{{BASE_URL}}"],
+                                                                                   "path":  ["api", "v1", "app", "sync", "revisedOrder"]
+                                                                               },
+                                                                       "description":  "Creates a revision of an active order in the authenticated host. Send the original orderId and its hostId. The original is soft-deleted and linked to the new row through revisedOrderId; the new row has isRevised = 1. The order number, owner, visit, and customer carry over. Original product rows are unchanged. If orderProducts is supplied, it is the final list for the revision: an id refers to a line on the original order; omit id for a new line. All revised lines get new IDs. An empty array creates no lines; omitting orderProducts copies all active lines. Send updated order totals when changing the product list. The response data includes the new orderId, previousOrderId, and the new orderProducts. Invalid input returns 400, a host mismatch returns 403, and an unavailable or already-replaced original order returns 404."
+                                                                   },
+                                                       "response":  []
+                                                   },
+                                                   {
                                                        "name":  "Sync Payments",
                                                        "request":  {
                                                                        "method":  "POST",
@@ -1001,6 +1029,34 @@
                                                        "response":  [
 
                                                                     ]
+                                                   },
+                                                   {
+                                                       "name":  "Get Order Details",
+                                                       "request":  {
+                                                                       "method":  "POST",
+                                                                       "header":  [
+                                                                                      {
+                                                                                          "key":  "Authorization",
+                                                                                          "value":  "Bearer {{TOKEN}}",
+                                                                                          "type":  "text"
+                                                                                      },
+                                                                                      {
+                                                                                          "key":  "Content-Type",
+                                                                                          "value":  "application/json"
+                                                                                      }
+                                                                                  ],
+                                                                       "body":  {
+                                                                                    "mode":  "raw",
+                                                                                    "raw":  "{\n  \"orderId\": \"123\"\n}"
+                                                                                },
+                                                                       "url":  {
+                                                                                   "raw":  "{{BASE_URL}}/api/v1/app/reports/getOrderDetails",
+                                                                                   "host":  ["{{BASE_URL}}"],
+                                                                                   "path":  ["api", "v1", "app", "reports", "getOrderDetails"]
+                                                                               },
+                                                                       "description":  "Load an order for editing using the orderId from Get Orders Report. The host comes from the authenticated user. Returns success, message, and data containing the stored order fields, orderId, and orderProducts (an empty array if there are no active products). Invalid IDs return 400; missing, deleted, or out-of-host orders return 404."
+                                                                   },
+                                                       "response":  []
                                                    },
                                                    {
                                                        "name":  "Get Payments",

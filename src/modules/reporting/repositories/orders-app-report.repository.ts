@@ -1,4 +1,4 @@
-import { FindAndCountOptions, Includeable, Op } from 'sequelize';
+import { cast, FindAndCountOptions, Includeable, Op } from 'sequelize';
 import db, { Order, OrderProduct } from '../../../models';
 import { AttendanceReportFilter, CommonReportSortBy, ReportResponse, ReportSortDirection, GetOrdersReportPayload } from '../types/report.types';
 import baseReportHelper from '../helpers/base-report.helper';
@@ -6,6 +6,23 @@ import { buildCommonReportOrder, buildDynamicModelFilters, buildUserInclude, bui
 
 
 export class OrdersReportRepository {
+  async getOrderDetails(hostId: number, orderId: string): Promise<typeof Order.prototype | null> {
+    // Keep comparisons exact for BIGINT IDs returned by MySQL as strings.
+    const activeHostScope = { hostId: { [Op.eq]: cast(hostId, 'SIGNED') }, isDeleted: 0 };
+    return Order.findOne({
+      where: { id: { [Op.eq]: cast(orderId, 'SIGNED') }, ...activeHostScope },
+      include: [
+        {
+          model: OrderProduct,
+          as: 'products',
+          where: activeHostScope,
+          required: false,
+        },
+      ],
+      order: [[{ model: OrderProduct, as: 'products' }, 'id', 'ASC']],
+    });
+  }
+
   async getOrdersReport(params: { hostId: number; userId?: number; filter?: { orderTime?: { fromDate: number; tillDate: number }; customerId?: number }}): Promise<ReportResponse<any>> {
     const { hostId, userId, filter } = params;
 

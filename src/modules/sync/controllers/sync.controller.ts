@@ -7,6 +7,8 @@ import {
   uploadManyBuffersToMediaStorage,
 } from '../../../shared/utils/media-storage.util';
 import customerService from '../../master/services/customer.service';
+import { revisedOrderSchema } from '../types/revised-order.schema';
+import { createConfiguredError } from '../../../shared/utils/error.util';
 
 export class SyncController {
   async syncAttendance(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
@@ -104,6 +106,30 @@ export class SyncController {
         message: 'Orders synced successfully',
         data: result,
       } as ApiResponse);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async revisedOrder(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const hostId = Number(req.user?.hostId);
+      if (!Number.isSafeInteger(hostId) || hostId <= 0) {
+        throw createConfiguredError('AUTH_REQUIRED', 'Authentication required', 401, 'AUTH_REQUIRED');
+      }
+
+      const result = revisedOrderSchema.safeParse(req.body);
+      if (!result.success) {
+        const issue = result.error.issues[0];
+        const field = issue.path.join('.');
+        throw createConfiguredError(
+          'INVALID_ORDER_REVISION',
+          field ? `${field}: ${issue.message}` : issue.message
+        );
+      }
+
+      const order = await syncService.reviseOrder(hostId, result.data);
+      res.json({ success: true, message: 'Order revised successfully', data: order });
     } catch (error) {
       next(error);
     }

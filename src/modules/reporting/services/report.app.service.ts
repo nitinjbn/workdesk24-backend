@@ -14,7 +14,13 @@ import { getHostDateTimeSettings } from '../../../shared/utils/host-settings.uti
 import { DateTimeFormatUtil, formatDateTimeFieldsBySettings } from '../../../shared/utils/date-time-format.util';
 import { createConfiguredError } from '../../../shared/utils/error.util';
 import { customerRepository } from '../../master/repositories/customer.repository';
+import type { OrderAttributes, OrderProductAttributes } from '../../../types';
+
 type AttendanceInstance = typeof Attendance.prototype;
+type OrderDetails = OrderAttributes & {
+  orderId: OrderAttributes['id'];
+  orderProducts: OrderProductAttributes[];
+};
 export class ReportService {
   
   async getAttendanceReport(
@@ -71,6 +77,18 @@ export class ReportService {
     };
   }
   
+  async getOrderDetails(payload: { hostId: number; orderId: string }): Promise<OrderDetails> {
+    const order = await ordersReportRepository.getOrderDetails(payload.hostId, payload.orderId);
+    if (!order) {
+      throw createConfiguredError('ORDER_NOT_FOUND', 'Order not found', 404, 'ORDER_NOT_FOUND');
+    }
+
+    const { products, ...details } = order.toJSON<
+      OrderAttributes & { products: OrderProductAttributes[] }
+    >();
+    return { ...details, orderId: details.id, orderProducts: products };
+  }
+
   async getVisitsReport(
     payload: { hostId: number; userId?: number; filter?: { checkInTime?: { fromDate: number; tillDate: number }; customerId?: number } },
   ): Promise<any> {
