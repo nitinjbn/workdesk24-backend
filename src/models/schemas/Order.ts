@@ -11,6 +11,8 @@ class Order extends Model<OrderAttributes, OrderCreationAttributes> implements O
   public visitId!: number;
   public customerId!: number;
   public orderNumber?: string;
+  public isRevised!: number;
+  public revisedOrderId?: number | null;
   public totalAmount!: number;
   public taxAmount?: number;
   public totalDiscount?: number;
@@ -75,6 +77,18 @@ export function initOrder(sequelize: Sequelize): typeof Order {
       orderNumber: {
         type: DataTypes.STRING(100),
         allowNull: true
+      },
+      isRevised: {
+        type: DataTypes.TINYINT,
+        allowNull: false,
+        defaultValue: 0,
+      },
+      revisedOrderId: {
+        type: DataTypes.BIGINT,
+        allowNull: true,
+        defaultValue: null,
+        references: { model: 'wd_orders', key: 'id' },
+        onDelete: 'RESTRICT',
       },
       totalAmount: {
         type: DataTypes.DECIMAL(10, 2),

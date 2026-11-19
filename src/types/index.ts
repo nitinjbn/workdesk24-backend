@@ -166,6 +166,8 @@ export interface OrderAttributes {
   userId: number;
   localId?: string;
   orderNumber?: string;
+  isRevised?: number;
+  revisedOrderId?: number | null;
   visitId?: number;
   customerId?: number;
   totalAmount: number;

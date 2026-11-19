@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { authMiddleware } from '../../../shared/middleware/auth.middleware';
+import { requireSupportReadOnlyPolicy } from '../../../shared/middleware/support-access.middleware';
 import { resolveVisitLocalId } from '../../../shared/middleware/resolve-visit-local-id.middleware';
 import { AuthRequest } from '../../../types';
 import syncController from '../../../modules/sync/controllers/sync.controller';
@@ -30,6 +31,11 @@ router.post('/sync/attendance', syncController.syncAttendance.bind(syncControlle
 router.post('/sync/gps-history', syncController.syncGpsHistory.bind(syncController));
 router.post('/sync/visits', syncController.syncVisits.bind(syncController));
 router.post('/sync/orders', resolveVisitLocalId(), syncController.syncOrders.bind(syncController));
+router.post(
+  '/sync/revisedOrder',
+  requireSupportReadOnlyPolicy,
+  syncController.revisedOrder.bind(syncController)
+);
 router.post(
   '/sync/payments',
   resolveVisitLocalId(),
@@ -68,6 +74,8 @@ router.post('/sync/todayAttendance', syncController.getTodayAttendance.bind(sync
 router.post('/reports/getAttendance', reportController.getAttendance.bind(reportController));
 router.post('/reports/getVisits', reportController.getVisits.bind(reportController));
 router.post('/reports/getOrders', reportController.getOrders.bind(reportController));
+router.post('/reports/getOrderDetails', reportController.getOrderDetails.bind(reportController));
+
 router.post('/reports/getPayments', reportController.getPayments.bind(reportController));
 router.post('/reports/getFeedbacks', reportController.getFeedbacks.bind(reportController));
 router.post('/reports/getImages', reportController.getImages.bind(reportController));

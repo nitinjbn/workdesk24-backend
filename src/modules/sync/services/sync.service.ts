@@ -17,6 +17,9 @@ import {
 } from '../repositories';
 import { type AppVersionCheckResult } from '../repositories/app-upgrade.repository';
 import type { ActivityLogInput } from '../repositories/activity-log.repository';
+import type { RevisedOrderInput } from '../types/revised-order.schema';
+import type Order from '../../../models/schemas/Order';
+import { createConfiguredError } from '../../../shared/utils/error.util';
 import { ActivityModule, ACTIVITY_DESCRIPTION_KEYS } from '../../../config/activityLog';
 import { User } from '../../../models';
 import { resolveVisitLocalIdForRecord } from '../../../shared/utils/visit-local-id-resolver';
@@ -810,21 +813,32 @@ export class SyncService {
             const {
               visitLocalId,
               orderNumber: _ignoredClientOrderNumber,
+              isRevised: _ignoredIsRevised,
+              revisedOrderId: _ignoredRevisedOrderId,
               ...orderPayload
             } = orderData;
             const resolvedOrderData: SyncRecord = {
               ...orderPayload,
               visitId,
             };
-            const instance = localId
-              ? await orderRepository.findOne({ userId, localId } as any, transaction)
+            const hostId = this.toPositiveInteger(resolvedOrderData.hostId);
+            const instance = localId && hostId !== null
+              ? await orderRepository.findForSync(hostId, userId, localId, transaction)
               : null;
             const previousOrder = instance?.toJSON();
+            if (instance?.isRevised === 1) {
+              // An offline replay should resolve to the current revision, not overwrite it.
+              return {
+                status: 'updated' as const,
+                serverId: instance.id,
+                persistedRecord: instance.toJSON(),
+                previousRecord: previousOrder,
+              };
+            }
             // The order number is always generated server-side; any value sent
             // by the app is ignored. Existing orders keep their number.
             let orderNumber = instance?.orderNumber;
             if (!orderNumber) {
-              const hostId = this.toPositiveInteger(resolvedOrderData.hostId);
               if (hostId === null) {
                 throw new Error('hostId is required to generate the order number');
               }
@@ -937,6 +951,89 @@ export class SyncService {
     }
 
     return results;
+  }
+
+  async reviseOrder(authenticatedHostId: number, input: RevisedOrderInput) {
+    const { orderId, hostId, visitId, customerId, orderProducts, isDeleted: _isDeleted, ...details } =
+      input;
+    if (hostId !== authenticatedHostId) {
+      throw createConfiguredError('ORDER_HOST_MISMATCH', 'hostId must match the authenticated host', 403, 'ORDER_HOST_MISMATCH');
+    }
+
+    const result = await orderRepository.getSequelize().transaction(async (transaction) => {
+      const order = await orderRepository.findForUpdate(orderId, hostId, transaction);
+      if (!order) {
+        throw createConfiguredError('ORDER_NOT_FOUND', 'Order not found', 404, 'ORDER_NOT_FOUND');
+      }
+
+      if (
+        (visitId !== undefined && String(visitId) !== String(order.visitId)) ||
+        (customerId !== undefined && String(customerId) !== String(order.customerId))
+      ) {
+        throw createConfiguredError('IMMUTABLE_ORDER_LINKS', 'visitId and customerId cannot be changed');
+      }
+
+      const previousOrder = order.toJSON();
+      const now = Math.floor(Date.now() / 1000);
+      const lines = await this.resolveRevisedOrderProducts(order, orderProducts, transaction);
+      const revisedOrder = await orderRepository.createRevision(order, details, now, transaction);
+      const products = await orderProductRepository.createRevisedProducts(
+        revisedOrder, lines, now, transaction
+      );
+      await orderRepository.markReplaced(order, revisedOrder.id, now, transaction);
+
+      const data = revisedOrder.toJSON();
+      await this.syncVisitSummaryForActivity(data, transaction, previousOrder);
+      await this.syncDailySummaryForActivity(data, 'orderTime', transaction, previousOrder);
+
+      return { data, previousOrder, products: products.map((product) => product.toJSON()) };
+    });
+
+    await this.invalidateDashboardOverview('order.changed', result.data, result.previousOrder, 'orderTime');
+    return {
+      ...result.data,
+      orderId: result.data.id,
+      previousOrderId: result.previousOrder.id,
+      orderProducts: result.products,
+    };
+  }
+
+  private async resolveRevisedOrderProducts(
+    order: Order,
+    orderProducts: RevisedOrderInput['orderProducts'],
+    transaction: Transaction
+  ) {
+    const activeProducts = await orderProductRepository.findForOrderUpdate(order, transaction);
+    if (orderProducts === undefined) {
+      return activeProducts.map((existing) => ({ existing }));
+    }
+
+    const availableLines = new Map(activeProducts.map((line) => [String(line.id), line]));
+    const changedProductIds = new Set<number>();
+    const lines = orderProducts.map((input) => {
+      const key = String(input.id);
+      const existing = availableLines.get(key);
+      if (input.id !== undefined && !availableLines.delete(key)) {
+        throw createConfiguredError(
+          'INVALID_ORDER_PRODUCT_ID',
+          'Each line id must be unique and belong to an active product line on this order'
+        );
+      }
+
+      if (input.productId != null && String(input.productId) !== String(existing?.productId)) {
+        changedProductIds.add(input.productId);
+      }
+      return { input, existing };
+    });
+
+    if (changedProductIds.size) {
+      const activeIds = await productRepository.findActiveIds(order.hostId, [...changedProductIds], transaction);
+      if ([...changedProductIds].some((id) => !activeIds.has(String(id)))) {
+        throw createConfiguredError('INVALID_ORDER_PRODUCT', 'productId must reference a product in this host');
+      }
+    }
+
+    return lines;
   }
 
   private async generateNextOrderNumber(hostId: number, transaction: Transaction): Promise<string> {

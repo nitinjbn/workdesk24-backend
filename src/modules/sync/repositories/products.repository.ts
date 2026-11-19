@@ -1,6 +1,16 @@
 import db, { Product, ProductCategory, ProductBrand, ProductMedia, ProductAttribute } from '../../../models';
+import { Op, Transaction } from 'sequelize';
 
 export class ProductRepository {
+  async findActiveIds(hostId: number, ids: number[], transaction: Transaction): Promise<Set<string>> {
+    const products = await Product.findAll({
+      attributes: ['id'],
+      where: { hostId, id: { [Op.in]: ids }, isDeleted: 0 },
+      transaction,
+    });
+    return new Set(products.map(({ id }) => String(id)));
+  }
+
   async getProducts(payload) {
     const { hostId, userId } = payload;
 
