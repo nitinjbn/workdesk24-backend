@@ -12,6 +12,8 @@ import {
   ProductAttributesResponse,
   SaveProductMediaPayload,
   SaveCustomerMediaPayload,
+  CustomerNameListItem,
+  GetAllCustomersPayload,
 } from '../types/master.types';
 import { Product } from '../../../models/schemas';
 import baseReportHelper from '../helpers/base-report.helper';
@@ -113,6 +115,12 @@ export class CustomerService {
       customers: formatDateTimeFieldsBySettings(plainData, dateTimeSettings),
       pagination: report.pagination,
     };
+  }
+
+  async getAllCustomers(
+    payload: GetAllCustomersPayload
+  ): Promise<ReportResponse<CustomerNameListItem, 'customers'>> {
+    return customerRepository.getAllCustomers(payload);
   }
 
   async getCustomerDetails(

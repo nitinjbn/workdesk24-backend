@@ -13,6 +13,8 @@ import db, {
 } from '../../../models';
 import {
   GetCustomersPayload,
+  GetAllCustomersPayload,
+  CustomerNameListItem,
   GetProductDetailsByIdPayload,
   ReportResponse,
   SingleRecordResponse,
@@ -95,6 +97,60 @@ export class customerRepository {
         data: rows,
       };
     }
+  }
+
+  async getAllCustomers(
+    params: GetAllCustomersPayload
+  ): Promise<ReportResponse<CustomerNameListItem, 'customers'>> {
+    const { hostId, page, limit } = params;
+    const query: FindAndCountOptions<InstanceType<typeof Customer>['_attributes']> = {
+      attributes: [
+        'id',
+        'customerName',
+        'customerCode',
+        [db.Sequelize.col('customerTypeDetails.customerTypeName'), 'customerType'],
+      ],
+      where: { hostId, isDeleted: 0 },
+      include: [
+        {
+          model: CustomerType,
+          as: 'customerTypeDetails',
+          attributes: [],
+          where: { hostId, isDeleted: 0 },
+          required: false,
+        },
+      ],
+      order: [
+        ['customerName', 'ASC'],
+        ['id', 'ASC'],
+      ],
+    };
+
+    const toListItem = (customer: InstanceType<typeof Customer>): CustomerNameListItem => {
+      const customerType = customer.get('customerType');
+      return {
+        id: customer.id,
+        customerName: customer.customerName,
+        customerCode: customer.customerCode ?? null,
+        customerType: typeof customerType === 'string' ? customerType : null,
+      };
+    };
+
+    if (page === undefined || limit === undefined) {
+      const rows = await Customer.findAll(query);
+      return { customers: rows.map(toListItem) };
+    }
+
+    const pagination = baseReportHelper.normalizePagination({ page, limit });
+    const { rows, count } = await Customer.findAndCountAll({
+      ...query,
+      limit: pagination.limit,
+      offset: pagination.offset,
+    });
+    return {
+      customers: rows.map(toListItem),
+      pagination: baseReportHelper.buildPagination(count, pagination.page, pagination.limit),
+    };
   }
 
   async getCustomers(params: GetCustomersPayload): Promise<ReportResponse<any>> {

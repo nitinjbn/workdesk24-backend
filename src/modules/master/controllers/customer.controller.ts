@@ -1,4 +1,5 @@
 import { Response, NextFunction } from 'express';
+import { z } from 'zod';
 import customerService from '../services/customer.service';
 import { ApiResponse } from '../../../shared/types/base.types';
 import { AuthRequest } from '../../../shared/types/auth.types';
@@ -7,6 +8,21 @@ import {
   uploadBufferToMediaStorage,
 } from '../../../shared/utils/media-storage.util';
 import { createConfiguredError } from '../../../shared/utils/error.util';
+
+const customerNamesRequestSchema = z
+  .object({
+    hostId: z.union([z.number().int().positive(), z.string().regex(/^[1-9]\d*$/)]).optional(),
+    page: z.number().int().positive().optional(),
+    limit: z.number().int().min(1).max(100).optional(),
+  })
+  .refine(({ page, limit }) => (page === undefined) === (limit === undefined), {
+    message: 'Provide both page and limit, or omit both.',
+  })
+  .refine(
+    ({ page, limit }) =>
+      page === undefined || limit === undefined || Number.isSafeInteger(page * limit),
+    { message: 'Pagination range is too large.' }
+  );
 
 export class CustomerController {
   async getCustomerTypes(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
@@ -36,6 +52,34 @@ export class CustomerController {
       res.json({
         success: true,
         message: 'Customers retrieved successfully',
+        data: result,
+      } as ApiResponse);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getAllCustomers(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      if (!req.user) {
+        throw createConfiguredError('ACCESS_DENIED', 'Unauthorized', 401, 'ACCESS_DENIED');
+      }
+
+      const parsed = customerNamesRequestSchema.safeParse(req.body ?? {});
+      if (!parsed.success) {
+        throw createConfiguredError('VALIDATION_ERROR', parsed.error.issues[0]?.message);
+      }
+
+      const { hostId } = req.user;
+      if (parsed.data.hostId !== undefined && String(parsed.data.hostId) !== String(hostId)) {
+        throw createConfiguredError('ACCESS_DENIED', 'Invalid host scope.', 403, 'ACCESS_DENIED');
+      }
+
+      const { page, limit } = parsed.data;
+      const result = await customerService.getAllCustomers({ hostId, page, limit });
+      res.json({
+        success: true,
+        message: 'Customer names retrieved successfully',
         data: result,
       } as ApiResponse);
     } catch (error) {

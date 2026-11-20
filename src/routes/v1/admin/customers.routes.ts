@@ -20,6 +20,10 @@ router.post(
 );
 router.post('/customers/getCustomers', customerController.getCustomers.bind(customerController));
 router.post(
+  '/customers/getAllCustomers',
+  customerController.getAllCustomers.bind(customerController)
+);
+router.post(
   '/customers/getCustomerDetails',
   customerController.getCustomerDetails.bind(customerController)
 );

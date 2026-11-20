@@ -3,6 +3,17 @@ export interface ReportPaginationParams {
   limit?: number;
 }
 
+export interface GetAllCustomersPayload extends ReportPaginationParams {
+  hostId: number;
+}
+
+export interface CustomerNameListItem {
+  id: number;
+  customerName: string;
+  customerCode: string | null;
+  customerType: string | null;
+}
+
 export interface ReportScope {
   hostId: number;
   requestUserId?: number;

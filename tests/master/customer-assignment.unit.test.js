@@ -4,6 +4,8 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const { CustomerService } = require('../../src/modules/master/services/customer.service');
+const customerController =
+  require('../../src/modules/master/controllers/customer.controller').default;
 const { Customer } = require('../../src/models');
 const customerRepository =
   require('../../src/modules/master/repositories/customer.repository').default;
@@ -62,4 +64,70 @@ test('customer list serializes assigned users', async () => {
     { userId: 7, employeeName: 'Test user', employeeCode: 'E007' },
   ]);
   assert.equal('customerUserAssignments' in serializedCustomer, false);
+});
+
+async function requestCustomerNames(body, hostId = 7) {
+  let response;
+  await customerController.getAllCustomers(
+    { body, user: { hostId } },
+    { json: (payload) => { response = payload; } },
+    (error) => { throw error; }
+  );
+  return response.data;
+}
+
+test('report filter selects only the customer lookup fields without a count or limit by default', async (t) => {
+  const customer = Customer.build({ id: 8, customerName: 'Acme', email: 'not-returned@example.com' });
+  customer.setDataValue('customerType', 'Retailer');
+  const select = t.mock.method(Customer.sequelize, 'query', async () => [customer]);
+  const count = t.mock.method(Customer, 'count', async () => 1);
+
+  assert.deepEqual(await requestCustomerNames({}), {
+    customers: [{ id: 8, customerName: 'Acme', customerCode: null, customerType: 'Retailer' }],
+  });
+  assert.equal(count.mock.callCount(), 0);
+  assert.equal(select.mock.callCount(), 1);
+  const [sql] = select.mock.calls[0].arguments;
+  assert.match(sql, /^SELECT `Customer`\.`id`, `Customer`\.`customerName`, `Customer`\.`customerCode`, `customerTypeDetails`\.`customerTypeName` AS `customerType` FROM /);
+  assert.match(sql, /LEFT OUTER JOIN `wd_customer_types` AS `customerTypeDetails`/);
+  assert.match(sql, /WHERE `Customer`\.`hostId` = 7 AND `Customer`\.`isDeleted` = 0/);
+  assert.match(sql, /ORDER BY `Customer`\.`customerName` ASC, `Customer`\.`id` ASC/);
+  assert.doesNotMatch(sql, /\bLIMIT\b/);
+});
+
+test('report filter applies limit and offset only when pagination is requested', async (t) => {
+  const customer = Customer.build({ id: 9, customerName: 'Beta', customerCode: 'B9' });
+  customer.setDataValue('customerType', null);
+  const select = t.mock.method(Customer.sequelize, 'query', async () => [customer]);
+  const count = t.mock.method(Customer, 'count', async () => 3);
+
+  const result = await requestCustomerNames({ page: 2, limit: 2 });
+  assert.deepEqual(result.customers, [
+    { id: 9, customerName: 'Beta', customerCode: 'B9', customerType: null },
+  ]);
+  assert.deepEqual(result.pagination, {
+    total: 3, page: 2, limit: 2, totalPages: 2,
+    hasNextPage: false, hasPreviousPage: true, nextPage: null, previousPage: 1,
+  });
+  assert.equal(count.mock.callCount(), 1);
+  assert.match(select.mock.calls[0].arguments[0], /LIMIT 2, 2/);
+});
+
+test('report filter accepts matching numeric or string host IDs and rejects a different host', async (t) => {
+  const select = t.mock.method(Customer.sequelize, 'query', async () => []);
+  assert.deepEqual(await requestCustomerNames({ hostId: 7 }, '7'), { customers: [] });
+  assert.deepEqual(await requestCustomerNames({ hostId: '7' }), { customers: [] });
+  await assert.rejects(requestCustomerNames({ hostId: 8 }, '7'), {
+    code: 'ACCESS_DENIED',
+    statusCode: 403,
+  });
+  assert.equal(select.mock.callCount(), 2);
+});
+
+test('report filter rejects invalid pagination before querying', async (t) => {
+  const select = t.mock.method(Customer.sequelize, 'query', async () => []);
+  for (const body of [{ page: 1 }, { limit: 1 }, { page: 1, limit: 101 }, { page: 0, limit: 1 }]) {
+    await assert.rejects(requestCustomerNames(body), { code: 'VALIDATION_ERROR', statusCode: 400 });
+  }
+  assert.equal(select.mock.callCount(), 0);
 });

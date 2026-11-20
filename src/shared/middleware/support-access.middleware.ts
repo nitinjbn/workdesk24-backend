@@ -12,6 +12,7 @@ const READ_ONLY_SUPPORT_ROUTES = new Set([
   '/users/validateMobile',
   '/customers/getCustomerTypes',
   '/customers/getCustomers',
+  '/customers/getAllCustomers',
   '/customers/getCustomerDetails',
   '/products/getCategories',
   '/products/getBrands',

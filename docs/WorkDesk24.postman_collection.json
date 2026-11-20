@@ -3968,6 +3968,24 @@
                                                                                      ]
                                                                     },
                                                                     {
+                                                                        "name":  "Get All Customers",
+                                                                        "request":  {
+                                                                                        "method":  "POST",
+                                                                                        "header":  [
+                                                                                                       {"key": "x-csrf-token", "value": "{{ADMIN_TOKEN}}", "type": "text"},
+                                                                                                       {"key": "Content-Type", "value": "application/json"}
+                                                                                                   ],
+                                                                                        "body":  {"mode": "raw", "raw": "{}"},
+                                                                                        "url":  {
+                                                                                                    "raw":  "{{BASE_URL}}/api/v1/admin/customers/getAllCustomers",
+                                                                                                    "host":  ["{{BASE_URL}}"],
+                                                                                                    "path":  ["api", "v1", "admin", "customers", "getAllCustomers"]
+                                                                                                },
+                                                                                        "description":  "Requires an authenticated admin session and its CSRF token. The host comes from the session; omit hostId from the request. Send {} for all non-deleted customers, or send both page and limit (1-100), e.g. {\"page\":1,\"limit\":25}. Returns data.customers with id, customerName, customerCode, and customerType (the type name, or null). data.pagination is returned only when paginated."
+                                                                                    },
+                                                                        "response":  []
+                                                                    },
+                                                                    {
                                                                         "name":  "Get Customer Details",
                                                                         "request":  {
                                                                                         "method":  "POST",

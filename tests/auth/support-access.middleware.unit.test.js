@@ -36,6 +36,20 @@ test('read-only support allows known POST query routes', () => {
   assert.equal(response.statusCode, 200);
 });
 
+test('read-only support allows the customer report filter lookup', () => {
+  const response = createResponse();
+  let continued = false;
+  requireSupportReadOnlyPolicy(
+    {
+      path: '/customers/getAllCustomers',
+      authContext: { isSupportSession: true, accessMode: 'SUPPORT_READ_ONLY' },
+    },
+    response,
+    () => { continued = true; }
+  );
+  assert.equal(continued, true);
+});
+
 test('read-only support denies unclassified POST routes by default', () => {
   const response = createResponse();
   let continued = false;
