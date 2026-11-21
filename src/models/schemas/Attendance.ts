@@ -9,6 +9,7 @@ interface AttendanceAttributes extends BaseModel {
   vehicleType?: string;
   vehicleCategory?: string;
   attendanceOdometerReading?: number;
+  attendanceOdometerImage?: string;
   attendanceImage?: string;
   attendanceRemarks?: string;
   attendanceLatitude?: number;
@@ -22,6 +23,7 @@ interface AttendanceAttributes extends BaseModel {
   isChargingOnAttendance?: number;
   dayoverImage?: string;
   dayoverOdometerReading?: number;
+  dayoverOdometerImage?: string;
   dayoverLatitude?: number;
   dayoverLongitude?: number;
   dayoverLocationAccuracy?: number;
@@ -59,6 +61,7 @@ interface AttendanceCreationAttributes extends Optional<
   | 'vehicleType'
   | 'vehicleCategory'
   | 'attendanceOdometerReading'
+  | 'attendanceOdometerImage'
   | 'attendanceImage'
   | 'attendanceRemarks'
   | 'attendanceLatitude'
@@ -78,6 +81,7 @@ interface AttendanceCreationAttributes extends Optional<
   | 'dayoverLocationProvider'
   | 'dayoverAddress'
   | 'dayoverBatteryPercentage'
+  | 'dayoverOdometerImage'
   | 'isChargingOnDayover'
   | 'dayoverRemarks'
   | 'attendanceTime'
@@ -111,6 +115,7 @@ class Attendance
   public vehicleType?: string;
   public vehicleCategory?: string;
   public attendanceOdometerReading?: number;
+  public attendanceOdometerImage?: string;
   public attendanceImage?: string;
   public attendanceRemarks?: string;
   public attendanceLatitude?: number;
@@ -132,6 +137,7 @@ class Attendance
   public dayoverLocationProvider?: string;
   public dayoverAddress?: string;
   public dayoverBatteryPercentage?: number;
+  public dayoverOdometerImage?: string;
   public isChargingOnDayover?: number;
   public dayoverRemarks?: string;
   public attendanceTime!: number;
@@ -200,6 +206,10 @@ export function initAttendance(sequelize: Sequelize): typeof Attendance {
       },
       attendanceOdometerReading: {
         type: DataTypes.INTEGER,
+        allowNull: true,
+      },
+      attendanceOdometerImage: {
+        type: DataTypes.STRING(255),
         allowNull: true,
       },
       attendanceImage: {
@@ -276,6 +286,10 @@ export function initAttendance(sequelize: Sequelize): typeof Attendance {
       },
       dayoverLocationProvider: {
         type: DataTypes.STRING(100),
+        allowNull: true,
+      },
+      dayoverOdometerImage: {
+        type: DataTypes.STRING(255),
         allowNull: true,
       },
       dayoverAddress: {

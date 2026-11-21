@@ -822,9 +822,10 @@ export class SyncService {
               visitId,
             };
             const hostId = this.toPositiveInteger(resolvedOrderData.hostId);
-            const instance = localId && hostId !== null
-              ? await orderRepository.findForSync(hostId, userId, localId, transaction)
-              : null;
+            const instance =
+              localId && hostId !== null
+                ? await orderRepository.findForSync(hostId, userId, localId, transaction)
+                : null;
             const previousOrder = instance?.toJSON();
             if (instance?.isRevised === 1) {
               // An offline replay should resolve to the current revision, not overwrite it.
@@ -954,10 +955,22 @@ export class SyncService {
   }
 
   async reviseOrder(authenticatedHostId: number, input: RevisedOrderInput) {
-    const { orderId, hostId, visitId, customerId, orderProducts, isDeleted: _isDeleted, ...details } =
-      input;
+    const {
+      orderId,
+      hostId,
+      visitId,
+      customerId,
+      orderProducts,
+      isDeleted: _isDeleted,
+      ...details
+    } = input;
     if (hostId !== authenticatedHostId) {
-      throw createConfiguredError('ORDER_HOST_MISMATCH', 'hostId must match the authenticated host', 403, 'ORDER_HOST_MISMATCH');
+      throw createConfiguredError(
+        'ORDER_HOST_MISMATCH',
+        'hostId must match the authenticated host',
+        403,
+        'ORDER_HOST_MISMATCH'
+      );
     }
 
     const result = await orderRepository.getSequelize().transaction(async (transaction) => {
@@ -970,7 +983,10 @@ export class SyncService {
         (visitId !== undefined && String(visitId) !== String(order.visitId)) ||
         (customerId !== undefined && String(customerId) !== String(order.customerId))
       ) {
-        throw createConfiguredError('IMMUTABLE_ORDER_LINKS', 'visitId and customerId cannot be changed');
+        throw createConfiguredError(
+          'IMMUTABLE_ORDER_LINKS',
+          'visitId and customerId cannot be changed'
+        );
       }
 
       const previousOrder = order.toJSON();
@@ -978,7 +994,10 @@ export class SyncService {
       const lines = await this.resolveRevisedOrderProducts(order, orderProducts, transaction);
       const revisedOrder = await orderRepository.createRevision(order, details, now, transaction);
       const products = await orderProductRepository.createRevisedProducts(
-        revisedOrder, lines, now, transaction
+        revisedOrder,
+        lines,
+        now,
+        transaction
       );
       await orderRepository.markReplaced(order, revisedOrder.id, now, transaction);
 
@@ -989,7 +1008,12 @@ export class SyncService {
       return { data, previousOrder, products: products.map((product) => product.toJSON()) };
     });
 
-    await this.invalidateDashboardOverview('order.changed', result.data, result.previousOrder, 'orderTime');
+    await this.invalidateDashboardOverview(
+      'order.changed',
+      result.data,
+      result.previousOrder,
+      'orderTime'
+    );
     return {
       ...result.data,
       orderId: result.data.id,
@@ -1027,9 +1051,16 @@ export class SyncService {
     });
 
     if (changedProductIds.size) {
-      const activeIds = await productRepository.findActiveIds(order.hostId, [...changedProductIds], transaction);
+      const activeIds = await productRepository.findActiveIds(
+        order.hostId,
+        [...changedProductIds],
+        transaction
+      );
       if ([...changedProductIds].some((id) => !activeIds.has(String(id)))) {
-        throw createConfiguredError('INVALID_ORDER_PRODUCT', 'productId must reference a product in this host');
+        throw createConfiguredError(
+          'INVALID_ORDER_PRODUCT',
+          'productId must reference a product in this host'
+        );
       }
     }
 
@@ -1741,6 +1772,7 @@ export class SyncService {
       isChargingOnDayover: attendance.isChargingOnDayover,
       dayoverLocationSpeed: attendance.dayoverLocationSpeed,
       dayoverOdometerReading: attendance.dayoverOdometerReading,
+      dayoverOdometerImage: attendance.dayoverOdometerImage,
       isChargingOnAttendance: attendance.isChargingOnAttendance,
       attendanceLocationSpeed: attendance.attendanceLocationSpeed,
       dayoverLocationAccuracy: attendance.dayoverLocationAccuracy,
@@ -1751,6 +1783,7 @@ export class SyncService {
       attendanceLocationAccuracy: attendance.attendanceLocationAccuracy,
       attendanceLocationAltitude: attendance.attendanceLocationAltitude,
       attendanceLocationProvider: attendance.attendanceLocationProvider,
+      attendanceOdometerImage: attendance.attendanceOdometerImage,
       attendanceBatteryPercentage: attendance.attendanceBatteryPercentage,
     };
   }
