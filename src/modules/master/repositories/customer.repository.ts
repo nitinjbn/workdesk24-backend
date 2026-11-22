@@ -157,8 +157,8 @@ export class customerRepository {
     const { page, limit, filter, hostId, sortBy, sortOrder } = params;
     const { offset } = baseReportHelper.normalizePagination({ page, limit });
     let order: any = [
-      ['updatedAt', 'DESC'],
       ['createdAt', 'DESC'],
+      ['updatedAt', 'DESC'],
     ];
 
     if (sortBy && sortOrder) {

@@ -41,6 +41,10 @@ test('paginated customers select customer type from an available join', async ()
 
   assert.match(selectSql, /JOIN `wd_customer_types` AS `customerTypeDetails`/);
   assert.match(selectSql, /`customerTypeDetails`\.`customerTypeName`/);
+  assert.match(
+    selectSql,
+    /ORDER BY `Customer`\.`createdAt` DESC, `Customer`\.`updatedAt` DESC/
+  );
   assert.doesNotMatch(selectSql, /FROM \(SELECT/);
 });
 

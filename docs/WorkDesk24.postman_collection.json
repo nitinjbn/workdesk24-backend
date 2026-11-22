@@ -3932,6 +3932,7 @@
                                                                     },
                                                                     {
                                                                         "name":  "Get Customers",
+                                                                    "description":  "By default, customers are sorted by createdAt descending, then updatedAt descending.",
                                                                         "request":  {
                                                                                         "method":  "POST",
                                                                                         "header":  [
