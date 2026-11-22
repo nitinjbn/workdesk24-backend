@@ -184,6 +184,58 @@ export class SyncService {
     return Math.floor(parsedValue);
   }
 
+  private async resolveCustomerId(
+    customerId: unknown,
+    hostId: unknown,
+    transaction: Transaction
+  ): Promise<number | undefined> {
+    if (customerId === undefined || customerId === null || customerId === '') {
+      return undefined;
+    }
+
+    if (typeof customerId === 'number') {
+      if (!Number.isSafeInteger(customerId) || customerId <= 0) {
+        throw new Error('customerId must be a positive integer or customer localId');
+      }
+      return customerId;
+    }
+
+    if (typeof customerId !== 'string') {
+      throw new Error('customerId must be a positive integer or customer localId');
+    }
+
+    const normalizedCustomerId = customerId.trim();
+    if (!normalizedCustomerId) {
+      return undefined;
+    }
+
+    if (/^\d+$/.test(normalizedCustomerId)) {
+      const numericCustomerId = Number(normalizedCustomerId);
+      if (!Number.isSafeInteger(numericCustomerId) || numericCustomerId <= 0) {
+        throw new Error('customerId must be a positive integer or customer localId');
+      }
+      return numericCustomerId;
+    }
+
+    const normalizedHostId = Number(hostId);
+    if (!Number.isSafeInteger(normalizedHostId) || normalizedHostId <= 0) {
+      throw new Error('A valid hostId is required to resolve customer localId');
+    }
+
+    const customer = await customerRepository.findByLocalId(
+      normalizedHostId,
+      normalizedCustomerId,
+      transaction
+    );
+    if (!customer) {
+      throw new Error(
+        `Customer localId "${normalizedCustomerId}" was not found for hostId ${normalizedHostId}`
+      );
+    }
+
+    return customer.id;
+  }
+
   private async invalidateDashboardOverview(
     event: DashboardCacheInvalidationEvent,
     record: SyncRecord,
@@ -417,11 +469,21 @@ export class SyncService {
 
     for (const record of records) {
       try {
-        const { localId, ...data } = record;
+        const localId = record.localId;
         const now = Math.floor(Date.now() / 1000);
         const syncResult = await repository
           .getSequelize()
           .transaction(async (transaction: Transaction): Promise<SyncTransactionResult> => {
+            const sourceRecord = { ...record };
+            const customerId = await this.resolveCustomerId(
+              sourceRecord.customerId,
+              sourceRecord.hostId,
+              transaction
+            );
+            if (customerId !== undefined) {
+              sourceRecord.customerId = customerId;
+            }
+            const { localId: _localId, ...data } = sourceRecord;
             const instance = localId
               ? await repository.findOne({ userId, localId }, transaction)
               : null;
@@ -443,7 +505,7 @@ export class SyncService {
               }
 
               const persistedRecord = updatedRecord.toJSON();
-              await afterPersist?.(persistedRecord, transaction, previousRecord, record);
+              await afterPersist?.(persistedRecord, transaction, previousRecord, sourceRecord);
               return { status: 'updated', serverId: instance.id, persistedRecord, previousRecord };
             }
 
@@ -457,7 +519,7 @@ export class SyncService {
               transaction
             );
             const persistedRecord = newRecord.toJSON();
-            await afterPersist?.(persistedRecord, transaction, undefined, record);
+            await afterPersist?.(persistedRecord, transaction, undefined, sourceRecord);
             return { status: 'created', serverId: newRecord.id, persistedRecord };
           });
 
@@ -836,6 +898,15 @@ export class SyncService {
                 previousRecord: previousOrder,
               };
             }
+            const customerId = await this.resolveCustomerId(
+              resolvedOrderData.customerId,
+              resolvedOrderData.hostId,
+              transaction
+            );
+            if (customerId !== undefined) {
+              resolvedOrderData.customerId = customerId;
+            }
+
             // The order number is always generated server-side; any value sent
             // by the app is ignored. Existing orders keep their number.
             let orderNumber = instance?.orderNumber;
@@ -872,14 +943,16 @@ export class SyncService {
             }
 
             if (orderProducts) {
+              const resolvedOrderProducts: SyncRecord[] = orderProducts.map((product) => ({
+                ...product,
+                visitId,
+                customerId: resolvedOrderData.customerId,
+              }));
+
               await orderProductRepository.replaceForOrder(
                 order.id,
                 userId,
-                orderProducts.map((product) => ({
-                  ...product,
-                  visitId,
-                  customerId: product.customerId ?? resolvedOrderData.customerId,
-                })),
+                resolvedOrderProducts,
                 now,
                 transaction
               );

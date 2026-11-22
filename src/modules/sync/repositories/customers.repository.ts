@@ -1,4 +1,4 @@
-import { Op } from 'sequelize';
+import { Op, Transaction } from 'sequelize';
 import db, {
   Customer,
   CustomerMedia,
@@ -8,6 +8,17 @@ import db, {
 } from '../../../models';
 
 export class CustomerRepository {
+  async findByLocalId(
+    hostId: number,
+    localId: string,
+    transaction: Transaction
+  ): Promise<typeof Customer.prototype | null> {
+    return Customer.findOne({
+      where: { hostId, localId, isDeleted: 0 },
+      transaction,
+    });
+  }
+
   async getCustomers(payload) {
     const { hostId, userId } = payload;
 

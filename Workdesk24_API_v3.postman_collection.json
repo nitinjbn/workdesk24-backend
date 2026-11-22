@@ -1183,7 +1183,7 @@
                       "host": ["{{BASE_URL}}"],
                       "path": ["api", "v1", "app", "sync", "visits"]
                     },
-                    "description": "Sync customer visit records"
+                    "description": "Sync customer visit records. customerId may be the numeric server ID or the customer's localId; local IDs are resolved within hostId."
                   },
                   "response": []
                 }
@@ -1217,7 +1217,7 @@
                       "host": ["{{BASE_URL}}"],
                       "path": ["api", "v1", "app", "sync", "orders"]
                     },
-                    "description": "Sync order records"
+                    "description": "Sync order records. customerId (including products[].customerId) may be the numeric server ID or the customer's localId; local IDs are resolved within hostId."
                   },
                   "response": []
                 }
@@ -1251,7 +1251,7 @@
                       "host": ["{{BASE_URL}}"],
                       "path": ["api", "v1", "app", "sync", "payments"]
                     },
-                    "description": "Sync payment records"
+                    "description": "Sync payment records. customerId may be the numeric server ID or the customer's localId; local IDs are resolved within hostId."
                   },
                   "response": []
                 }
@@ -1285,7 +1285,7 @@
                       "host": ["{{BASE_URL}}"],
                       "path": ["api", "v1", "app", "sync", "feedback"]
                     },
-                    "description": "Sync customer feedback"
+                    "description": "Sync customer feedback. customerId may be the numeric server ID or the customer's localId; local IDs are resolved within hostId."
                   },
                   "response": []
                 }
@@ -1319,7 +1319,7 @@
                       "host": ["{{BASE_URL}}"],
                       "path": ["api", "v1", "app", "sync", "images"]
                     },
-                    "description": "Sync images from mobile app"
+                    "description": "Sync images from mobile app. customerId may be the numeric server ID or the customer's localId; local IDs are resolved within hostId."
                   },
                   "response": []
                 }
