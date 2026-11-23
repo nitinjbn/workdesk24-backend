@@ -261,6 +261,7 @@ export class UserService {
       timezone,
       holidayCalendarId,
       leavePolicyId,
+      workLocation,
     } = payload;
 
     let settings = payload.settings;
@@ -306,6 +307,7 @@ export class UserService {
       pinCode,
       timezone,
       isFieldAppUser: 1,
+      workLocation,
       createdAt: currentUnixTime,
     });
 
@@ -399,6 +401,7 @@ export class UserService {
       holidayCalendarId,
       leavePolicyId,
       attendanceSites,
+      workLocation,
     } = payload;
 
     let settings = payload.settings;
@@ -446,6 +449,7 @@ export class UserService {
       city,
       district,
       pinCode,
+      workLocation,
       timezone,
       holidayCalendarId,
       leavePolicyId,

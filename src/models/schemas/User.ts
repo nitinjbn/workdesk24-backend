@@ -40,6 +40,7 @@ interface UserAttributes extends BaseModel {
   isFieldAppUser?: number;
   isAdminUser?: number;
   isSuperAdmin?: number;
+  workLocation: 'HOME' | 'OFFICE' | 'FIELD' | 'ALL';
 }
 
 interface UserCreationAttributes extends Optional<
@@ -119,6 +120,7 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
   public isFieldAppUser!: number;
   public isAdminUser!: number;
   public isSuperAdmin!: number;
+  public workLocation!: 'HOME' | 'OFFICE' | 'FIELD' | 'ALL';
   public createdAt!: number;
   public updatedAt!: number;
   public isDeleted!: number;
@@ -352,6 +354,11 @@ export function initUser(sequelize: Sequelize): typeof User {
         type: DataTypes.TINYINT,
         allowNull: false,
         defaultValue: 0,
+      },
+      workLocation: {
+        type: DataTypes.ENUM('HOME', 'OFFICE', 'FIELD', 'ALL'),
+        allowNull: false,
+        defaultValue: 'FIELD',
       },
       createdAt: {
         type: DataTypes.BIGINT,

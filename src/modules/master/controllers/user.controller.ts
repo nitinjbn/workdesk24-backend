@@ -171,6 +171,7 @@ export class UserController {
         holidayCalendarId,
         leavePolicyId,
         attendanceSites,
+        workLocation = 'FIELD',
       } = req.body;
       const effectiveHostId = req.authContext?.isSupportSession
         ? req.authContext.currentHostId!
@@ -182,7 +183,11 @@ export class UserController {
       const file = req.file as Express.Multer.File | undefined;
 
       //Step 1: Validate the mobile number uniqueness and format using PhoneUtil
-      const mobileValidationResult = await this.validateMobile({ hostId: effectiveHostId, mobile, countryIsoCode });
+      const mobileValidationResult = await this.validateMobile({
+        hostId: effectiveHostId,
+        mobile,
+        countryIsoCode,
+      });
       if (!mobileValidationResult.isValid) {
         throw new Error('Invalid mobile number');
       }
@@ -227,6 +232,7 @@ export class UserController {
         dateOfBirth,
         reportingManagerId,
         roleId,
+        workLocation,
         designationId,
         profileImageUrl,
         joiningDate,
@@ -357,6 +363,7 @@ export class UserController {
         holidayCalendarId,
         leavePolicyId,
         attendanceSites,
+        workLocation = 'FIELD',
       } = req.body;
       const effectiveHostId = req.authContext?.isSupportSession
         ? req.authContext.currentHostId!
@@ -435,6 +442,7 @@ export class UserController {
         holidayCalendarId,
         leavePolicyId,
         settings,
+        workLocation,
       };
 
       // Update password only if it's provided in the request

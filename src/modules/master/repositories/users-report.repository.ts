@@ -588,6 +588,7 @@ export class usersRepository {
       holidayCalendarId,
       leavePolicyId,
       isFieldAppUser,
+      workLocation,
     } = params;
     const newUser = await User.create({
       hostId,
@@ -621,6 +622,7 @@ export class usersRepository {
       holidayCalendarId,
       leavePolicyId,
       isFieldAppUser,
+      workLocation,
       isDeleted: 0,
       createdAt,
     });
