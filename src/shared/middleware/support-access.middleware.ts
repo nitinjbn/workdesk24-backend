@@ -7,6 +7,7 @@ const READ_ONLY_SUPPORT_ROUTES = new Set([
   '/users/getRoles',
   '/users/getUsers',
   '/users/getUserDetails',
+  '/users/getDeviceHealth',
   '/users/checkCreateAppUserEligibility',
   '/users/validateEmail',
   '/users/validateMobile',

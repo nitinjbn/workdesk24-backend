@@ -27,11 +27,32 @@ import roleRepository from '../repositories/role-report.repository';
 import { CommonUtil } from '../../../shared/utils/common.util';
 import { PhoneUtil } from '../../../shared/utils/phone.util';
 import userNotificationService from '../../notifications/master/userNotificationService';
+import { logger } from '../../../config/database';
 
 type UserInstance = typeof User.prototype;
 type DesignationInstance = typeof Designation.prototype;
 type RoleInstance = typeof Role.prototype;
 export class UserService {
+  async getDeviceHealth(payload: { hostId: number; userId: number; deviceId?: string }) {
+    try {
+      const { hostId, userId } = payload;
+      const deviceId = payload.deviceId ?? await usersRepository.findActiveDeviceId(hostId, userId);
+      const deviceHealth = deviceId
+        ? await usersRepository.findDeviceHealth(hostId, userId, deviceId)
+        : null;
+      if (!deviceHealth) {
+        return { deviceHealth: null };
+      }
+      const dateTimeSettings = await getHostDateTimeSettings(hostId);
+      return { deviceHealth: formatDateTimeFieldsBySettings(deviceHealth, dateTimeSettings) };
+    } catch (error: unknown) {
+      logger.error('Device health retrieval failed', {
+        errorType: error instanceof Error ? error.name : 'UnknownError',
+      });
+      throw createConfiguredError('DEVICE_HEALTH_UNAVAILABLE', 'Device health temporarily unavailable', 500, 'DEVICE_HEALTH_UNAVAILABLE');
+    }
+  }
+
   async searchEmployeesForAI(hostId: number, search: string) {
     return usersRepository.searchEmployeesForAI({ hostId, search });
   }

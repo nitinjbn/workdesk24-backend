@@ -5,6 +5,7 @@ import db, {
   Role,
   Designation,
   UserDevice,
+  UserDeviceHealth,
   HolidayCalendar,
   UserAttendanceSite,
   AttendanceSite,
@@ -76,6 +77,25 @@ export interface GetUsersQuery {
 }
 
 export class usersRepository {
+  async findActiveDeviceId(hostId: number, userId: number): Promise<string | null> {
+    const device = await UserDevice.findOne({
+      attributes: ['deviceId'],
+      where: { hostId, userId, isActive: 1 },
+      order: [['id', 'DESC']],
+      logging: false,
+    });
+    return device?.deviceId ?? null;
+  }
+
+  async findDeviceHealth(hostId: number, userId: number, deviceId: string) {
+    const health = await UserDeviceHealth.findOne({
+      attributes: { exclude: ['isDeleted', 'deletedAt'] },
+      where: { hostId, userId, deviceId, isDeleted: 0 },
+      logging: false,
+    });
+    return health?.deviceId === deviceId ? health.get({ plain: true }) : null;
+  }
+
   async searchEmployeesForAI(params: {
     hostId: number;
     search: string;

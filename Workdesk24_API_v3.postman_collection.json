@@ -1464,6 +1464,29 @@
           "description": "User management",
           "item": [
             {
+              "name": "Get Device Health",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{ADMIN_TOKEN}}", "type": "text" },
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" },
+                  { "key": "Cookie", "value": "wd24_admin_csrf={{ADMIN_CSRF_TOKEN}}" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"hostId\": 1,\n  \"userId\": 2\n}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/admin/users/getDeviceHealth",
+                  "host": ["{{BASE_URL}}"],
+                  "path": ["api", "v1", "admin", "users", "getDeviceHealth"]
+                },
+                "description": "Read the latest health snapshot. Optionally provide deviceId; otherwise the active registration with the highest ID is selected. Timestamps are formatted using the host timezone and date-time format. Returns data.deviceHealth = null when no snapshot or active device exists. hostId must match the authenticated host."
+              },
+              "response": []
+            },
+            {
               "name": "List Users",
               "request": {
                 "method": "POST",

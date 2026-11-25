@@ -35,3 +35,22 @@ incorrect ordering, and two legitimate updates in the same second can conflict.
 An authorized installation-generation fencing contract is needed for strict
 ordering. A retry of an older snapshot after a newer write cannot be recognized
 as an exact duplicate using only the latest row.
+
+## Admin lookup
+
+`POST /api/v1/admin/users/getDeviceHealth` requires admin authentication and
+the admin CSRF cookie/header. Send `hostId` and `userId`, with an optional
+non-empty `deviceId`. The host must match the authenticated host, including
+the currently selected host for support sessions.
+
+When `deviceId` is omitted, the endpoint selects the active registration with
+the highest registration ID. A supplied device ID can identify an inactive
+device. The response is `{ "success": true, "message": "Device health retrieved
+successfully", "data": { "deviceHealth": ... } }`. `deviceHealth` is null
+when no active device or non-deleted snapshot is found; no fallback to another
+device is attempted. The response formats snapshot timestamps using the host's
+configured timezone and date-time format, like other reports. Null timestamps
+remain null. Stored timestamps remain Unix seconds and snapshots can be stale.
+API logs omit request and response bodies for this endpoint. Operators must
+also prevent SQL debug, database, proxy and APM logs from recording health
+queries or their parameters.

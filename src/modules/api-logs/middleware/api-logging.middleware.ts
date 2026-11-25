@@ -12,6 +12,9 @@ import type {
 import { CONFIG } from '../../../config/constants';
 import { deviceHealthPath } from '../../../shared/utils/device-health-path.util';
 
+const isDeviceHealthEndpoint = (path: string): boolean =>
+  deviceHealthPath.test(path) || /^\/api\/v1\/admin\/users\/getDeviceHealth\/?$/i.test(path);
+
 const SKIP_PATH_SUFFIXES = new Set(['/health', '/ping']);
 const SKIP_EXACT_PATHS = new Set(['/favicon.ico']);
 const DEFAULT_SKIP_PATH_PATTERNS = CONFIG.SKIP_LOGGING_PATH_PATTERNS ?? ['/background-jobs'];
@@ -403,7 +406,7 @@ export function createApiLoggingMiddleware(service: ApiLogService = apiLogServic
         next();
         return;
       }
-      const isDeviceHealth = deviceHealthPath.test(endpoint);
+      const isDeviceHealth = isDeviceHealthEndpoint(endpoint);
 
       const startTime = process.hrtime.bigint();
       const requestTime = Math.floor(Date.now() / 1000);
@@ -552,7 +555,7 @@ export function apiLogRouteContext(category: string, module: string): RequestHan
 
 export function createApiLoggingErrorMiddleware(): ErrorRequestHandler {
   return (error: unknown, req: ApiLoggingRequest, res: Response, next: NextFunction): void => {
-    if (req.apiLoggingDisabled !== true && !deviceHealthPath.test(getEndpoint(req))) {
+    if (req.apiLoggingDisabled !== true && !isDeviceHealthEndpoint(getEndpoint(req))) {
       const locals = res.locals as ApiLoggingLocals;
       locals.apiLoggingErrorMessage = errorMessageFromUnknown(error);
     }

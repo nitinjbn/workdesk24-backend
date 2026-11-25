@@ -9,8 +9,42 @@ import { EmailUtil } from '../../../shared/utils/email.util';
 import { CONFIG } from '../../../config/constants';
 import UserValidator from '../helpers/user.validator';
 import { createConfiguredError } from '../../../shared/utils/error.util';
+import { z } from 'zod';
+
+const positiveId = z.union([
+  z.number().int().positive().safe(),
+  z.string().regex(/^[1-9]\d*$/).refine((value) => Number.isSafeInteger(Number(value))),
+]);
+const deviceHealthRequest = z.object({
+  hostId: positiveId,
+  userId: positiveId,
+  deviceId: z.string().max(255).refine((value) => value.trim().length > 0).optional(),
+}).strict();
 
 export class UserController {
+  async getDeviceHealth(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      if (!req.user) {
+        throw createConfiguredError('DEVICE_HEALTH_AUTH_REQUIRED', 'Authentication required', 401, 'AUTH_REQUIRED');
+      }
+      const parsed = deviceHealthRequest.safeParse(req.body);
+      if (!parsed.success) {
+        throw createConfiguredError('VALIDATION_ERROR', 'Invalid device health request', 400, 'VALIDATION_ERROR');
+      }
+      if (String(parsed.data.hostId) !== String(req.user.hostId)) {
+        throw createConfiguredError('ACCESS_DENIED', 'Invalid host scope', 403, 'ACCESS_DENIED');
+      }
+      const result = await userService.getDeviceHealth({
+        hostId: Number(parsed.data.hostId),
+        userId: Number(parsed.data.userId),
+        deviceId: parsed.data.deviceId,
+      });
+      res.json({ success: true, message: 'Device health retrieved successfully', data: result } as ApiResponse);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async getAppUsers(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     await this.executeUserScopedReport(
       req,
