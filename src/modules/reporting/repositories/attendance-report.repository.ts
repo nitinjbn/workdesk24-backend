@@ -50,7 +50,7 @@ export interface MonthlyAttendanceSource {
   attendance: Array<{ userId: number; attendanceTime: number; attendanceStatus?: string }>;
   leaveDates: Array<{ userId: number; leaveDate: string }>;
   holidays: Array<{ holidayCalendarId: number; holidayDate: string }>;
-  pagination?: ReturnType<typeof baseReportHelper.buildPagination>;
+  pagination: ReturnType<typeof baseReportHelper.buildPagination>;
 }
 
 type MonthlyAttendanceQuery = Omit<MonthlyAttendanceReportPayload, 'filter'> & {
@@ -72,14 +72,13 @@ export class AttendanceReportRepository {
       throw new Error('filter.attendanceTime is required for monthly attendance');
     }
 
-    const { offset } = baseReportHelper.normalizePagination(payload);
-    let paginationClause = {};
-    if (payload.page && payload.limit) {
-      paginationClause = {
-        limit: payload.limit,
-        offset,
-      };
+    // Set default pagination if not provided, Temporary as UI is not handled if we are not returning pagination key in response
+    if (!payload.page) {
+      payload.page = 1;
+      payload.limit = 50;
     }
+
+    const { offset, page, limit } = baseReportHelper.normalizePagination(payload);
 
     // Fetch attendance first so users deleted after marking attendance
     // can still be identified for the selected period
@@ -119,8 +118,9 @@ export class AttendanceReportRepository {
           where: { settingName: 'weeklyOffMask', isEnabled: 1, isDeleted: 0 },
         },
       ],
-      order: [['name', 'ASC']],
-      ...paginationClause,
+      order: [['id', 'ASC']],
+      limit,
+      offset,
       distinct: true,
     } as any;
 
@@ -184,18 +184,13 @@ export class AttendanceReportRepository {
       }),
     ]);
 
-    const response: any = {
+    return {
       users,
       attendance,
       leaveDates: leaveDates as MonthlyAttendanceSource['leaveDates'],
       holidays: holidays as MonthlyAttendanceSource['holidays'],
+      pagination: baseReportHelper.buildPagination(count, page, limit),
     };
-
-    if (payload.page && payload.limit) {
-      response.pagination = baseReportHelper.buildPagination(count, payload.page, payload.limit);
-    }
-
-    return response;
   }
 
   private toDateKey(unixTime: number, timeZone: string): string {
