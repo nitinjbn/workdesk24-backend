@@ -50,7 +50,7 @@ export interface MonthlyAttendanceSource {
   attendance: Array<{ userId: number; attendanceTime: number; attendanceStatus?: string }>;
   leaveDates: Array<{ userId: number; leaveDate: string }>;
   holidays: Array<{ holidayCalendarId: number; holidayDate: string }>;
-  pagination: ReturnType<typeof baseReportHelper.buildPagination>;
+  pagination?: ReturnType<typeof baseReportHelper.buildPagination>;
 }
 
 type MonthlyAttendanceQuery = Omit<MonthlyAttendanceReportPayload, 'filter'> & {
@@ -72,7 +72,14 @@ export class AttendanceReportRepository {
       throw new Error('filter.attendanceTime is required for monthly attendance');
     }
 
-    const { offset, page, limit } = baseReportHelper.normalizePagination(payload);
+    const { offset } = baseReportHelper.normalizePagination(payload);
+    let paginationClause = {};
+    if (payload.page && payload.limit) {
+      paginationClause = {
+        limit: payload.limit,
+        offset,
+      };
+    }
 
     // Fetch attendance first so users deleted after marking attendance
     // can still be identified for the selected period
@@ -112,9 +119,8 @@ export class AttendanceReportRepository {
           where: { settingName: 'weeklyOffMask', isEnabled: 1, isDeleted: 0 },
         },
       ],
-      order: [['id', 'ASC']],
-      limit,
-      offset,
+      order: [['name', 'ASC']],
+      ...paginationClause,
       distinct: true,
     } as any;
 
@@ -178,13 +184,18 @@ export class AttendanceReportRepository {
       }),
     ]);
 
-    return {
+    const response: any = {
       users,
       attendance,
       leaveDates: leaveDates as MonthlyAttendanceSource['leaveDates'],
       holidays: holidays as MonthlyAttendanceSource['holidays'],
-      pagination: baseReportHelper.buildPagination(count, page, limit),
     };
+
+    if (payload.page && payload.limit) {
+      response.pagination = baseReportHelper.buildPagination(count, payload.page, payload.limit);
+    }
+
+    return response;
   }
 
   private toDateKey(unixTime: number, timeZone: string): string {
