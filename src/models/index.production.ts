@@ -43,6 +43,7 @@ import { initProductMedia } from './schemas/ProductMedia';
 import { initUOM } from './schemas/UOM';
 import { initUserOTP } from './schemas/UserOTP';
 import { initUserDevice } from './schemas/UserDevices';
+import { initUserDeviceHealth } from './schemas/UserDeviceHealth';
 import { initUserOTPDeliveries } from './schemas/UserOTPDeliveries';
 import { initUserPushNotifications } from './schemas/UserPushNotifications';
 import { initUserDailySummary } from './schemas/UserDailySummary';
@@ -146,6 +147,7 @@ const UserPermission = initUserPermission(sequelize);
 const User = initUser(sequelize);
 const UserSettings = initUserSettings(sequelize);
 const UserDevice = initUserDevice(sequelize);
+const UserDeviceHealth = initUserDeviceHealth(sequelize);
 const Inquiry = initInquiry(sequelize);
 const UserRefreshToken = initUserRefreshToken(sequelize);
 const UserRefreshTokenHistory = initUserRefreshTokenHistory(sequelize);
@@ -244,6 +246,7 @@ const db: any = {
   Sequelize,
   UserOTP,
   UserDevice,
+  UserDeviceHealth,
   UserOTPDeliveries,
   UserPushNotifications,
   UserDailySummary,
@@ -367,6 +370,7 @@ export {
   UOM,
   UserOTP,
   UserDevice,
+  UserDeviceHealth,
   connectionManager,
   UserOTPDeliveries,
   UserPushNotifications,

@@ -1034,6 +1034,42 @@
           "description": "Data synchronization endpoints for Android app",
           "item": [
             {
+              "name": "Sync Device Health",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{TOKEN}}", "type": "text" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"hostId\": 1,\n  \"userId\": 2,\n  \"deviceId\": \"registered-device-id\",\n  \"schemaVersion\": 1,\n  \"sequence\": 1,\n  \"collectedAt\": 1795590000,\n  \"syncReason\": \"INITIAL\",\n  \"deviceInfo\": { \"deviceModel\": \"Example\", \"manufacturer\": \"Example\", \"androidVersion\": \"15\", \"sdkInt\": 35, \"appVersion\": \"1.0\", \"versionCode\": 1 },\n  \"permissions\": { \"locationPermission\": \"FINE\", \"backgroundLocationPermission\": \"GRANTED\", \"cameraPermission\": \"DENIED\", \"microphonePermission\": \"DENIED\", \"notificationPermission\": \"GRANTED\" },\n  \"deviceSettings\": { \"locationEnabled\": true, \"gpsProviderEnabled\": true, \"batteryOptimizationIgnored\": false, \"batterySaverEnabled\": false, \"backgroundRestricted\": null, \"appNotificationsEnabled\": true, \"trackingNotificationChannelEnabled\": true },\n  \"trackingDiagnostics\": { \"trackingExpected\": true, \"trackingServiceRunning\": true, \"trackingStatus\": \"ACTIVE\", \"trackingIssue\": null, \"lastLocationFetchResult\": \"SUCCESS\", \"lastLocationFailureReason\": null, \"lastLocationFetchAt\": 1795589990, \"lastSuccessfulLocationAt\": 1795589990, \"lastLocationAccuracyMeters\": 10.5 },\n  \"network\": { \"connected\": true, \"internetValidated\": true, \"networkType\": \"WIFI\" }\n}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/app/sync/deviceHealth",
+                  "host": ["{{BASE_URL}}"],
+                  "path": ["api", "v1", "app", "sync", "deviceHealth"]
+                },
+                "description": "Stores the latest snapshot for a device registered to the authenticated user. All timestamps are Unix seconds. Replace example IDs and timestamps. Created, updated and exact duplicate return 200; older and same-second conflicting snapshots return 409 and are not acknowledged. Android blocks the rejected pending snapshot. Client clocks and installation resets prevent strict ordering; see docs/device-health-sync.md."
+              },
+              "response": [
+                {
+                  "name": "Snapshot created",
+                  "status": "OK",
+                  "code": 200,
+                  "header": [{ "key": "Content-Type", "value": "application/json" }],
+                  "body": "{\n  \"success\": true,\n  \"message\": \"Device health synced successfully\",\n  \"data\": { \"status\": \"created\", \"sequence\": 1 }\n}"
+                },
+                {
+                  "name": "Stale snapshot",
+                  "status": "Conflict",
+                  "code": 409,
+                  "header": [{ "key": "Content-Type", "value": "application/json" }],
+                  "body": "{\n  \"success\": false,\n  \"code\": \"DEVICE_HEALTH_STALE\",\n  \"message\": \"Device health snapshot was not accepted\",\n  \"data\": null\n}"
+                }
+              ]
+            },
+            {
               "name": "Get Users",
               "request": {
                 "method": "POST",

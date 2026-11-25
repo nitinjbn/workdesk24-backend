@@ -9,8 +9,53 @@ import {
 import customerService from '../../master/services/customer.service';
 import { revisedOrderSchema } from '../types/revised-order.schema';
 import { createConfiguredError } from '../../../shared/utils/error.util';
+import { deviceHealthSchema } from '../types/device-health.schema';
+import deviceHealthService from '../services/device-health.service';
+
+function safeAuthenticatedId(value: unknown): number | null {
+  if (typeof value !== 'number' && (typeof value !== 'string' || !/^[1-9]\d*$/.test(value))) {
+    return null;
+  }
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
+}
 
 export class SyncController {
+  async syncDeviceHealth(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const hostId = safeAuthenticatedId(req.user?.hostId);
+      const userId = safeAuthenticatedId(req.user?.id);
+      if (hostId === null || userId === null) {
+        throw createConfiguredError('DEVICE_HEALTH_AUTH_REQUIRED', 'Authentication required', 401, 'AUTH_REQUIRED');
+      }
+      const body: unknown = req.body;
+      if (body && typeof body === 'object' && 'schemaVersion' in body
+        && typeof body.schemaVersion === 'number' && Number.isSafeInteger(body.schemaVersion)
+        && body.schemaVersion !== 1) {
+        throw createConfiguredError('DEVICE_HEALTH_UNSUPPORTED_VERSION', 'Unsupported device health schema version', 400, 'DEVICE_HEALTH_UNSUPPORTED_VERSION');
+      }
+      const parsed = deviceHealthSchema.safeParse(body);
+      if (!parsed.success) {
+        throw createConfiguredError('DEVICE_HEALTH_INVALID_PAYLOAD', 'Invalid device health payload', 400, 'DEVICE_HEALTH_INVALID_PAYLOAD');
+      }
+
+      const outcome = await deviceHealthService.sync({ hostId, id: userId }, parsed.data);
+      if (outcome === 'stale' || outcome === 'ambiguous' || outcome === 'deleted') {
+        const code = outcome === 'stale' ? 'DEVICE_HEALTH_STALE'
+          : outcome === 'ambiguous' ? 'DEVICE_HEALTH_AMBIGUOUS' : 'DEVICE_HEALTH_DELETED';
+        res.status(409).json({ success: false, code, message: 'Device health snapshot was not accepted', data: null });
+        return;
+      }
+      res.json({
+        success: true,
+        message: 'Device health synced successfully',
+        data: { status: outcome, sequence: parsed.data.sequence },
+      } as ApiResponse);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async syncAttendance(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const userId = req.user!.id;

@@ -196,3 +196,21 @@ test('logging failures do not change the API response or enqueue orphan updates'
   assert.deepEqual(res.body, { success: true });
   assert.equal(finalized.length, 0);
 });
+
+test('device health requests and responses never enter API logs', async (context) => {
+  for (const configuration of [null, '[7]']) {
+    const { req, res, created, finalized, finish } = await makeHarness(context, configuration, {
+      originalUrl: '/API/v1/app/sync/devicehealth/?test=1',
+      headers: { 'x-device-id': 'sensitive-device' },
+      body: { deviceId: 'sensitive-device', trackingDiagnostics: { trackingStatus: 'sensitive-health' } },
+    });
+    req.user = { id: 2, hostId: 1 };
+    res.json({ success: true, data: { details: 'sensitive-health' } });
+    await finish();
+    assert.equal(created.length, 1);
+    assert.equal(created[0].deviceId, undefined);
+    assert.equal(created[0].requestBody, '[device health body omitted]');
+    assert.equal(finalized[0].responseBody, '[device health response omitted]');
+    assert.doesNotMatch(JSON.stringify({ created, finalized }), /sensitive-device|sensitive-health/);
+  }
+});

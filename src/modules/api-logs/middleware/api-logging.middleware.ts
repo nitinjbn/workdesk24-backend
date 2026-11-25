@@ -10,6 +10,7 @@ import type {
   JsonValue,
 } from '../types/api-log.types';
 import { CONFIG } from '../../../config/constants';
+import { deviceHealthPath } from '../../../shared/utils/device-health-path.util';
 
 const SKIP_PATH_SUFFIXES = new Set(['/health', '/ping']);
 const SKIP_EXACT_PATHS = new Set(['/favicon.ico']);
@@ -402,6 +403,7 @@ export function createApiLoggingMiddleware(service: ApiLogService = apiLogServic
         next();
         return;
       }
+      const isDeviceHealth = deviceHealthPath.test(endpoint);
 
       const startTime = process.hrtime.bigint();
       const requestTime = Math.floor(Date.now() / 1000);
@@ -411,7 +413,8 @@ export function createApiLoggingMiddleware(service: ApiLogService = apiLogServic
           ? DEFAULT_MAX_BODY_BYTES
           : 32768;
 
-      const maskedRequestBody = ensureSizeBound(maskSensitiveData(req.body), maxBodyBytes);
+      const maskedRequestBody = isDeviceHealth
+        ? '[device health body omitted]' : ensureSizeBound(maskSensitiveData(req.body), maxBodyBytes);
       const requestSize = getRequestSize(req, maskedRequestBody);
 
       const { category, module } = resolveCategoryAndModule(req, endpoint);
@@ -420,7 +423,7 @@ export function createApiLoggingMiddleware(service: ApiLogService = apiLogServic
         .createProcessingLog({
           hostId: resolveHostId(req),
           userId: resolveUserId(req),
-          deviceId: resolveDeviceId(req),
+          deviceId: isDeviceHealth ? undefined : resolveDeviceId(req),
           source: inferSource(req),
           category,
           module,
@@ -484,7 +487,8 @@ export function createApiLoggingMiddleware(service: ApiLogService = apiLogServic
           const maskedResponseBody =
             capturedResponseBody === undefined
               ? undefined
-              : ensureSizeBound(maskSensitiveData(capturedResponseBody), maxBodyBytes);
+              : isDeviceHealth ? '[device health response omitted]'
+                : ensureSizeBound(maskSensitiveData(capturedResponseBody), maxBodyBytes);
           const responseSize = getResponseSize(res, maskedResponseBody);
           const locals = res.locals as ApiLoggingLocals;
 
@@ -496,7 +500,7 @@ export function createApiLoggingMiddleware(service: ApiLogService = apiLogServic
             responseSize,
             responseTime,
             durationMilliseconds,
-            errorMessage: locals.apiLoggingErrorMessage,
+            errorMessage: isDeviceHealth ? undefined : locals.apiLoggingErrorMessage,
             // Re-resolve at finish time: auth middleware has run by now,
             // so req.user is available for routes that don't send hostId/userId in the body (e.g. /sync).
             hostId: resolveHostId(req),
@@ -548,7 +552,7 @@ export function apiLogRouteContext(category: string, module: string): RequestHan
 
 export function createApiLoggingErrorMiddleware(): ErrorRequestHandler {
   return (error: unknown, req: ApiLoggingRequest, res: Response, next: NextFunction): void => {
-    if (req.apiLoggingDisabled !== true) {
+    if (req.apiLoggingDisabled !== true && !deviceHealthPath.test(getEndpoint(req))) {
       const locals = res.locals as ApiLoggingLocals;
       locals.apiLoggingErrorMessage = errorMessageFromUnknown(error);
     }

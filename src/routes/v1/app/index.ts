@@ -27,6 +27,7 @@ router.use('/leave', apiLogRouteContext('app', 'leave'), leaveRoutes);
 router.use('/task', apiLogRouteContext('app', 'task'), taskRoutes);
 
 // Sync related routes
+router.post('/sync/deviceHealth', syncController.syncDeviceHealth.bind(syncController));
 router.post('/sync/attendance', syncController.syncAttendance.bind(syncController));
 router.post('/sync/gps-history', syncController.syncGpsHistory.bind(syncController));
 router.post('/sync/visits', syncController.syncVisits.bind(syncController));

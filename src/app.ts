@@ -9,6 +9,7 @@ import { errorHandler } from './shared/middleware/error-handler.middleware';
 import responseSerializerMiddleware from './shared/middleware/response-serializer.middleware';
 import { ApiLoggingErrorMiddleware, ApiLoggingMiddleware } from './modules/api-logs';
 import { createCorsPolicy } from './shared/utils/cors-config.util';
+import { requireDeviceHealthJson, handleDeviceHealthBodyError } from './modules/sync/middleware/device-health-body.middleware';
 
 const app: Application = express();
 
@@ -26,6 +27,8 @@ app.use(
   })
 );
 app.use(cookieParser());
+app.use(requireDeviceHealthJson);
+app.use(handleDeviceHealthBodyError);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
