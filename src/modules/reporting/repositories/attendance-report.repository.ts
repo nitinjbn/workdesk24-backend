@@ -118,7 +118,7 @@ export class AttendanceReportRepository {
           where: { settingName: 'weeklyOffMask', isEnabled: 1, isDeleted: 0 },
         },
       ],
-      order: [['id', 'ASC']],
+      order: [['name', 'ASC']],
       limit,
       offset,
       distinct: true,
