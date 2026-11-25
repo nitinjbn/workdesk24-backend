@@ -715,7 +715,15 @@ export class ReportService {
       };
     });
 
-    return { employees, pagination: report.pagination };
+    const response: any = {
+      employees,
+    };
+
+    if (report.pagination) {
+      response.pagination = report.pagination;
+    }
+
+    return response;
   }
 
   private normalizeMonthlyAttendanceRange(
