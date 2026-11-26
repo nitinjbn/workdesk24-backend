@@ -11,6 +11,7 @@ import leaveRoutes from './leaves.routes';
 import taskRoutes from './tasks.routes';
 import { apiLogRouteContext } from '../../../modules/api-logs';
 import hostController from '../../../modules/sync/controllers/host.controller';
+import visitsRoutes from './visits.routes';
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -25,6 +26,7 @@ router.use('/device', apiLogRouteContext('app', 'device'));
 router.use('/profile', apiLogRouteContext('app', 'profile'));
 router.use('/leave', apiLogRouteContext('app', 'leave'), leaveRoutes);
 router.use('/task', apiLogRouteContext('app', 'task'), taskRoutes);
+router.use('/visits', apiLogRouteContext('app', 'visits'), visitsRoutes);
 
 // Sync related routes
 router.post('/sync/deviceHealth', syncController.syncDeviceHealth.bind(syncController));

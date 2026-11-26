@@ -43,6 +43,7 @@ import { getRedisConnectionStatus } from '../../../infrastructure/background-job
 import dashboardCacheInvalidationService, {
   type DashboardCacheInvalidationEvent,
 } from '../../dashboard/services/dashboard-cache-invalidation.service';
+import visitPlanService from '../../staff/services/visit-plan.service';
 
 import { Country, State, City } from 'country-state-city';
 
@@ -782,13 +783,40 @@ export class SyncService {
   }
 
   async syncVisits(userId: number, records: SyncRecord[]): Promise<SyncResult> {
+    const authenticatedUser = await User.findOne({
+      where: { id: userId, isDeleted: 0 },
+      attributes: ['id', 'hostId'],
+    });
+    if (!authenticatedUser) {
+      throw new Error('Authenticated sync user was not found');
+    }
+    const hostId = Number(authenticatedUser.hostId);
+    if (!Number.isSafeInteger(hostId) || hostId <= 0) {
+      throw new Error('Authenticated sync user has no valid host');
+    }
+
     return this.syncData(
       visitRepository,
       userId,
       records,
       async (visit, transaction, previousVisit, sourceVisit) => {
+        const scopedVisit = { ...visit, hostId, userId };
         await this.syncVisitSummaryForVisit(visit, transaction);
         await this.syncDailySummaryForActivity(visit, 'checkInTime', transaction, previousVisit);
+        await visitPlanService.onExistingVisitCheckIn(
+          hostId,
+          { ...scopedVisit, plannedVisitId: sourceVisit?.plannedVisitId, visitPlanId: sourceVisit?.visitPlanId },
+          userId,
+          transaction
+        );
+        if (visit.checkOutTime) {
+          await visitPlanService.onExistingVisitCompletion(
+            hostId,
+            scopedVisit,
+            userId,
+            transaction
+          );
+        }
         await this.logActivity(
           visit,
           (r) => ({

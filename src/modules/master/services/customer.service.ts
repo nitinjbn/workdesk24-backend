@@ -1,4 +1,5 @@
 import customerRepository from '../repositories/customer.repository';
+import { Transaction } from 'sequelize';
 import {
   GetProductsPayload,
   GetProductDetailsByIdPayload,
@@ -27,6 +28,32 @@ import { deleteMediaFromStorage } from '../../../shared/utils/media-storage.util
 type ProductInstance = typeof Product.prototype;
 
 export class CustomerService {
+  async lockCustomerForAssignment(hostId: number, customerId: number, transaction: Transaction): Promise<void> {
+    const customer = await customerRepository.lockCustomerForAssignment(hostId, customerId, transaction);
+    if (!customer) {
+      throw createConfiguredError('NOT_FOUND', 'Customer not found', 404);
+    }
+  }
+
+  async assignUserIfCustomerRestricted(
+    hostId: number,
+    customerId: number,
+    userId: number,
+    transaction: Transaction
+  ): Promise<void> {
+    await this.lockCustomerForAssignment(hostId, customerId, transaction);
+    const assignments = await customerRepository.getCustomerUserAssignments(
+      { hostId, customerId },
+      transaction
+    );
+    if (assignments.length > 0 && !assignments.some((assignment) => Number(assignment.userId) === userId)) {
+      await customerRepository.saveCustomerUserAssignments(
+        { hostId, customerId, userIds: [userId], createdAt: DateTimeFormatUtil.getCurrentUnixTime() },
+        transaction
+      );
+    }
+  }
+
   resolveCustomerUserAssignmentChanges(
     existingUserIds: number[],
     incomingUserIds: number[]

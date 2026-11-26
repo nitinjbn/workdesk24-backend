@@ -28,6 +28,7 @@
     "test:reporting": "node --test tests/reporting/*.unit.test.js",
     "test:task": "node --test --require ts-node/register/transpile-only tests/task/task-tags.unit.test.js tests/task/task-category.unit.test.js tests/task/task-category-migration.unit.test.js tests/task/task-number.unit.test.ts tests/task/task-service.unit.test.js tests/task/task-kanban.unit.test.js tests/task/task-dashboard.unit.test.js tests/task/task-notification.unit.test.js tests/auth/support-access.middleware.unit.test.js tests/auth/support-task-authorization.unit.test.js",
     "test:task:mysql": "node --test --require ts-node/register/transpile-only tests/task/task-number.mysql.integration.test.ts tests/task/task-category-migration.mysql.integration.test.js",
+    "test:visit-plan": "node --test --require ts-node/register/transpile-only tests/staff/visit-plan.unit.test.js",
     "manualRun": "nodemon dist/server.production.js"
   },
   "keywords": [

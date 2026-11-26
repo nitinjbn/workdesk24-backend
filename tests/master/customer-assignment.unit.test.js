@@ -7,6 +7,7 @@ const { CustomerService } = require('../../src/modules/master/services/customer.
 const customerController =
   require('../../src/modules/master/controllers/customer.controller').default;
 const { Customer } = require('../../src/models');
+const CustomerUserAssignment = require('../../src/models/schemas/CustomerUserAssignment').default;
 const customerRepository =
   require('../../src/modules/master/repositories/customer.repository').default;
 
@@ -19,6 +20,34 @@ test('customer assignment diff separates new and removed users', () => {
     toInsert: [4, 5],
     toDelete: [1],
   });
+});
+
+test('transactional assignment uses a tenant-scoped customer lock and a current read', async (t) => {
+  const transaction = { LOCK: { UPDATE: 'UPDATE' } };
+  const customerLock = t.mock.method(Customer, 'findOne', async () => ({ id: 8 }));
+  const assignmentRead = t.mock.method(CustomerUserAssignment, 'findAll', async () => [{ userId: 8 }]);
+  const assignmentWrite = t.mock.method(CustomerUserAssignment, 'bulkCreate', async () => []);
+
+  await new CustomerService().assignUserIfCustomerRestricted(3, 8, 7, transaction);
+
+  assert.deepEqual(customerLock.mock.calls[0].arguments[0].where, { id: 8, hostId: 3, isDeleted: 0 });
+  assert.equal(customerLock.mock.calls[0].arguments[0].lock, 'UPDATE');
+  assert.deepEqual(assignmentRead.mock.calls[0].arguments[0].where, { hostId: 3, customerId: 8, isDeleted: 0 });
+  assert.equal(assignmentRead.mock.calls[0].arguments[0].lock, 'UPDATE');
+  assert.equal(assignmentRead.mock.calls[0].arguments[0].transaction, transaction);
+  assert.equal(assignmentWrite.mock.calls[0].arguments[1].transaction, transaction);
+  assert.equal(assignmentWrite.mock.calls[0].arguments[0][0].userId, 7);
+});
+
+test('visit assignment leaves an open customer unassigned', async (t) => {
+  const transaction = { LOCK: { UPDATE: 'UPDATE' } };
+  t.mock.method(Customer, 'findOne', async () => ({ id: 8 }));
+  t.mock.method(CustomerUserAssignment, 'findAll', async () => []);
+  const assignmentWrite = t.mock.method(CustomerUserAssignment, 'bulkCreate', async () => []);
+
+  await new CustomerService().assignUserIfCustomerRestricted(3, 8, 7, transaction);
+
+  assert.equal(assignmentWrite.mock.callCount(), 0);
 });
 
 test('paginated customers select customer type from an available join', async () => {

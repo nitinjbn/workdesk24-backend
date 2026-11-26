@@ -1,4 +1,4 @@
-import { FindAndCountOptions, Op } from 'sequelize';
+import { FindAndCountOptions, Op, Transaction } from 'sequelize';
 import db, {
   Product,
   ProductAttribute,
@@ -695,7 +695,19 @@ export class customerRepository {
     };
   }
 
-  async getCustomerUserAssignments(params: { hostId: number; customerId: number }): Promise<any[]> {
+  async lockCustomerForAssignment(hostId: number, customerId: number, transaction: Transaction) {
+    return Customer.findOne({
+      attributes: ['id'],
+      where: { id: customerId, hostId, isDeleted: 0 },
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+  }
+
+  async getCustomerUserAssignments(
+    params: { hostId: number; customerId: number },
+    transaction?: Transaction
+  ): Promise<Array<{ userId: number }>> {
     const { hostId, customerId } = params;
 
     return CustomerUserAssignment.findAll({
@@ -706,15 +718,20 @@ export class customerRepository {
         isDeleted: 0,
       },
       raw: true,
+      transaction,
+      lock: transaction ? transaction.LOCK.UPDATE : undefined,
     });
   }
 
-  async saveCustomerUserAssignments(payload: {
-    hostId: number;
-    customerId: number;
-    userIds: number[];
-    createdAt: number;
-  }): Promise<any> {
+  async saveCustomerUserAssignments(
+    payload: {
+      hostId: number;
+      customerId: number;
+      userIds: number[];
+      createdAt: number;
+    },
+    transaction?: Transaction
+  ): Promise<any> {
     const { hostId, customerId, userIds, createdAt } = payload;
     const result = await CustomerUserAssignment.bulkCreate(
       userIds.map((userId) => ({
@@ -722,7 +739,8 @@ export class customerRepository {
         customerId,
         userId,
         createdAt,
-      }))
+      })),
+      { transaction }
     );
     return result;
   }

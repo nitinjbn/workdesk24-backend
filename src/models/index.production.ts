@@ -77,6 +77,8 @@ import { initTaskAttachments } from './schemas/TaskAttachments';
 import { initAppRelease } from './schemas/AppRelease';
 import { initAppUpgradePolicy } from './schemas/AppUpgradePolicy';
 import { initHostFeatures } from './schemas/HostFeatures';
+import { initVisitPlan } from './schemas/VisitPlan';
+import { initVisitPlanHistory } from './schemas/VisitPlanHistory';
 
 dotenv.config();
 
@@ -142,6 +144,8 @@ const AppRelease = initAppRelease(sequelize);
 const AppUpgradePolicy = initAppUpgradePolicy(sequelize);
 const Permission = initPermission(sequelize);
 const HostFeatures = initHostFeatures(sequelize);
+const VisitPlan = initVisitPlan(sequelize);
+const VisitPlanHistory = initVisitPlanHistory(sequelize);
 const RolePermission = initRolePermission(sequelize);
 const UserPermission = initUserPermission(sequelize);
 const User = initUser(sequelize);
@@ -281,6 +285,8 @@ const db: any = {
   AppRelease,
   AppUpgradePolicy,
   HostFeatures,
+  VisitPlan,
+  VisitPlanHistory,
 };
 
 // Setup associations
@@ -404,6 +410,8 @@ export {
   AppRelease,
   AppUpgradePolicy,
   HostFeatures,
+  VisitPlan,
+  VisitPlanHistory,
 };
 
 export default db;

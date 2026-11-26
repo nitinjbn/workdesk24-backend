@@ -113,6 +113,103 @@
                      "name":  "App Routes",
                      "item":  [
                                   {
+                                      "name":  "Visit Plans",
+                                      "item":  [
+                                                   {
+                                                       "name":  "Schedule Visit",
+                                                       "description": "A valid same-host customerId takes precedence; customerLocalId is used only if customerId is absent, invalid or not found. Customers with no active assignments remain open to all; otherwise the scheduling user must be assigned and the visit assignee is added if needed. Assignment, visit and history are committed together.",
+                                                       "request":  {
+                                                                       "method":  "POST",
+                                                                       "header":  [
+                                                                                      {"key": "Authorization", "value": "Bearer {{TOKEN}}", "type": "text"},
+                                                                                      {"key": "Content-Type", "value": "application/json"}
+                                                                                  ],
+                                                                       "body":  {"mode": "raw", "raw": "{\n  \"customerId\": 125,\n  \"customerLocalId\": \"customer_device_uuid_abc123\",\n  \"scheduledDate\": \"2026-11-27\",\n  \"scheduledTime\": \"10:30\",\n  \"remarks\": \"Follow-up visit\",\n  \"assignedUserId\": 42,\n  \"idempotencyKey\": \"schedule-501\"\n}"},
+                                                                       "url":  {"raw": "{{BASE_URL}}/api/v1/app/visits/schedule", "host": ["{{BASE_URL}}"], "path": ["api","v1","app","visits","schedule"]}
+                                                                   },
+                                                       "response": []
+                                                   },
+                                                   {
+                                                       "name":  "Reschedule Visit",
+                                                       "description": "Any user who can access the customer can reschedule the visit. Customers with no active assignments remain open to all. Otherwise, when the assignee changes, the new employee is added if needed without removing previous assignments. Assignment, reschedule and history are committed together.",
+                                                       "request":  {
+                                                                       "method":  "POST",
+                                                                       "header":  [{"key": "Authorization", "value": "Bearer {{TOKEN}}", "type": "text"}, {"key": "Content-Type", "value": "application/json"}],
+                                                                       "body":  {"mode": "raw", "raw": "{\n  \"visitId\": 501,\n  \"scheduledDate\": \"2026-11-28\",\n  \"scheduledTime\": \"11:30\",\n  \"remarks\": \"Customer requested another date\",\n  \"assignedUserId\": 42\n}"},
+                                                                       "url":  {"raw": "{{BASE_URL}}/api/v1/app/visits/reschedule", "host": ["{{BASE_URL}}"], "path": ["api","v1","app","visits","reschedule"]}
+                                                                   },
+                                                       "response": []
+                                                   },
+                                                   {
+                                                       "name":  "Today Visits",
+                                                       "description": "Returns the visit array in data.visits, with pagination and hostTimeZone in data. scheduledDate uses the host date format; timestamp fields use the host date-time format and timezone.",
+                                                       "request":  {
+                                                                       "method":  "POST",
+                                                                       "header":  [{"key": "Authorization", "value": "Bearer {{TOKEN}}", "type": "text"}, {"key": "Content-Type", "value": "application/json"}],
+                                                                       "body":  {"mode": "raw", "raw": "{\n  \"page\": 1,\n  \"limit\": 20,\n  \"status\": \"SCHEDULED\",\n  \"assignedUserId\": 42,\n  \"search\": \"\"\n}"},
+                                                                       "url":  {"raw": "{{BASE_URL}}/api/v1/app/visits/today", "host": ["{{BASE_URL}}"], "path": ["api","v1","app","visits","today"]}
+                                                                   },
+                                                       "response": []
+                                                   },
+                                                   {
+                                                       "name":  "Upcoming Visits",
+                                                       "description": "Returns the visit array in data.visits, with pagination and hostTimeZone in data.",
+                                                       "request":  {
+                                                                       "method":  "POST",
+                                                                       "header":  [{"key": "Authorization", "value": "Bearer {{TOKEN}}", "type": "text"}, {"key": "Content-Type", "value": "application/json"}],
+                                                                       "body":  {"mode": "raw", "raw": "{\n  \"page\": 1,\n  \"limit\": 20,\n  \"status\": \"SCHEDULED\",\n  \"assignedUserId\": 42,\n  \"search\": \"\"\n}"},
+                                                                       "url":  {"raw": "{{BASE_URL}}/api/v1/app/visits/upcoming", "host": ["{{BASE_URL}}"], "path": ["api","v1","app","visits","upcoming"]}
+                                                                   },
+                                                       "response": []
+                                                   },
+                                                   {
+                                                       "name":  "Overdue Visits",
+                                                       "description": "Returns the visit array in data.visits, with pagination and hostTimeZone in data.",
+                                                       "request":  {
+                                                                       "method":  "POST",
+                                                                       "header":  [{"key": "Authorization", "value": "Bearer {{TOKEN}}", "type": "text"}, {"key": "Content-Type", "value": "application/json"}],
+                                                                       "body":  {"mode": "raw", "raw": "{\n  \"page\": 1,\n  \"limit\": 20,\n  \"assignedUserId\": 42,\n  \"search\": \"\"\n}"},
+                                                                       "url":  {"raw": "{{BASE_URL}}/api/v1/app/visits/overdue", "host": ["{{BASE_URL}}"], "path": ["api","v1","app","visits","overdue"]}
+                                                                   },
+                                                       "response": []
+                                                   },
+                                                   {
+                                                       "name":  "Customer Visit History",
+                                                       "description": "Returns customer history visits in data.visits. A valid same-host customerId takes precedence; customerLocalId is used only if customerId is absent, invalid or not found. Customers with no active assignments are visible to all; otherwise the user must be assigned.",
+                                                       "request":  {
+                                                                       "method":  "POST",
+                                                                       "header":  [{"key": "Authorization", "value": "Bearer {{TOKEN}}", "type": "text"}, {"key": "Content-Type", "value": "application/json"}],
+                                                                       "body":  {"mode": "raw", "raw": "{\n  \"customerId\": 125,\n  \"customerLocalId\": \"customer_device_uuid_abc123\",\n  \"page\": 1,\n  \"limit\": 20\n}"},
+                                                                       "url":  {"raw": "{{BASE_URL}}/api/v1/app/visits/customerHistory", "host": ["{{BASE_URL}}"], "path": ["api","v1","app","visits","customerHistory"]}
+                                                                   },
+                                                       "response": []
+                                                   },
+                                                   {
+                                                       "name":  "Visit Details",
+                                                       "description": "Field officers can access their assigned visits when they also have access to the customer. Visit and customer access are scoped to the authenticated host.",
+                                                       "request":  {
+                                                                       "method":  "POST",
+                                                                       "header":  [{"key": "Authorization", "value": "Bearer {{TOKEN}}", "type": "text"}, {"key": "Content-Type", "value": "application/json"}],
+                                                                       "body":  {"mode": "raw", "raw": "{\n  \"visitId\": 501\n}"},
+                                                                       "url":  {"raw": "{{BASE_URL}}/api/v1/app/visits/details", "host": ["{{BASE_URL}}"], "path": ["api","v1","app","visits","details"]}
+                                                                   },
+                                                       "response": []
+                                                   },
+                                                   {
+                                                       "name":  "Cancel Visit",
+                                                       "description": "Field officers can cancel their assigned scheduled visits when they also have access to the customer. Visit and customer access are scoped to the authenticated host.",
+                                                       "request":  {
+                                                                       "method":  "POST",
+                                                                       "header":  [{"key": "Authorization", "value": "Bearer {{TOKEN}}", "type": "text"}, {"key": "Content-Type", "value": "application/json"}],
+                                                                       "body":  {"mode": "raw", "raw": "{\n  \"visitId\": 501,\n  \"remarks\": \"Customer cancelled the meeting\"\n}"},
+                                                                       "url":  {"raw": "{{BASE_URL}}/api/v1/app/visits/cancel", "host": ["{{BASE_URL}}"], "path": ["api","v1","app","visits","cancel"]}
+                                                                   },
+                                                       "response": []
+                                                   }
+                               ],
+                                      "description": "Visit Plan response dates use the host date format and timestamp fields use the host date-time format and timezone. Schedule and reschedule request dates remain YYYY-MM-DD."
+                                  },
+                                  {
                                       "name":  "Profile",
                                       "item":  [
                                                    {
@@ -422,7 +519,26 @@
                                                                     ]
                                                    },
                                                    {
-                                                       "name":  "Sync Visits",
+                                                       "name": "Get Customers",
+                                                       "description": "Use the employee's TOKEN and their authenticated HOST_ID. Verify the customer appears after assignment.",
+                                                       "request": {
+                                                           "method": "POST",
+                                                           "header": [
+                                                               {"key": "Authorization", "value": "Bearer {{TOKEN}}", "type": "text"},
+                                                               {"key": "Content-Type", "value": "application/json"}
+                                                           ],
+                                                           "body": {"mode": "raw", "raw": "{\n  \"hostId\": {{HOST_ID}}\n}"},
+                                                           "url": {
+                                                               "raw": "{{BASE_URL}}/api/v1/app/sync/getCustomers",
+                                                               "host": ["{{BASE_URL}}"],
+                                                               "path": ["api", "v1", "app", "sync", "getCustomers"]
+                                                           }
+                                                       },
+                                                       "response": []
+                                                   },
+                                                   {
+                                                       "name":  "Sync Visits - Check In",
+                                                       "description": "Use the assigned employee's TOKEN. Set HOST_ID to that employee's authenticated host, CUSTOMER_ID and CUSTOMER_NAME to an existing customer, VISIT_ID to the plan ID, VISIT_LOCAL_ID to a new device visit ID, and CHECK_IN_AT to Unix seconds. Check data.failed and verify the plan in Visit Details.",
                                                        "request":  {
                                                                        "method":  "POST",
                                                                        "header":  [
@@ -438,7 +554,7 @@
                                                                                   ],
                                                                        "body":  {
                                                                                     "mode":  "raw",
-                                                                                    "raw":  "{\n  \"records\": [\n    {\n      \"localId\": \"visit_001\",\n      \"customerName\": \"ABC Corporation\",\n      \"customerPhone\": \"+919876543210\",\n      \"customerEmail\": \"contact@abc.com\",\n      \"address\": \"123 Business Park, Delhi\",\n      \"latitude\": 28.6139,\n      \"longitude\": 77.2090,\n      \"visitType\": \"meeting\",\n      \"purpose\": \"Product demonstration\",\n      \"notes\": \"Interested in premium package\",\n      \"checkInTime\": \"2026-05-30T10:00:00Z\",\n      \"checkOutTime\": \"2026-05-30T11:30:00Z\",\n      \"duration\": 90,\n      \"status\": \"completed\",\n      \"outcome\": \"success\"\n    }\n  ]\n}"
+                                                                                    "raw":  "{\n  \"records\": [\n    {\n      \"hostId\": {{HOST_ID}},\n      \"localId\": \"{{VISIT_LOCAL_ID}}\",\n      \"customerId\": {{CUSTOMER_ID}},\n      \"customerName\": \"{{CUSTOMER_NAME}}\",\n      \"plannedVisitId\": {{VISIT_ID}},\n      \"checkInTime\": {{CHECK_IN_AT}}\n    }\n  ]\n}"
                                                                                 },
                                                                        "url":  {
                                                                                    "raw":  "{{BASE_URL}}/api/v1/app/sync/visits",
@@ -457,6 +573,27 @@
                                                        "response":  [
 
                                                                     ]
+                                                   },
+                                                   {
+                                                       "name": "Sync Visits - Check Out",
+                                                       "description": "Use the same employee TOKEN, HOST_ID, VISIT_LOCAL_ID, CUSTOMER_ID, CUSTOMER_NAME and CHECK_IN_AT as check-in. Set CHECK_OUT_AT to Unix seconds after check-in. Check data.updated and data.failed, then verify the plan in Visit Details.",
+                                                       "request": {
+                                                           "method": "POST",
+                                                           "header": [
+                                                               {"key": "Authorization", "value": "Bearer {{TOKEN}}", "type": "text"},
+                                                               {"key": "Content-Type", "value": "application/json"}
+                                                           ],
+                                                           "body": {
+                                                               "mode": "raw",
+                                                               "raw": "{\n  \"records\": [\n    {\n      \"hostId\": {{HOST_ID}},\n      \"localId\": \"{{VISIT_LOCAL_ID}}\",\n      \"customerId\": {{CUSTOMER_ID}},\n      \"customerName\": \"{{CUSTOMER_NAME}}\",\n      \"plannedVisitId\": {{VISIT_ID}},\n      \"checkInTime\": {{CHECK_IN_AT}},\n      \"checkOutTime\": {{CHECK_OUT_AT}}\n    }\n  ]\n}"
+                                                           },
+                                                           "url": {
+                                                               "raw": "{{BASE_URL}}/api/v1/app/sync/visits",
+                                                               "host": ["{{BASE_URL}}"],
+                                                               "path": ["api", "v1", "app", "sync", "visits"]
+                                                           }
+                                                       },
+                                                       "response": []
                                                    },
                                                    {
                                                        "name":  "Sync Orders",
