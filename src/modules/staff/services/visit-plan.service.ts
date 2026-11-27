@@ -1,4 +1,5 @@
 import moment from 'moment-timezone';
+import { createHash } from 'crypto';
 import { Op, Transaction, UniqueConstraintError } from 'sequelize';
 import db from '../../../models';
 import visitPlanRepository from '../repositories/visit-plan.repository';
@@ -251,6 +252,23 @@ export class VisitPlanService {
     return resolvedId;
   }
 
+  private scheduleRequestHash(body: Record<string, unknown>): string {
+    const fields = ['customerId', 'customerLocalId', 'scheduledDate', 'scheduledTime', 'assignedUserId', 'remarks'];
+    const payload = fields.map((field) => body[field] === undefined ? null : body[field]);
+    return createHash('sha256').update(JSON.stringify(payload)).digest('hex');
+  }
+
+  private assertMatchingScheduleRequest(
+    plan: { createdBy: number; idempotencyRequestHash?: string | null; isDeleted: number },
+    user: AuthUser,
+    requestHash: string
+  ): void {
+    if (Number(plan.createdBy) !== user.id || !plan.idempotencyRequestHash ||
+        plan.idempotencyRequestHash !== requestHash || Number(plan.isDeleted) !== 0) {
+      throw createConfiguredError('CONFLICT', 'Schedule request cannot be retried with this key', 409, 'SCHEDULE_IDEMPOTENCY_CONFLICT');
+    }
+  }
+
   async schedule(user: AuthUser, body: Record<string, unknown>) {
     this.requireAppAccess(user);
     const hostId = user.hostId;
@@ -258,6 +276,7 @@ export class VisitPlanService {
       typeof body.idempotencyKey === 'string' && body.idempotencyKey.trim()
         ? body.idempotencyKey.trim().slice(0, 100)
         : null;
+    const requestHash = idempotencyKey ? this.scheduleRequestHash(body) : null;
 
     try {
       return await db.sequelize.transaction(async (transaction: Transaction) => {
@@ -268,6 +287,7 @@ export class VisitPlanService {
             transaction
           );
           if (existing) {
+            this.assertMatchingScheduleRequest(existing, user, requestHash!);
             await customerService.lockCustomerForAssignment(hostId, existing.customerId, transaction);
             await this.ensureCustomerAccessible(user, existing.customerId, transaction, true);
             return this.formatVisitResponse(existing.toJSON(), await this.visitDateTimeSettings(hostId));
@@ -311,6 +331,7 @@ export class VisitPlanService {
             remarks: typeof body.remarks === 'string' ? body.remarks : null,
             status: 'SCHEDULED',
             idempotencyKey,
+            idempotencyRequestHash: requestHash,
             createdBy: user.id,
             createdAt: now,
             updatedAt: now,
@@ -340,6 +361,7 @@ export class VisitPlanService {
       if (idempotencyKey && error instanceof UniqueConstraintError) {
         const existing = await visitPlanRepository.findIdempotent(hostId, idempotencyKey);
         if (existing) {
+          this.assertMatchingScheduleRequest(existing, user, requestHash!);
           await this.ensureCustomerAccessible(user, existing.customerId);
           return this.formatVisitResponse(existing.toJSON(), await this.visitDateTimeSettings(hostId));
         }
@@ -355,10 +377,55 @@ export class VisitPlanService {
     if (!visitId) throw createConfiguredError('VALIDATION_ERROR', 'visitId is required', 400);
     const remarks = typeof body.remarks === 'string' ? body.remarks.trim() : '';
     if (!remarks) throw createConfiguredError('VALIDATION_ERROR', 'remarks are required', 400);
+    let keyHash: string | null = null;
+    let requestHash: string | null = null;
+    if (body.idempotencyKey !== undefined && body.idempotencyKey !== null) {
+      if (typeof body.idempotencyKey !== 'string' ||
+          !body.idempotencyKey.trim() || body.idempotencyKey.trim().length > 100) {
+        throw createConfiguredError('VALIDATION_ERROR', 'Invalid idempotency key', 400);
+      }
+      const assigned = body.assignedUserId === undefined ? 'unchanged' :
+        body.assignedUserId === null ? 'default' : this.toPositiveInteger(body.assignedUserId);
+      if (assigned === null) {
+        throw createConfiguredError('VALIDATION_ERROR', 'assignedUserId must be a positive integer', 400);
+      }
+      this.parseScheduledDate(body.scheduledDate, 'UTC');
+      const time = this.validateTime(body.scheduledTime);
+      keyHash = createHash('sha256').update(body.idempotencyKey.trim()).digest('hex');
+      requestHash = createHash('sha256').update(JSON.stringify([
+        visitId, body.scheduledDate, time, assigned, remarks,
+      ])).digest('hex');
+    }
 
-    return db.sequelize.transaction(async (transaction: Transaction) => {
+    const replay = async (
+      operation: { visitId: number; requestHash: string; result: string },
+      transaction?: Transaction
+    ) => {
+      if (Number(operation.visitId) !== visitId || operation.requestHash !== requestHash) {
+        throw createConfiguredError('CONFLICT', 'Reschedule key does not match request', 409, 'RESCHEDULE_IDEMPOTENCY_CONFLICT');
+      }
+      const plan = await visitPlanRepository.findById(hostId, visitId, transaction, !!transaction);
+      if (!plan) throw createConfiguredError('NOT_FOUND', 'Visit plan not found', 404);
+      if (transaction) {
+        await customerService.lockCustomerForAssignment(hostId, plan.customerId, transaction);
+      }
+      await this.ensureCustomerAccessible(user, plan.customerId, transaction, !!transaction);
+      return JSON.parse(operation.result);
+    };
+
+    if (keyHash) {
+      const existing = await visitPlanRepository.findRescheduleOperation(hostId, user.id, keyHash);
+      if (existing) return replay(existing);
+    }
+
+    try {
+      return await db.sequelize.transaction(async (transaction: Transaction) => {
       const plan = await visitPlanRepository.findById(hostId, visitId, transaction, true);
       if (!plan) throw createConfiguredError('NOT_FOUND', 'Visit plan not found', 404);
+      if (keyHash) {
+        const existing = await visitPlanRepository.findRescheduleOperation(hostId, user.id, keyHash, transaction);
+        if (existing) return replay(existing, transaction);
+      }
       await customerService.lockCustomerForAssignment(hostId, plan.customerId, transaction);
       await this.ensureCustomerAccessible(user, plan.customerId, transaction, true);
       if (plan.status !== 'SCHEDULED') {
@@ -390,6 +457,7 @@ export class VisitPlanService {
           scheduledTime,
           assignedUserId,
           remarks,
+          rescheduleRevision: Number(plan.rescheduleRevision ?? 0) + 1,
           updatedAt: now,
         },
         transaction
@@ -412,7 +480,119 @@ export class VisitPlanService {
         },
         transaction
       );
-      return this.formatVisitResponse(plan.toJSON(), settings);
+      const result = this.formatVisitResponse(plan.toJSON(), settings);
+      if (keyHash && requestHash) {
+        await visitPlanRepository.createRescheduleOperation({
+          hostId, userId: user.id, visitId, keyHash, requestHash,
+          result: JSON.stringify(result), createdAt: now,
+        }, transaction);
+      }
+      return result;
+      });
+    } catch (error) {
+      if (keyHash && error instanceof UniqueConstraintError) {
+        const existing = await visitPlanRepository.findRescheduleOperation(hostId, user.id, keyHash);
+        if (existing) return replay(existing);
+      }
+      throw error;
+    }
+  }
+
+  async reschedulePreparation(user: AuthUser, body: Record<string, unknown>) {
+    this.requireAppAccess(user);
+    const visitId = this.toPositiveInteger(body.visitId);
+    if (!visitId) throw createConfiguredError('VALIDATION_ERROR', 'visitId is required', 400);
+    const plan = await visitPlanRepository.findById(user.hostId, visitId);
+    if (!plan) throw createConfiguredError('NOT_FOUND', 'Visit plan not found', 404);
+    await this.ensureCustomerAccessible(user, plan.customerId);
+    return {
+      contractVersion: 2,
+      hostId: user.hostId,
+      userId: user.id,
+      visitId,
+      revision: Number(plan.rescheduleRevision),
+    };
+  }
+
+  async rescheduleV2(user: AuthUser, body: Record<string, unknown>) {
+    this.requireAppAccess(user);
+    const visitId = this.toPositiveInteger(body.visitId);
+    const assignedUserId = this.toPositiveInteger(body.assignedUserId);
+    const expectedRevision = body.expectedRevision;
+    const key = typeof body.idempotencyKey === 'string' ? body.idempotencyKey.trim() : '';
+    const remarks = typeof body.remarks === 'string' ? body.remarks.trim() : '';
+    if (!visitId || !assignedUserId || !key || key.length > 100 || !remarks ||
+        typeof expectedRevision !== 'number' || !Number.isSafeInteger(expectedRevision) ||
+        expectedRevision < 0 || expectedRevision >= Number.MAX_SAFE_INTEGER) {
+      throw createConfiguredError('VALIDATION_ERROR', 'Invalid reschedule request', 400);
+    }
+    this.parseScheduledDate(body.scheduledDate, 'UTC');
+    const scheduledTime = this.validateTime(body.scheduledTime);
+    const scheduledDate = body.scheduledDate as string;
+    const keyHash = createHash('sha256').update(key).digest('hex');
+    const request = { visitId, scheduledDate, scheduledTime, assignedUserId, remarks, expectedRevision };
+    const requestHash = createHash('sha256').update(JSON.stringify([
+      'reschedule-v2', visitId, scheduledDate, scheduledTime, assignedUserId, remarks, expectedRevision,
+    ])).digest('hex');
+    const replay = (operation: { visitId: number; requestHash: string; result: string }) => {
+      if (Number(operation.visitId) !== visitId || operation.requestHash !== requestHash) {
+        throw createConfiguredError('CONFLICT', 'Reschedule key does not match request', 409, 'RESCHEDULE_IDEMPOTENCY_CONFLICT');
+      }
+      return JSON.parse(operation.result);
+    };
+
+    return db.sequelize.transaction(async (transaction: Transaction) => {
+      const plan = await visitPlanRepository.findById(user.hostId, visitId, transaction, true);
+      if (!plan) throw createConfiguredError('NOT_FOUND', 'Visit plan not found', 404);
+      await customerService.lockCustomerForAssignment(user.hostId, plan.customerId, transaction);
+      await this.ensureCustomerAccessible(user, plan.customerId, transaction, true);
+      const existing = await visitPlanRepository.findRescheduleOperation(user.hostId, user.id, keyHash, transaction);
+      if (existing) return replay(existing);
+
+      const base = { contractVersion: 2, hostId: user.hostId, userId: user.id, key, request };
+      let result: Record<string, unknown>;
+      if (plan.status !== 'SCHEDULED' || Number(plan.rescheduleRevision) !== expectedRevision) {
+        result = { ...base, outcome: 'rejected', reason: plan.status !== 'SCHEDULED' ? 'VISIT_INVALID_TRANSITION' : 'REVISION_CONFLICT' };
+      } else {
+        const settings = await this.visitDateTimeSettings(user.hostId);
+        const date = this.parseScheduledDate(scheduledDate, settings.timeZone);
+        const assignee = await this.validateAssignedUser(user.hostId, assignedUserId, user, plan.customerId, transaction);
+        if (Number(assignee) !== Number(plan.assignedUserId)) {
+          await customerService.assignUserIfCustomerRestricted(user.hostId, plan.customerId, assignee, transaction);
+        }
+        const oldScheduledDate = plan.scheduledDate;
+        const oldScheduledTime = plan.scheduledTime;
+        const now = Math.floor(Date.now() / 1000);
+        await visitPlanRepository.updateVisit(plan, {
+          scheduledDate: date, scheduledTime, assignedUserId: assignee, remarks,
+          rescheduleRevision: expectedRevision + 1, updatedAt: now,
+        }, transaction);
+        await visitPlanRepository.historyCreate({
+          hostId: user.hostId, visitId, customerId: plan.customerId, eventType: 'VISIT_RESCHEDULED',
+          oldScheduledDate, newScheduledDate: date, oldScheduledTime, newScheduledTime: scheduledTime,
+          remarks, performedBy: user.id, eventAt: now, createdAt: now, updatedAt: now,
+        }, transaction);
+        result = {
+          ...base,
+          outcome: 'confirmed',
+          applied: {
+            scheduledDate: moment.tz(Number(plan.scheduledDate) * 1000, settings.timeZone).format('YYYY-MM-DD'),
+            scheduledTime: plan.scheduledTime ?? null,
+            assignedUserId: Number(plan.assignedUserId),
+            remarks: plan.remarks,
+            revision: Number(plan.rescheduleRevision),
+          },
+          visit: {
+            ...this.formatVisitResponse(plan.toJSON(), settings),
+            scheduledDate: moment.tz(Number(plan.scheduledDate) * 1000, settings.timeZone).format('YYYY-MM-DD'),
+          },
+        };
+      }
+      await visitPlanRepository.createRescheduleOperation({
+        hostId: user.hostId, userId: user.id, visitId, keyHash, requestHash,
+        result: JSON.stringify(result), createdAt: Math.floor(Date.now() / 1000),
+      }, transaction);
+      return result;
     });
   }
 

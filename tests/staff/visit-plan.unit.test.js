@@ -427,6 +427,92 @@ test('Today response exposes visits and preserves pagination and timezone', asyn
   assert.equal(response.data.pagination.total, 0);
 });
 
+test('Today passes its global ordering and pagination to the database query', async (t) => {
+  const db = require('../../src/models').default;
+  const { Op } = require('sequelize');
+  t.mock.method(db.HostSettings, 'findAll', async () => []);
+  const query = t.mock.method(db.VisitPlan, 'findAndCountAll', async () => ({ rows: [], count: 0 }));
+
+  await visitPlanService.list(
+    { id: 42, hostId: 1, isFieldAppUser: 1 },
+    { page: 2, limit: 2, assignedUserId: 42, status: ['SCHEDULED', 'IN_PROGRESS'], search: 'Store' },
+    'today'
+  );
+
+  const options = query.mock.calls[0].arguments[0];
+  assert.equal(options.where.hostId, 1);
+  assert.equal(options.where.isDeleted, 0);
+  assert.equal(options.where.assignedUserId, 42);
+  assert.deepEqual(options.where.status[Op.in], ['SCHEDULED', 'IN_PROGRESS']);
+  assert.equal(options.where['$customer.customerName$'][Op.like], '%Store%');
+  assert.ok(Number.isInteger(options.where.scheduledDate));
+  assert.equal(options.limit, 2);
+  assert.equal(options.offset, 2);
+  assert.equal(options.order[0][0].val, 'CASE WHEN scheduledTime IS NULL THEN 1 ELSE 0 END');
+  assert.equal(options.order[0][1], 'ASC');
+  assert.deepEqual(options.order.slice(1), [
+    ['scheduledDate', 'ASC'], ['scheduledTime', 'ASC'], ['createdAt', 'ASC'], ['id', 'ASC'],
+  ]);
+  const sql = db.sequelize.getQueryInterface().queryGenerator.selectQuery(
+    db.VisitPlan.tableName,
+    { attributes: ['id', 'scheduledTime', 'scheduledDate', 'createdAt'], order: options.order, limit: options.limit, offset: options.offset },
+    db.VisitPlan
+  );
+  assert.match(sql, /ORDER BY CASE WHEN scheduledTime IS NULL THEN 1 ELSE 0 END ASC, `VisitPlan`\.`scheduledDate` ASC, `VisitPlan`\.`scheduledTime` ASC, `VisitPlan`\.`createdAt` ASC, `VisitPlan`\.`id` ASC LIMIT 2, 2;/);
+});
+
+let DatabaseSync;
+try {
+  ({ DatabaseSync } = require('node:sqlite'));
+} catch (error) {
+  if (error.code !== 'ERR_UNKNOWN_BUILTIN_MODULE' && error.code !== 'MODULE_NOT_FOUND') throw error;
+}
+
+test('Today SQL orders timed and date-only visits across pages with stable tie-breakers', {
+  skip: !DatabaseSync ? 'Requires Node.js with node:sqlite for an isolated in-memory SQL test' : false,
+}, async (t) => {
+  const db = require('../../src/models').default;
+  const memory = new DatabaseSync(':memory:');
+  t.after(() => memory.close());
+  memory.exec('CREATE TABLE wd_customer_visit_plans (id INTEGER PRIMARY KEY, scheduledDate INTEGER NOT NULL, scheduledTime TEXT, createdAt INTEGER NOT NULL)');
+  const insert = memory.prepare('INSERT INTO wd_customer_visit_plans VALUES (?, ?, ?, ?)');
+  for (const [id, time, createdAt] of [
+    [14, null, 2], [4, '11:30', 2], [1, '08:00', 1], [3, '11:30', 1],
+    [11, null, 1], [2, '11:30', 1], [10, null, 1], [5, '10:00', 1],
+  ]) {
+    insert.run(id, 1, time, createdAt);
+  }
+  t.mock.method(db.HostSettings, 'findAll', async () => []);
+  t.mock.method(db.VisitPlan, 'findAndCountAll', async (options) => {
+    const sql = db.sequelize.getQueryInterface().queryGenerator.selectQuery(
+      db.VisitPlan.tableName,
+      {
+        attributes: ['id', 'scheduledTime', 'scheduledDate', 'createdAt'],
+        order: options.order,
+        limit: options.limit,
+        offset: options.offset,
+      },
+      db.VisitPlan
+    );
+    return {
+      count: 8,
+      rows: memory.prepare(sql).all().map((row) => ({ toJSON: () => ({ ...row }) })),
+    };
+  });
+
+  const pages = [];
+  for (let page = 1; page <= 4; page++) {
+    const result = await visitPlanService.list(
+      { id: 42, hostId: 1, isFieldAppUser: 1 },
+      { page, limit: 2, assignedUserId: 42 },
+      'today'
+    );
+    assert.deepEqual(result.pagination, { total: 8, page, limit: 2, totalPages: 4 });
+    pages.push(result.visits.map((visit) => visit.id));
+  }
+  assert.deepEqual(pages, [[1, 5], [2, 3], [4, 10], [11, 14]]);
+});
+
 test('Today formats visit dates and timestamps using host settings without changing other fields', async (t) => {
   const db = require('../../src/models').default;
   const repository = require('../../src/modules/staff/repositories/visit-plan.repository').default;
@@ -606,7 +692,7 @@ function assignmentFixture(t, initialAssignments = [42, 7, 8], hostSettings = []
     tx.state.history.push({ ...payload });
   });
   t.mock.method(plans, 'findById', async (hostId, visitId, tx) => {
-    const plan = tx.state.plans.find((row) => row.hostId === hostId && row.id === visitId);
+    const plan = (tx ? tx.state : state).plans.find((row) => row.hostId === hostId && row.id === visitId);
     return plan && Object.assign(plan, { toJSON: () => ({ ...plan, toJSON: undefined }) });
   });
   t.mock.method(plans, 'updateVisit', async (plan, payload) => Object.assign(plan, payload));
@@ -633,6 +719,131 @@ const scheduleInput = {
   assignedUserId: 43,
   scheduledDate: '2026-11-27',
 };
+
+test('Keyed reschedule replays its saved result and rejects a different payload', async (t) => {
+  const fixture = assignmentFixture(t);
+  const user = { id: 42, hostId: 1, isAdminUser: 0, isFieldAppUser: 1 };
+  await visitPlanService.schedule(user, scheduleInput);
+  let operation = null;
+  t.mock.method(fixture.plans, 'findRescheduleOperation', async () => operation);
+  t.mock.method(fixture.plans, 'createRescheduleOperation', async (payload) => {
+    operation = { ...payload };
+  });
+  const body = {
+    visitId: 501, scheduledDate: '2026-11-28', scheduledTime: '',
+    assignedUserId: 43, remarks: 'Moved', idempotencyKey: 'operation-1',
+  };
+  const first = await visitPlanService.reschedule(user, body);
+  const retry = await visitPlanService.reschedule(user, {
+    ...body, visitId: '501', assignedUserId: '43', scheduledTime: null,
+  });
+  assert.deepEqual(retry, JSON.parse(JSON.stringify(first)));
+  assert.equal(fixture.getState().history.filter((event) => event.eventType === 'VISIT_RESCHEDULED').length, 1);
+  await assert.rejects(
+    visitPlanService.reschedule(user, { ...body, remarks: 'Different' }),
+    { statusCode: 409, code: 'RESCHEDULE_IDEMPOTENCY_CONFLICT' }
+  );
+  fixture.getState().assignments = [7];
+  await assert.rejects(visitPlanService.reschedule(user, body), { statusCode: 403 });
+});
+
+test('Reschedule operation migration creates an owner-scoped unique key', async () => {
+  const migration = require('../../src/migrations/20261127080000-create-visit-plan-reschedule-operations');
+  const Sequelize = require('sequelize');
+  const calls = [];
+  await migration.up({
+    createTable: async (name, columns) => calls.push({ name, columns }),
+    addIndex: async (name, columns, options) => calls.push({ name, columns, options }),
+  }, Sequelize);
+  assert.equal(calls[0].name, 'wd_visit_plan_reschedule_operations');
+  assert.equal(calls[0].columns.requestHash.allowNull, false);
+  assert.equal(calls[0].columns.result.allowNull, false);
+  assert.deepEqual(calls[1].columns, ['hostId', 'userId', 'keyHash']);
+  assert.equal(calls[1].options.unique, true);
+});
+
+test('Failure to record a keyed reschedule rolls back its mutation and history', async (t) => {
+  const fixture = assignmentFixture(t);
+  const user = { id: 42, hostId: 1, isAdminUser: 0, isFieldAppUser: 1 };
+  await visitPlanService.schedule(user, scheduleInput);
+  t.mock.method(fixture.plans, 'findRescheduleOperation', async () => null);
+  t.mock.method(fixture.plans, 'createRescheduleOperation', async () => { throw new Error('injected'); });
+  await assert.rejects(visitPlanService.reschedule(user, {
+    visitId: 501, scheduledDate: '2026-11-28', scheduledTime: '',
+    assignedUserId: 43, remarks: 'Moved', idempotencyKey: 'operation-1',
+  }));
+  assert.equal(fixture.getState().history.filter((event) => event.eventType === 'VISIT_RESCHEDULED').length, 0);
+  assert.equal(fixture.getState().plans[0].remarks, null);
+});
+
+test('Versioned reschedule acknowledges replay and persists stale-version rejection', async (t) => {
+  const fixture = assignmentFixture(t, [42, 7, 8], [
+    { settingName: 'timezone', settingValue: 'America/New_York' },
+    { settingName: 'dateFormat', settingValue: 'MM/DD/YYYY' },
+  ]);
+  const user = { id: 42, hostId: 1, isAdminUser: 0, isFieldAppUser: 1 };
+  await visitPlanService.schedule(user, scheduleInput);
+  fixture.getState().plans[0].rescheduleRevision = 0;
+  const operations = new Map();
+  t.mock.method(fixture.plans, 'findRescheduleOperation', async (hostId, userId, keyHash) =>
+    operations.get(`${hostId}:${userId}:${keyHash}`) ?? null
+  );
+  t.mock.method(fixture.plans, 'createRescheduleOperation', async (payload) => {
+    operations.set(`${payload.hostId}:${payload.userId}:${payload.keyHash}`, { ...payload });
+  });
+  const body = {
+    visitId: 501, scheduledDate: '2026-11-28', scheduledTime: '',
+    assignedUserId: 43, remarks: 'Moved', idempotencyKey: 'first', expectedRevision: 0,
+  };
+  const first = await visitPlanService.rescheduleV2(user, body);
+  assert.equal(first.outcome, 'confirmed');
+  assert.equal(first.key, 'first');
+  assert.equal(first.request.expectedRevision, 0);
+  assert.equal(first.applied.revision, 1);
+  assert.equal(first.applied.scheduledDate, body.scheduledDate);
+  assert.equal(first.visit.scheduledDate, body.scheduledDate);
+  delete fixture.getState().plans[0].toJSON;
+  assert.deepEqual(await visitPlanService.rescheduleV2(user, body), JSON.parse(JSON.stringify(first)));
+  delete fixture.getState().plans[0].toJSON;
+  const other = { ...user, id: 7, isAdminUser: 1, isFieldAppUser: 0 };
+  const stale = await visitPlanService.rescheduleV2(other, { ...body, idempotencyKey: 'second' });
+  assert.equal(stale.outcome, 'rejected');
+  assert.equal(stale.reason, 'REVISION_CONFLICT');
+  delete fixture.getState().plans[0].toJSON;
+  assert.deepEqual(await visitPlanService.rescheduleV2(other, { ...body, idempotencyKey: 'second' }), stale);
+  delete fixture.getState().plans[0].toJSON;
+  assert.equal(fixture.getState().history.filter((event) => event.eventType === 'VISIT_RESCHEDULED').length, 1);
+  await assert.rejects(visitPlanService.rescheduleV2(user, { ...body, remarks: 'Changed' }), {
+    statusCode: 409, code: 'RESCHEDULE_IDEMPOTENCY_CONFLICT',
+  });
+});
+
+test('Versioned operation persistence failure rolls back visit, assignment and history', async (t) => {
+  const fixture = assignmentFixture(t);
+  const user = { id: 42, hostId: 1, isAdminUser: 0, isFieldAppUser: 1 };
+  await visitPlanService.schedule(user, { ...scheduleInput, assignedUserId: 42 });
+  fixture.getState().plans[0].rescheduleRevision = 0;
+  const originalAssignments = [...fixture.getState().assignments];
+  t.mock.method(fixture.plans, 'findRescheduleOperation', async () => null);
+  t.mock.method(fixture.plans, 'createRescheduleOperation', async () => { throw new Error('injected'); });
+  await assert.rejects(visitPlanService.rescheduleV2(user, {
+    visitId: 501, scheduledDate: '2026-11-28', scheduledTime: '',
+    assignedUserId: 43, remarks: 'Moved', idempotencyKey: 'key', expectedRevision: 0,
+  }));
+  assert.equal(fixture.getState().plans[0].rescheduleRevision, 0);
+  assert.deepEqual(fixture.getState().assignments, originalAssignments);
+  assert.equal(fixture.getState().history.filter((event) => event.eventType === 'VISIT_RESCHEDULED').length, 0);
+});
+
+test('Reschedule revision migration uses a non-null zero baseline', async () => {
+  const migration = require('../../src/migrations/20261127090000-add-visit-plan-reschedule-revision');
+  const calls = [];
+  await migration.up({ addColumn: async (...args) => calls.push(args) }, require('sequelize'));
+  assert.equal(calls[0][0], 'wd_customer_visit_plans');
+  assert.equal(calls[0][1], 'rescheduleRevision');
+  assert.equal(calls[0][2].allowNull, false);
+  assert.equal(calls[0][2].defaultValue, 0);
+});
 
 const newYorkSettings = [
   { settingName: 'timezone', settingValue: 'America/New_York' },
@@ -674,6 +885,8 @@ test('Both idempotent schedule retry paths return formatted timestamps', async (
   const fixture = assignmentFixture(t, [42, 7, 8], newYorkSettings);
   const existing = {
     customerId: 125,
+    createdBy: assignmentAdmin.id,
+    isDeleted: 0,
     toJSON: () => ({ id: 501, customerId: 125, scheduledDate: '1795669200', createdAt: 1795673700 }),
   };
   let lookupCount = 0;
@@ -688,6 +901,7 @@ test('Both idempotent schedule retry paths return formatted timestamps', async (
   for (conflict of [false, true]) {
     lookupCount = 0;
     const body = conflict ? { ...scheduleInput, idempotencyKey: 'key' } : { idempotencyKey: 'key' };
+    existing.idempotencyRequestHash = visitPlanService.scheduleRequestHash(body);
     const response = await visitPlanService.schedule(assignmentAdmin, body);
     assert.equal(response.scheduledDate, '2026/11/26');
     assert.equal(response.createdAt, '2026/11/26 01:15');
@@ -902,16 +1116,75 @@ test('Restricted customers deny unassigned users, including admins, across visit
 
 test('An idempotent schedule retry checks the caller can still access the customer', async (t) => {
   const fixture = assignmentFixture(t);
-  const plan = { id: 501, customerId: 125, toJSON: () => ({ id: 501, customerId: 125 }) };
+  const plan = { id: 501, customerId: 125, createdBy: 44, isDeleted: 0,
+    toJSON: () => ({ id: 501, customerId: 125 }) };
   t.mock.method(fixture.plans, 'findIdempotent', async () => plan);
   const body = { idempotencyKey: 'existing-key' };
+  plan.idempotencyRequestHash = visitPlanService.scheduleRequestHash(body);
 
   await assert.rejects(
     visitPlanService.schedule({ id: 44, hostId: 1, isAdminUser: 1 }, body),
     { statusCode: 403 }
   );
+  plan.createdBy = assignmentAdmin.id;
   assert.deepEqual(await visitPlanService.schedule(assignmentAdmin, body), { id: 501, customerId: 125 });
   assert.deepEqual(fixture.getState().assignments, [42, 7, 8]);
+});
+
+test('Schedule keys bind the original payload and creator, including cancelled and deleted plans', async (t) => {
+  const fixture = assignmentFixture(t);
+  const body = { ...scheduleInput, idempotencyKey: 'bound-key' };
+  let original;
+  t.mock.method(fixture.plans, 'findIdempotent', async () => original && ({
+    ...original,
+    isDeleted: original.isDeleted ?? 0,
+    toJSON: () => ({ ...original }),
+  }));
+  await visitPlanService.schedule(assignmentAdmin, body);
+  original = fixture.getState().plans[0];
+  const retry = await visitPlanService.schedule(assignmentAdmin, body);
+  assert.equal(retry.id, original.id);
+  await assert.rejects(visitPlanService.schedule(assignmentAdmin, { ...body, remarks: 'changed' }),
+    { statusCode: 409, code: 'SCHEDULE_IDEMPOTENCY_CONFLICT' });
+  await assert.rejects(visitPlanService.schedule({ ...assignmentAdmin, id: 44 }, body),
+    { statusCode: 409, code: 'SCHEDULE_IDEMPOTENCY_CONFLICT' });
+  original.status = 'CANCELLED';
+  assert.equal((await visitPlanService.schedule(assignmentAdmin, body)).status, 'CANCELLED');
+  original.isDeleted = 1;
+  await assert.rejects(visitPlanService.schedule(assignmentAdmin, body),
+    { statusCode: 409, code: 'SCHEDULE_IDEMPOTENCY_CONFLICT' });
+  original.isDeleted = 0;
+  original.idempotencyRequestHash = null;
+  await assert.rejects(visitPlanService.schedule(assignmentAdmin, body),
+    { statusCode: 409, code: 'SCHEDULE_IDEMPOTENCY_CONFLICT' });
+});
+
+test('Schedule request fingerprint is not serialized in Visit Plan responses', () => {
+  const db = require('../../src/models').default;
+  const plan = db.VisitPlan.build({ idempotencyRequestHash: 'private-hash' });
+  assert.equal(plan.idempotencyRequestHash, 'private-hash');
+  assert.equal(Object.hasOwn(plan.toJSON(), 'idempotencyRequestHash'), false);
+});
+
+test('A unique-key collision rejects a concurrent winner with a different payload', async (t) => {
+  const fixture = assignmentFixture(t);
+  const body = { ...scheduleInput, idempotencyKey: 'race-key' };
+  const existing = {
+    customerId: 125,
+    createdBy: assignmentAdmin.id,
+    isDeleted: 0,
+    idempotencyRequestHash: visitPlanService.scheduleRequestHash({ ...body, remarks: 'other' }),
+    toJSON: () => ({ id: 501 }),
+  };
+  let lookups = 0;
+  t.mock.method(fixture.plans, 'findIdempotent', async () => ++lookups === 1 ? null : existing);
+  t.mock.method(fixture.plans, 'create', async () => {
+    throw new (require('sequelize').UniqueConstraintError)();
+  });
+  await assert.rejects(visitPlanService.schedule(assignmentAdmin, body),
+    { statusCode: 409, code: 'SCHEDULE_IDEMPOTENCY_CONFLICT' });
+  assert.equal(lookups, 2);
+  assert.deepEqual(fixture.getState().plans, []);
 });
 
 test('Schedule and customer history use the same local ID fallback', async (t) => {

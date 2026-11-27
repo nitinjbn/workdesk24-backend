@@ -117,7 +117,7 @@
                                       "item":  [
                                                    {
                                                        "name":  "Schedule Visit",
-                                                       "description": "A valid same-host customerId takes precedence; customerLocalId is used only if customerId is absent, invalid or not found. Customers with no active assignments remain open to all; otherwise the scheduling user must be assigned and the visit assignee is added if needed. Assignment, visit and history are committed together.",
+                                                       "description": "A valid same-host customerId takes precedence; customerLocalId is used only if customerId is absent, invalid or not found. Customers with no active assignments remain open to all; otherwise the scheduling user must be assigned and the visit assignee is added if needed. Assignment, visit and history are committed together. An idempotency key is scoped to the host and bound to the original creator and scheduling payload; retries with the same payload return the existing plan if customer access remains valid. Reuse with a different payload or creator, a legacy unverifiable key, or a soft-deleted plan returns 409. Cancelled plans retain their key and return the cancelled plan.",
                                                        "request":  {
                                                                        "method":  "POST",
                                                                        "header":  [
@@ -142,7 +142,7 @@
                                                    },
                                                    {
                                                        "name":  "Today Visits",
-                                                       "description": "Returns the visit array in data.visits, with pagination and hostTimeZone in data. scheduledDate uses the host date format; timestamp fields use the host date-time format and timezone.",
+                                                       "description": "Returns the visit array in data.visits, with pagination and hostTimeZone in data. Before pagination, today's visits are ordered by scheduledTime presence (timed first), scheduledDate ascending, scheduledTime ascending, createdAt ascending, then unique id ascending. Today filters to the host-local current date, and includes date-only visits and timed visits at or after the current host-local time. Offset pages are not a snapshot: changes or the passage of time between requests can shift results. scheduledDate uses the host date format; timestamp fields use the host date-time format and timezone.",
                                                        "request":  {
                                                                        "method":  "POST",
                                                                        "header":  [{"key": "Authorization", "value": "Bearer {{TOKEN}}", "type": "text"}, {"key": "Content-Type", "value": "application/json"}],

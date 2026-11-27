@@ -37,6 +37,24 @@ export class VisitPlanController {
     }
   }
 
+  async reschedulePreparation(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const data = await visitPlanService.reschedulePreparation(this.authUser(req), req.body ?? {});
+      res.json({ success: true, data });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async rescheduleV2(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const data = await visitPlanService.rescheduleV2(this.authUser(req), req.body ?? {});
+      res.json({ success: true, data });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async today(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const data = await visitPlanService.list(this.authUser(req), req.body ?? {}, 'today');

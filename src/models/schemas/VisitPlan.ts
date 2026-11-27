@@ -18,6 +18,8 @@ export interface VisitPlanAttributes extends BaseModel {
   cancelledAt?: number | null;
   cancellationRemarks?: string | null;
   idempotencyKey?: string | null;
+  idempotencyRequestHash?: string | null;
+  rescheduleRevision: number;
   createdBy: number;
 }
 
@@ -34,6 +36,8 @@ interface VisitPlanCreationAttributes
     | 'cancelledAt'
     | 'cancellationRemarks'
     | 'idempotencyKey'
+    | 'idempotencyRequestHash'
+    | 'rescheduleRevision'
     | 'createdAt'
     | 'updatedAt'
     | 'deletedAt'
@@ -58,11 +62,19 @@ class VisitPlan
   public cancelledAt?: number | null;
   public cancellationRemarks?: string | null;
   public idempotencyKey?: string | null;
+  public idempotencyRequestHash?: string | null;
+  public rescheduleRevision!: number;
   public createdBy!: number;
   public createdAt!: number;
   public updatedAt!: number;
   public isDeleted!: number;
   public deletedAt?: number | null;
+
+  public toJSON<T extends VisitPlanAttributes>(): T {
+    const result = super.toJSON<T>();
+    Reflect.deleteProperty(result, 'idempotencyRequestHash');
+    return result;
+  }
 
   public static associate(models: any): void {
     VisitPlan.belongsTo(models.Host, { foreignKey: 'hostId', as: 'host' });
@@ -95,6 +107,8 @@ export function initVisitPlan(sequelize: Sequelize): typeof VisitPlan {
       cancelledAt: { type: DataTypes.BIGINT, allowNull: true },
       cancellationRemarks: { type: DataTypes.TEXT, allowNull: true },
       idempotencyKey: { type: DataTypes.STRING(100), allowNull: true },
+      idempotencyRequestHash: { type: DataTypes.STRING(64), allowNull: true },
+      rescheduleRevision: { type: DataTypes.BIGINT, allowNull: false, defaultValue: 0 },
       createdBy: { type: DataTypes.BIGINT, allowNull: false },
       createdAt: { type: DataTypes.BIGINT, allowNull: false },
       updatedAt: { type: DataTypes.BIGINT, allowNull: true },

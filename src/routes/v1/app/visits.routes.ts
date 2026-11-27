@@ -5,6 +5,8 @@ const router = Router();
 
 router.post('/schedule', visitPlanController.schedule.bind(visitPlanController));
 router.post('/reschedule', visitPlanController.reschedule.bind(visitPlanController));
+router.post('/reschedule/prepare-v2', visitPlanController.reschedulePreparation.bind(visitPlanController));
+router.post('/reschedule/execute-v2', visitPlanController.rescheduleV2.bind(visitPlanController));
 router.post('/today', visitPlanController.today.bind(visitPlanController));
 router.post('/upcoming', visitPlanController.upcoming.bind(visitPlanController));
 router.post('/overdue', visitPlanController.overdue.bind(visitPlanController));
