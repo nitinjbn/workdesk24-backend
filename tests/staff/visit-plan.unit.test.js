@@ -762,6 +762,75 @@ test('Reschedule operation migration creates an owner-scoped unique key', async 
   assert.equal(calls[1].options.unique, true);
 });
 
+test('Reschedule operation model matches the existing migration without extra lifecycle columns', () => {
+  const model = require('../../src/models').VisitPlanRescheduleOperation;
+  const attributes = model.getAttributes();
+  assert.equal(model.getTableName(), 'wd_visit_plan_reschedule_operations');
+  assert.equal(model.options.timestamps, false);
+  assert.deepEqual(Object.keys(attributes).sort(), [
+    'id', 'hostId', 'userId', 'visitId', 'keyHash', 'requestHash', 'result', 'createdAt',
+  ].sort());
+  for (const [column, table] of [
+    ['hostId', 'wd_hosts'], ['userId', 'wd_users'], ['visitId', 'wd_customer_visit_plans'],
+  ]) {
+    assert.deepEqual(attributes[column].references, { model: table, key: 'id' });
+    assert.equal(attributes[column].onDelete, 'RESTRICT');
+    assert.equal(attributes[column].onUpdate, 'CASCADE');
+  }
+  assert.equal(attributes.result.type.toSql(), 'LONGTEXT');
+  const index = model.options.indexes.find((entry) => entry.name === 'visit_plan_reschedule_owner_key');
+  assert.deepEqual(index.fields, ['hostId', 'userId', 'keyHash']);
+  assert.equal(index.unique, true);
+});
+
+test('Reschedule operation lookup uses the model with owner scoping and transaction locking', async (t) => {
+  const repository = require('../../src/modules/staff/repositories/visit-plan.repository').default;
+  const db = require('../../src/models').default;
+  const saved = { visitId: 501, requestHash: 'request-hash', result: '{"outcome":"confirmed"}' };
+  const lookup = t.mock.method(db.VisitPlanRescheduleOperation, 'findOne', async () => saved);
+  const rawQuery = t.mock.method(db.sequelize, 'query', async () => {
+    assert.fail('Repository must use the operation model');
+  });
+  const transaction = { LOCK: { UPDATE: 'UPDATE' } };
+  assert.equal(await repository.findRescheduleOperation(1, 42, 'key-hash', transaction), saved);
+  assert.deepEqual(lookup.mock.calls[0].arguments[0], {
+    where: { hostId: 1, userId: 42, keyHash: 'key-hash' },
+    attributes: ['visitId', 'requestHash', 'result'],
+    transaction,
+    lock: 'UPDATE',
+    raw: true,
+  });
+  await repository.findRescheduleOperation(2, 43, 'other-key');
+  assert.deepEqual(lookup.mock.calls[1].arguments[0].where, {
+    hostId: 2, userId: 43, keyHash: 'other-key',
+  });
+  assert.equal(lookup.mock.calls[1].arguments[0].lock, undefined);
+  assert.equal(lookup.mock.calls[1].arguments[0].transaction, undefined);
+  lookup.mock.mockImplementation(async () => null);
+  assert.equal(await repository.findRescheduleOperation(1, 42, 'missing'), null);
+  assert.equal(rawQuery.mock.callCount(), 0);
+});
+
+test('Reschedule operation insertion uses the model and preserves transaction failures', async (t) => {
+  const repository = require('../../src/modules/staff/repositories/visit-plan.repository').default;
+  const db = require('../../src/models').default;
+  const payload = {
+    hostId: 1, userId: 42, visitId: 501, keyHash: 'key-hash', requestHash: 'request-hash',
+    result: '{"outcome":"confirmed"}', createdAt: 1795795200,
+  };
+  const transaction = { LOCK: { UPDATE: 'UPDATE' } };
+  const insert = t.mock.method(db.VisitPlanRescheduleOperation, 'create', async () => payload);
+  const rawQuery = t.mock.method(db.sequelize, 'query', async () => {
+    assert.fail('Repository must use the operation model');
+  });
+  await repository.createRescheduleOperation(payload, transaction);
+  assert.deepEqual(insert.mock.calls[0].arguments, [payload, { transaction }]);
+  const failure = new Error('injected persistence failure');
+  insert.mock.mockImplementation(async () => { throw failure; });
+  await assert.rejects(repository.createRescheduleOperation(payload, transaction), (error) => error === failure);
+  assert.equal(rawQuery.mock.callCount(), 0);
+});
+
 test('Failure to record a keyed reschedule rolls back its mutation and history', async (t) => {
   const fixture = assignmentFixture(t);
   const user = { id: 42, hostId: 1, isAdminUser: 0, isFieldAppUser: 1 };

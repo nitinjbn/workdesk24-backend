@@ -79,6 +79,7 @@ import { initAppUpgradePolicy } from './schemas/AppUpgradePolicy';
 import { initHostFeatures } from './schemas/HostFeatures';
 import { initVisitPlan } from './schemas/VisitPlan';
 import { initVisitPlanHistory } from './schemas/VisitPlanHistory';
+import { initVisitPlanRescheduleOperation } from './schemas/VisitPlanRescheduleOperation';
 
 dotenv.config();
 
@@ -146,6 +147,7 @@ const Permission = initPermission(sequelize);
 const HostFeatures = initHostFeatures(sequelize);
 const VisitPlan = initVisitPlan(sequelize);
 const VisitPlanHistory = initVisitPlanHistory(sequelize);
+const VisitPlanRescheduleOperation = initVisitPlanRescheduleOperation(sequelize);
 const RolePermission = initRolePermission(sequelize);
 const UserPermission = initUserPermission(sequelize);
 const User = initUser(sequelize);
@@ -287,6 +289,7 @@ const db: any = {
   HostFeatures,
   VisitPlan,
   VisitPlanHistory,
+  VisitPlanRescheduleOperation,
 };
 
 // Setup associations
@@ -412,6 +415,7 @@ export {
   HostFeatures,
   VisitPlan,
   VisitPlanHistory,
+  VisitPlanRescheduleOperation,
 };
 
 export default db;

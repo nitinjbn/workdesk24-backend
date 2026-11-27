@@ -1,34 +1,32 @@
-import { FindAndCountOptions, Op, QueryTypes, Transaction, WhereOptions } from 'sequelize';
-import db, {
+import { FindAndCountOptions, Op, Transaction, WhereOptions } from 'sequelize';
+import {
   Customer,
   CustomerUserAssignment,
   User,
   Visit,
   VisitPlan,
   VisitPlanHistory,
+  VisitPlanRescheduleOperation,
 } from '../../../models';
 import type { VisitPlanStatus } from '../../../models/schemas/VisitPlan';
+import type { VisitPlanRescheduleOperationCreationAttributes } from '../../../models/schemas/VisitPlanRescheduleOperation';
 
 export class VisitPlanRepository {
   async findRescheduleOperation(hostId: number, userId: number, keyHash: string, transaction?: Transaction) {
-    const rows: Array<{ visitId: number; requestHash: string; result: string }> = await db.sequelize.query(
-      `SELECT visitId, requestHash, result FROM wd_visit_plan_reschedule_operations
-       WHERE hostId = :hostId AND userId = :userId AND keyHash = :keyHash${transaction ? ' FOR UPDATE' : ''}`,
-      { replacements: { hostId, userId, keyHash }, type: QueryTypes.SELECT, transaction }
-    );
-    return rows[0] ?? null;
+    return VisitPlanRescheduleOperation.findOne({
+      where: { hostId, userId, keyHash },
+      attributes: ['visitId', 'requestHash', 'result'],
+      transaction,
+      lock: transaction ? transaction.LOCK.UPDATE : undefined,
+      raw: true,
+    });
   }
 
   async createRescheduleOperation(
-    payload: { hostId: number; userId: number; visitId: number; keyHash: string; requestHash: string; result: string; createdAt: number },
+    payload: VisitPlanRescheduleOperationCreationAttributes,
     transaction: Transaction
   ) {
-    await db.sequelize.query(
-      `INSERT INTO wd_visit_plan_reschedule_operations
-       (hostId, userId, visitId, keyHash, requestHash, result, createdAt)
-       VALUES (:hostId, :userId, :visitId, :keyHash, :requestHash, :result, :createdAt)`,
-      { replacements: payload, transaction }
-    );
+    await VisitPlanRescheduleOperation.create(payload, { transaction });
   }
 
   async resolveCustomer(
