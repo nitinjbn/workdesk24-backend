@@ -117,7 +117,7 @@
                                       "item":  [
                                                    {
                                                        "name":  "Schedule Visit",
-                                                       "description": "A valid same-host customerId takes precedence; customerLocalId is used only if customerId is absent, invalid or not found. Customers with no active assignments remain open to all; otherwise the scheduling user must be assigned and the visit assignee is added if needed. Assignment, visit and history are committed together. An idempotency key is scoped to the host and bound to the original creator and scheduling payload; retries with the same payload return the existing plan if customer access remains valid. Reuse with a different payload or creator, a legacy unverifiable key, or a soft-deleted plan returns 409. Cancelled plans retain their key and return the cancelled plan.",
+                                                       "description": "A valid same-host customerId takes precedence; customerLocalId is the fallback. Actor/host come from authentication. Requires SCHEDULE_VISIT for the resolved assignee; self needs no rule and Host Admin retains the team override. Other assignees require active/non-deleted same-host field-app status. Existing customer access is still required. Restricted customers gain a new assignee only with independent CUSTOMER_ASSIGNMENT permission; open customers remain open and existing assignments are retained. A denial returns 403 TEAM_ASSIGNMENT_FORBIDDEN and commits nothing. Assignment, visit and history are atomic. Host-scoped schedule keys remain bound to the original creator/payload; successful replay checks customer access but not current team permissions. Conflicting, unverifiable or soft-deleted keys return 409; cancelled plans retain their keys.",
                                                        "request":  {
                                                                        "method":  "POST",
                                                                        "header":  [
@@ -131,13 +131,35 @@
                                                    },
                                                    {
                                                        "name":  "Reschedule Visit",
-                                                       "description": "Any user who can access the customer can reschedule the visit. Customers with no active assignments remain open to all. Otherwise, when the assignee changes, the new employee is added if needed without removing previous assignments. Assignment, reschedule and history are committed together.",
+                                                       "description": "Existing host/customer access is required, plus RESCHEDULE_VISIT for the selected assignee even if another-user assignee is unchanged or assignedUserId is omitted. Self needs no rule and Host Admin retains the team override; neither bypasses customer access. If a changed assignee is added to a restricted customer, independently requires CUSTOMER_ASSIGNMENT. No customer permission check occurs when nothing is added; open customers remain open and prior assignments remain. Denial returns 403 TEAM_ASSIGNMENT_FORBIDDEN before writes. Existing atomic history/revision updates and successful keyed replay remain unchanged.",
                                                        "request":  {
                                                                        "method":  "POST",
                                                                        "header":  [{"key": "Authorization", "value": "Bearer {{TOKEN}}", "type": "text"}, {"key": "Content-Type", "value": "application/json"}],
                                                                        "body":  {"mode": "raw", "raw": "{\n  \"visitId\": 501,\n  \"scheduledDate\": \"2026-11-28\",\n  \"scheduledTime\": \"11:30\",\n  \"remarks\": \"Customer requested another date\",\n  \"assignedUserId\": 42\n}"},
                                                                        "url":  {"raw": "{{BASE_URL}}/api/v1/app/visits/reschedule", "host": ["{{BASE_URL}}"], "path": ["api","v1","app","visits","reschedule"]}
                                                                    },
+                                                       "response": []
+                                                   },
+                                                   {
+                                                       "name": "Prepare Reschedule V2",
+                                                       "description": "Existing read-only revision lookup. Authenticated host/customer access remains required. Returns success/data with contractVersion, hostId, userId, visitId and revision; does not grant mutation permission.",
+                                                       "request": {
+                                                           "method": "POST",
+                                                           "header": [{"key": "Authorization", "value": "Bearer {{TOKEN}}"}, {"key": "Content-Type", "value": "application/json"}],
+                                                           "body": {"mode": "raw", "raw": "{\n  \"visitId\": 501\n}"},
+                                                           "url": {"raw": "{{BASE_URL}}/api/v1/app/visits/reschedule/prepare-v2", "host": ["{{BASE_URL}}"], "path": ["api","v1","app","visits","reschedule","prepare-v2"]}
+                                                       },
+                                                       "response": []
+                                                   },
+                                                   {
+                                                       "name": "Execute Reschedule V2",
+                                                       "description": "Requires assignedUserId, expectedRevision, idempotencyKey and remarks. After existing access/replay/revision/status checks, RESCHEDULE_VISIT is required even for unchanged other-user assignees; CUSTOMER_ASSIGNMENT is independently required only for actual additions to restricted customers. Self needs no rule and Host Admin retains the team override. Permission denial returns 403 TEAM_ASSIGNMENT_FORBIDDEN with no mutation or saved operation. Recorded revision/status rejections and successful replays preserve the HTTP 200 success/data contract.",
+                                                       "request": {
+                                                           "method": "POST",
+                                                           "header": [{"key": "Authorization", "value": "Bearer {{TOKEN}}"}, {"key": "Content-Type", "value": "application/json"}],
+                                                           "body": {"mode": "raw", "raw": "{\n  \"visitId\": 501,\n  \"assignedUserId\": 42,\n  \"scheduledDate\": \"2026-11-28\",\n  \"scheduledTime\": \"11:30\",\n  \"remarks\": \"Customer requested another date\",\n  \"idempotencyKey\": \"reschedule-v2-501\",\n  \"expectedRevision\": 0\n}"},
+                                                           "url": {"raw": "{{BASE_URL}}/api/v1/app/visits/reschedule/execute-v2", "host": ["{{BASE_URL}}"], "path": ["api","v1","app","visits","reschedule","execute-v2"]}
+                                                       },
                                                        "response": []
                                                    },
                                                    {

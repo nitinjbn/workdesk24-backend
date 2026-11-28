@@ -2,6 +2,10 @@ import { NextFunction, Response } from 'express';
 import { AuthRequest } from '../types/auth.types';
 
 const READ_ONLY_SUPPORT_ROUTES = new Set([
+  '/teams/list',
+  '/teams/detail',
+  '/teams/members/list',
+  '/teams/assignment-rules/list',
   '/dashboard/overview',
   '/users/getDesignations',
   '/users/getRoles',

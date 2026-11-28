@@ -71,6 +71,9 @@ import { initTaskSettings } from './schemas/TaskSettings';
 import { initTaskCategory } from './schemas/TaskCategory';
 import { initTaskTag } from './schemas/TaskTag';
 import { initTaskTagMapping } from './schemas/TaskTagMapping';
+import { initTeam } from './schemas/Team';
+import { initTeamMember } from './schemas/TeamMember';
+import { initTeamAssignmentRule } from './schemas/TeamAssignmentRule';
 import { initTaskLogs } from './schemas/TaskLogs';
 import { initTaskComments } from './schemas/TaskComments';
 import { initTaskAttachments } from './schemas/TaskAttachments';
@@ -208,6 +211,9 @@ const TaskSettings = initTaskSettings(sequelize);
 const TaskCategory = initTaskCategory(sequelize);
 const TaskTag = initTaskTag(sequelize);
 const TaskTagMapping = initTaskTagMapping(sequelize);
+const Team = initTeam(sequelize);
+const TeamMember = initTeamMember(sequelize);
+const TeamAssignmentRule = initTeamAssignmentRule(sequelize);
 const TaskLogs = initTaskLogs(sequelize);
 const TaskComments = initTaskComments(sequelize);
 const TaskAttachments = initTaskAttachments(sequelize);
@@ -281,6 +287,9 @@ const db: any = {
   TaskCategory,
   TaskTag,
   TaskTagMapping,
+  Team,
+  TeamMember,
+  TeamAssignmentRule,
   TaskLogs,
   TaskComments,
   TaskAttachments,
@@ -407,6 +416,9 @@ export {
   TaskCategory,
   TaskTag,
   TaskTagMapping,
+  Team,
+  TeamMember,
+  TeamAssignmentRule,
   TaskLogs,
   TaskComments,
   TaskAttachments,

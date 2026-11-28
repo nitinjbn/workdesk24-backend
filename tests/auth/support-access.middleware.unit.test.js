@@ -108,3 +108,21 @@ test('read-only support permits tag reads but rejects tag writes and assignment'
     assert.equal(response.statusCode, allowed ? 200 : 403);
   }
 });
+
+test('read-only support permits team reads but rejects every team and membership mutation', () => {
+  for (const [path, allowed] of [
+    ['/teams/list', true], ['/teams/detail', true], ['/teams/members/list', true],
+    ...['create', 'update', 'delete', 'members/add', 'members/update', 'members/remove'].map((action) => [`/teams/${action}`, false]),
+  ]) {
+    for (const prefix of ['', '/api/v1/admin']) {
+      const response = createResponse();
+      let continued = false;
+      requireSupportReadOnlyPolicy({
+        path: `${prefix}${path}`,
+        authContext: { isSupportSession: true, accessMode: 'SUPPORT_READ_ONLY' },
+      }, response, () => { continued = true; });
+      assert.equal(continued, allowed, path);
+      assert.equal(response.statusCode, allowed ? 200 : 403);
+    }
+  }
+});

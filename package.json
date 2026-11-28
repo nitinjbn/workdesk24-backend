@@ -29,6 +29,12 @@
     "test:task": "node --test --require ts-node/register/transpile-only tests/task/task-tags.unit.test.js tests/task/task-category.unit.test.js tests/task/task-category-migration.unit.test.js tests/task/task-number.unit.test.ts tests/task/task-service.unit.test.js tests/task/task-kanban.unit.test.js tests/task/task-dashboard.unit.test.js tests/task/task-notification.unit.test.js tests/auth/support-access.middleware.unit.test.js tests/auth/support-task-authorization.unit.test.js",
     "test:task:mysql": "node --test --require ts-node/register/transpile-only tests/task/task-number.mysql.integration.test.ts tests/task/task-category-migration.mysql.integration.test.js",
     "test:visit-plan": "node --test --require ts-node/register/transpile-only tests/staff/visit-plan.unit.test.js",
+    "test:teams": "node --test --require ts-node/register/transpile-only tests/auth/teams.unit.test.js tests/auth/team-migration.unit.test.js tests/auth/support-access.middleware.unit.test.js",
+    "test:teams:mysql": "node --test --require ts-node/register/transpile-only tests/auth/teams.mysql.integration.test.js",
+    "test:team-rules": "node --test --require ts-node/register/transpile-only tests/auth/team-assignment-rules.unit.test.js tests/auth/team-assignment-rule-migration.unit.test.js tests/auth/support-access.middleware.unit.test.js",
+    "test:team-rules:mysql": "node --test --require ts-node/register/transpile-only tests/auth/team-assignment-rules.mysql.integration.test.js",
+    "test:team-eligibility": "node --test --require ts-node/register/transpile-only tests/auth/assignment-eligibility.unit.test.js",
+    "test:team-eligibility:mysql": "node --test --require ts-node/register/transpile-only tests/auth/assignment-eligibility.mysql.integration.test.js",
     "manualRun": "nodemon dist/server.production.js"
   },
   "keywords": [

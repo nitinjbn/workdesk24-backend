@@ -9,6 +9,7 @@ import { createConfiguredError } from '../../../shared/utils/error.util';
 import type { AuthRequest } from '../../../shared/types/auth.types';
 import type { VisitPlanStatus } from '../../../models/schemas/VisitPlan';
 import customerService from '../../master/services/customer.service';
+import assignmentEligibilityService, { type AssignmentEligibilityAction } from '../../auth/services/assignment-eligibility.service';
 
 interface AuthUser {
   id: number;
@@ -109,6 +110,29 @@ export class VisitPlanService {
 
   private isFieldOfficer(user: AuthUser): boolean {
     return user.isFieldAppUser === 1 && !this.isAdmin(user);
+  }
+
+  private async ensureAssignmentEligible(
+    user: AuthUser,
+    assignedUserId: number,
+    action: AssignmentEligibilityAction,
+    transaction: Transaction
+  ): Promise<void> {
+    if (this.isAdmin(user)) return;
+    if (!await assignmentEligibilityService.isUserEligible({
+      hostId: user.hostId, actorId: user.id, targetUserId: assignedUserId, action, transaction,
+    })) {
+      throw createConfiguredError(
+        'FORBIDDEN', `Assigned user is not eligible for ${action}`, 403, 'TEAM_ASSIGNMENT_FORBIDDEN'
+      );
+    }
+  }
+
+  private async assignVisitUserToCustomer(user: AuthUser, customerId: number, assignedUserId: number, transaction: Transaction): Promise<void> {
+    await customerService.assignUserIfCustomerRestricted(
+      user.hostId, customerId, assignedUserId, transaction,
+      () => this.ensureAssignmentEligible(user, assignedUserId, 'CUSTOMER_ASSIGNMENT', transaction)
+    );
   }
 
   private async ensureCustomerAccessible(
@@ -226,7 +250,7 @@ export class VisitPlanService {
         'ASSIGNED_USER_REQUIRED'
       );
     }
-    const user = await visitPlanRepository.findUser(hostId, resolvedId, transaction);
+    const user = await visitPlanRepository.findUser(hostId, resolvedId, transaction, resolvedId !== fallbackUser.id);
     if (!user) {
       throw createConfiguredError(
         'VALIDATION_ERROR',
@@ -239,7 +263,7 @@ export class VisitPlanService {
       Number(user.hostId) !== hostId ||
       Number(user.isDeleted) !== 0 ||
       user.accountStatus !== 'ACTIVE' ||
-      Number(user.isFieldAppUser) !== 1
+      (resolvedId !== fallbackUser.id && Number(user.isFieldAppUser) !== 1)
     ) {
       throw createConfiguredError(
         'VALIDATION_ERROR',
@@ -306,6 +330,7 @@ export class VisitPlanService {
           customer.id,
           transaction
         );
+        await this.ensureAssignmentEligible(user, assignedUserId, 'SCHEDULE_VISIT', transaction);
         const duplicate = await visitPlanRepository.findDuplicate(
           hostId,
           customer.id,
@@ -313,12 +338,7 @@ export class VisitPlanService {
           undefined,
           transaction
         );
-        await customerService.assignUserIfCustomerRestricted(
-          hostId,
-          customer.id,
-          assignedUserId,
-          transaction
-        );
+        await this.assignVisitUserToCustomer(user, customer.id, assignedUserId, transaction);
         const now = Math.floor(Date.now() / 1000);
         const plan = await visitPlanRepository.create(
           {
@@ -439,13 +459,9 @@ export class VisitPlanService {
         body.assignedUserId === undefined
           ? plan.assignedUserId
           : await this.validateAssignedUser(hostId, body.assignedUserId, user, plan.customerId, transaction);
+      await this.ensureAssignmentEligible(user, Number(assignedUserId), 'RESCHEDULE_VISIT', transaction);
       if (Number(assignedUserId) !== Number(plan.assignedUserId)) {
-        await customerService.assignUserIfCustomerRestricted(
-          hostId,
-          plan.customerId,
-          assignedUserId,
-          transaction
-        );
+        await this.assignVisitUserToCustomer(user, plan.customerId, assignedUserId, transaction);
       }
       const oldScheduledDate = plan.scheduledDate;
       const oldScheduledTime = plan.scheduledTime;
@@ -557,8 +573,9 @@ export class VisitPlanService {
         const settings = await this.visitDateTimeSettings(user.hostId);
         const date = this.parseScheduledDate(scheduledDate, settings.timeZone);
         const assignee = await this.validateAssignedUser(user.hostId, assignedUserId, user, plan.customerId, transaction);
+        await this.ensureAssignmentEligible(user, assignee, 'RESCHEDULE_VISIT', transaction);
         if (Number(assignee) !== Number(plan.assignedUserId)) {
-          await customerService.assignUserIfCustomerRestricted(user.hostId, plan.customerId, assignee, transaction);
+          await this.assignVisitUserToCustomer(user, plan.customerId, assignee, transaction);
         }
         const oldScheduledDate = plan.scheduledDate;
         const oldScheduledTime = plan.scheduledTime;

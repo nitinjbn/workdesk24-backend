@@ -48,14 +48,14 @@ export class VisitPlanRepository {
     });
   }
 
-  async findUser(hostId: number, userId: number, transaction?: Transaction) {
+  async findUser(hostId: number, userId: number, transaction?: Transaction, requireFieldAppUser = true) {
     return User.findOne({
       where: {
         id: userId,
         hostId,
         isDeleted: 0,
         accountStatus: 'ACTIVE',
-        isFieldAppUser: 1,
+        ...(requireFieldAppUser ? { isFieldAppUser: 1 } : {}),
       },
       transaction,
     });

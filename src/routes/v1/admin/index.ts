@@ -21,6 +21,7 @@ import aiInsightsRoutes from './ai-insights.routes';
 import leavesRoutes from './leaves.routes';
 import geoFencingRoutes from './geo-fencing.routes';
 import taskRoutes from './tasks.routes';
+import teamRoutes from './teams.routes';
 import { apiLogRouteContext } from '../../../modules/api-logs';
 import { requireSupportReadOnlyPolicy } from '../../../shared/middleware/support-access.middleware';
 
@@ -84,5 +85,6 @@ router.use(apiLogRouteContext('admin', 'ai-insights'), aiInsightsRoutes);
 router.use(apiLogRouteContext('admin', 'leaves'), leavesRoutes);
 router.use(apiLogRouteContext('admin', 'geo-fencing'), geoFencingRoutes);
 router.use('/tasks', apiLogRouteContext('admin', 'tasks'), taskRoutes);
+router.use('/teams', apiLogRouteContext('admin', 'teams'), teamRoutes);
 
 export default router;

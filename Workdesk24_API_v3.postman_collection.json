@@ -297,6 +297,90 @@
       "description": "Mobile app endpoints - requires authentication",
       "item": [
         {
+          "name": "Visit Plans",
+          "item": [
+            {
+              "name": "Schedule Visit",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"customerId\": 125,\n  \"assignedUserId\": 42,\n  \"scheduledDate\": \"2026-11-27\",\n  \"scheduledTime\": \"10:30\",\n  \"remarks\": \"Follow-up\",\n  \"idempotencyKey\": \"schedule-501\"\n}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/app/visits/schedule", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "visits", "schedule"] },
+                "description": "Actor and host come only from authentication. Requires SCHEDULE_VISIT for the resolved assignee; self needs no rule, and Host Admin retains the team override. Other assignees must be active, non-deleted same-host field-app users. Existing customer access is still required. If a restricted customer gains a new assignee, independently requires CUSTOMER_ASSIGNMENT. Open customers and existing assignments remain unchanged. Permission denial returns 403 TEAM_ASSIGNMENT_FORBIDDEN and rolls back all writes. Successful keyed replay preserves original owner/payload checks and customer access without rechecking team permissions. Success retains HTTP 201 and the existing success/message/data envelope."
+              },
+              "response": [
+                { "name": "Team permission denied", "status": "Forbidden", "code": 403, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": "{\n  \"success\": false,\n  \"code\": \"TEAM_ASSIGNMENT_FORBIDDEN\",\n  \"message\": \"Assigned user is not eligible for SCHEDULE_VISIT\"\n}" }
+              ]
+            },
+            {
+              "name": "Reschedule Visit",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"visitId\": 501,\n  \"assignedUserId\": 42,\n  \"scheduledDate\": \"2026-11-28\",\n  \"scheduledTime\": \"11:30\",\n  \"remarks\": \"Customer requested another date\",\n  \"idempotencyKey\": \"reschedule-501\"\n}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/app/visits/reschedule", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "visits", "reschedule"] },
+                "description": "Requires RESCHEDULE_VISIT for the selected assignee, including the existing other-user assignee when assignedUserId is omitted. Self needs no rule; Host Admin retains the team override. Existing host and customer access checks still apply; self eligibility does not grant access. Changing the assignee adds them only to restricted customers and independently requires CUSTOMER_ASSIGNMENT if they are not already assigned. No customer permission check occurs if no assignment is added. Permission denial returns 403 TEAM_ASSIGNMENT_FORBIDDEN before writes. Existing keyed replay, revision increments, history and HTTP 200 success/message/data response remain unchanged."
+              },
+              "response": [
+                { "name": "Team permission denied", "status": "Forbidden", "code": 403, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": "{\n  \"success\": false,\n  \"code\": \"TEAM_ASSIGNMENT_FORBIDDEN\",\n  \"message\": \"Assigned user is not eligible for RESCHEDULE_VISIT\"\n}" }
+              ]
+            },
+            {
+              "name": "Prepare Reschedule V2",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"visitId\": 501\n}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/app/visits/reschedule/prepare-v2", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "visits", "reschedule", "prepare-v2"] },
+                "description": "Existing read-only revision lookup with authenticated host/customer access. Returns success/data with contractVersion, hostId, userId, visitId and revision. Does not grant permission to mutate; execute-v2 validates the selected assignee."
+              },
+              "response": []
+            },
+            {
+              "name": "Execute Reschedule V2",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"visitId\": 501,\n  \"assignedUserId\": 42,\n  \"scheduledDate\": \"2026-11-28\",\n  \"scheduledTime\": \"11:30\",\n  \"remarks\": \"Customer requested another date\",\n  \"idempotencyKey\": \"reschedule-v2-501\",\n  \"expectedRevision\": 0\n}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/app/visits/reschedule/execute-v2", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "visits", "reschedule", "execute-v2"] },
+                "description": "Existing V2 contract: assignedUserId, expectedRevision, idempotencyKey and remarks are required. After access, replay and revision/status checks, requires RESCHEDULE_VISIT for the selected assignee even when unchanged, plus CUSTOMER_ASSIGNMENT only if a restricted customer gains that assignee. Self needs no rule; Host Admin retains the team override. Denial returns 403 TEAM_ASSIGNMENT_FORBIDDEN without a stored operation or mutation. Revision/status rejections and successful replays retain their recorded outcomes and HTTP 200 success/data contract."
+              },
+              "response": [
+                { "name": "Team permission denied", "status": "Forbidden", "code": 403, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": "{\n  \"success\": false,\n  \"code\": \"TEAM_ASSIGNMENT_FORBIDDEN\",\n  \"message\": \"Assigned user is not eligible for RESCHEDULE_VISIT\"\n}" }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Get Team Eligible Users",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"action\": \"SCHEDULE_VISIT\",\n  \"search\": \"Alice\",\n  \"page\": 1,\n  \"limit\": 10\n}" },
+            "url": { "raw": "{{BASE_URL}}/api/v1/app/teams/getEligibleUsers", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "app", "teams", "getEligibleUsers"] },
+            "description": "Phase 4 eligibility only. action is exactly CUSTOMER_ASSIGNMENT, SCHEDULE_VISIT or RESCHEDULE_VISIT. Actor/host come from JWT context; body hostId/userId/actorId cannot override them. Self is always included in the database candidate set using the actual ID/name, regardless of memberships, rules, search or field-app access. Everyone is sorted by name ASC then ID, with no duplicate or separately pinned actor. Other users require active memberships/teams, a direct enabled permission rule, active/non-deleted status and, for visits, isFieldAppUser = 1. No admin, missing-configuration or transitive fallback for others. Optional search (100 characters). Supplying either page or limit enables normal pagination over the combined set (defaults 1/10, maximum 100); omitting both returns all eligible users without pagination metadata. The actor appears on their sorted page when paginated. Unsupported action returns 400 VALIDATION_ERROR. Does not modify customers, Visit Plans, login or sync."
+          },
+          "response": [
+            {
+              "name": "Eligible users retrieved successfully",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Eligible users retrieved successfully\",\n  \"data\": {\n    \"users\": [{ \"userId\": 11, \"name\": \"Adam\" }, { \"userId\": 22, \"name\": \"Alice\" }],\n    \"pagination\": { \"total\": 2, \"page\": 1, \"limit\": 10, \"totalPages\": 1 }\n  }\n}"
+            },
+            {
+              "name": "Self only (pagination omitted)",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Eligible users retrieved successfully\",\n  \"data\": {\n    \"users\": [{ \"userId\": 11, \"name\": \"Adam\" }]\n  }\n}"
+            }
+          ]
+        },
+        {
           "name": "Get Host Features",
           "request": {
             "method": "POST",
@@ -1459,6 +1543,226 @@
       "name": "Admin",
       "description": "Admin portal endpoints - requires admin authentication",
       "item": [
+        {
+          "name": "Team Assignment Rules",
+          "description": "Phase 3: rule storage/admin management only, not eligibility or enforcement. Same-team and many-to-many directional rules are supported. Host comes from authenticated admin context.",
+          "item": [
+            {
+              "name": "Create Assignment Rule",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{ADMIN_TOKEN}}" },
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" },
+                  { "key": "Cookie", "value": "wd24_admin_csrf={{ADMIN_CSRF_TOKEN}}" }
+                ],
+                "body": { "mode": "raw", "raw": "{\n  \"sourceTeamId\": 1,\n  \"targetTeamId\": 2,\n  \"allowCustomerAssignment\": 1,\n  \"allowScheduleVisit\": 0,\n  \"allowRescheduleVisit\": 0\n}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/admin/teams/assignment-rules/create", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "teams", "assignment-rules", "create"] },
+                "description": "Validates both teams in the authenticated host. Same-team rules are valid. Permission flags are independent numeric 0/1 and default to 0; isEnabled defaults to 1 and cannot be supplied on create. Duplicates, including disabled rules, return 409 TEAM_ASSIGNMENT_RULE_EXISTS. A deleted pair restores its existing ID with fresh permission values. Returns { success, message, data: { rule } }."
+              },
+              "response": []
+            },
+            {
+              "name": "List Assignment Rules",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{ADMIN_TOKEN}}" },
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" },
+                  { "key": "Cookie", "value": "wd24_admin_csrf={{ADMIN_CSRF_TOKEN}}" }
+                ],
+                "body": { "mode": "raw", "raw": "{\n  \"sourceTeamId\": 1,\n  \"isEnabled\": 1\n}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/admin/teams/assignment-rules/list", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "teams", "assignment-rules", "list"] },
+                "description": "Both filters are optional. Lists non-deleted rules only; disabled rules are included unless isEnabled is filtered. Includes sourceTeamName/targetTeamName and sourceTeam/targetTeam summaries (id, teamName, isEnabled, isDeleted). This does not calculate assignment eligibility. Returns { success, message, data: { rules } }. Allowed in read-only support sessions."
+              },
+              "response": []
+            },
+            {
+              "name": "Update Assignment Rule",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{ADMIN_TOKEN}}" },
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" },
+                  { "key": "Cookie", "value": "wd24_admin_csrf={{ADMIN_CSRF_TOKEN}}" }
+                ],
+                "body": { "mode": "raw", "raw": "{\n  \"ruleId\": 1,\n  \"allowScheduleVisit\": 1,\n  \"isEnabled\": 1\n}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/admin/teams/assignment-rules/update", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "teams", "assignment-rules", "update"] },
+                "description": "Changes only supplied permission flags/isEnabled (numeric 0/1); at least one is required. Supplied sourceTeamId/targetTeamId are rejected with 400; host cannot change. Unknown/deleted/foreign-host rules return 404 TEAM_ASSIGNMENT_RULE_NOT_FOUND. Returns { success, message, data: { rule } }."
+              },
+              "response": []
+            },
+            {
+              "name": "Delete Assignment Rule",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{ADMIN_TOKEN}}" },
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" },
+                  { "key": "Cookie", "value": "wd24_admin_csrf={{ADMIN_CSRF_TOKEN}}" }
+                ],
+                "body": { "mode": "raw", "raw": "{\n  \"ruleId\": 1\n}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/admin/teams/assignment-rules/delete", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "teams", "assignment-rules", "delete"] },
+                "description": "Soft-deletes and disables the rule, retaining the unique pair for reactivation via create. Returns { success, message, data: { ruleId } }. Blocked in read-only support sessions."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Teams",
+          "description": "Phase 2: host-scoped functional teams and memberships only. Membership grants no assignment permission. All host IDs come from the authenticated admin or switched-session context. Read-only support permits only list/detail/member-list.",
+          "item": [
+            {
+              "name": "Create Team",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{ADMIN_TOKEN}}" },
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" },
+                  { "key": "Cookie", "value": "wd24_admin_csrf={{ADMIN_CSRF_TOKEN}}" }
+                ],
+                "body": { "mode": "raw", "raw": "{\n  \"teamName\": \"Telecallers\",\n  \"isEnabled\": 1\n}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/admin/teams/create", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "teams", "create"] },
+                "description": "Trims a required 1-100 character name. isEnabled defaults to 1. Non-deleted names are case-insensitively unique per host; duplicates return 409 TEAM_NAME_EXISTS. Returns { success, message, data: { team } }."
+              },
+              "response": []
+            },
+            {
+              "name": "List Teams",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{ADMIN_TOKEN}}" },
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" },
+                  { "key": "Cookie", "value": "wd24_admin_csrf={{ADMIN_CSRF_TOKEN}}" }
+                ],
+                "body": { "mode": "raw", "raw": "{\n  \"search\": \"call\",\n  \"page\": 1,\n  \"limit\": 10\n}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/admin/teams/list", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "teams", "list"] },
+                "description": "Lists non-deleted teams for the authenticated host. Optional search/page/limit; defaults 1/10, maximum limit 100. Returns { success, message, data: { teams, pagination: { total, page, limit, totalPages } } }."
+              },
+              "response": []
+            },
+            {
+              "name": "Team Detail",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{ADMIN_TOKEN}}" },
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" },
+                  { "key": "Cookie", "value": "wd24_admin_csrf={{ADMIN_CSRF_TOKEN}}" }
+                ],
+                "body": { "mode": "raw", "raw": "{\n  \"teamId\": 1\n}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/admin/teams/detail", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "teams", "detail"] },
+                "description": "Returns { success, message, data: { team, members } }. Includes enabled and disabled memberships with minimal user summaries. Unknown/deleted/foreign-host teams return 404 TEAM_NOT_FOUND."
+              },
+              "response": []
+            },
+            {
+              "name": "Update Team",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{ADMIN_TOKEN}}" },
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" },
+                  { "key": "Cookie", "value": "wd24_admin_csrf={{ADMIN_CSRF_TOKEN}}" }
+                ],
+                "body": { "mode": "raw", "raw": "{\n  \"teamId\": 1,\n  \"teamName\": \"Telecallers\",\n  \"isEnabled\": 0\n}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/admin/teams/update", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "teams", "update"] },
+                "description": "Updates only teamName/isEnabled; at least one is required. Host cannot change. Flags must be numeric 0/1. Returns { success, message, data: { team } }."
+              },
+              "response": []
+            },
+            {
+              "name": "Delete Team",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{ADMIN_TOKEN}}" },
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" },
+                  { "key": "Cookie", "value": "wd24_admin_csrf={{ADMIN_CSRF_TOKEN}}" }
+                ],
+                "body": { "mode": "raw", "raw": "{\n  \"teamId\": 1\n}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/admin/teams/delete", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "teams", "delete"] },
+                "description": "Soft-deletes the team with deletedAt. Membership rows remain unchanged; the name can be reused. Returns { success, message, data: { teamId } }."
+              },
+              "response": []
+            },
+            {
+              "name": "List Team Members",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{ADMIN_TOKEN}}" },
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" },
+                  { "key": "Cookie", "value": "wd24_admin_csrf={{ADMIN_CSRF_TOKEN}}" }
+                ],
+                "body": { "mode": "raw", "raw": "{\n  \"teamId\": 1\n}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/admin/teams/members/list", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "teams", "members", "list"] },
+                "description": "Returns { success, message, data: { members } }, including disabled rows and a host-scoped user summary. Requires a non-deleted team in the authenticated host."
+              },
+              "response": []
+            },
+            {
+              "name": "Add Team Member",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{ADMIN_TOKEN}}" },
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" },
+                  { "key": "Cookie", "value": "wd24_admin_csrf={{ADMIN_CSRF_TOKEN}}" }
+                ],
+                "body": { "mode": "raw", "raw": "{\n  \"teamId\": 1,\n  \"userId\": 2\n}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/admin/teams/members/add", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "teams", "members", "add"] },
+                "description": "userId accepts a single positive ID or a non-empty array, e.g. {\"teamId\":1,\"userId\":[2,3]}. Adds non-deleted same-host users or reactivates disabled memberships preserving ID/createdAt. Repeated IDs are processed once, in user ID ascending order. An active duplicate returns 409 TEAM_MEMBER_EXISTS with the affected user's database name only, e.g. Alice is already a member of this team. Any invalid/foreign user or write failure rolls back the entire batch; unknown/foreign users receive a generic message. User IDs are not printed in member error messages. Multiple teams per user are allowed. Scalar input returns data: { member }; array input returns data: { members }, including one-element arrays."
+              },
+              "response": []
+            },
+            {
+              "name": "Update Team Member",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{ADMIN_TOKEN}}" },
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" },
+                  { "key": "Cookie", "value": "wd24_admin_csrf={{ADMIN_CSRF_TOKEN}}" }
+                ],
+                "body": { "mode": "raw", "raw": "{\n  \"teamId\": 1,\n  \"userId\": 2,\n  \"isEnabled\": 1\n}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/admin/teams/members/update", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "teams", "members", "update"] },
+                "description": "userId accepts a single positive ID or a non-empty array, e.g. {\"teamId\":1,\"userId\":[2,3],\"isEnabled\":0}. Applies the same numeric isEnabled (0/1) to all selected memberships. Identity and host cannot be rebound. Repeated IDs are processed once in user ID ascending order; unknown/foreign users or missing memberships return 404 and roll back the entire batch. Missing-member errors include the same-host database name only, e.g. Team membership not found for Alice; unknown/foreign users receive a generic message. User IDs are not printed in member error messages. Scalar input returns data: { member }; array input returns data: { members }."
+              },
+              "response": []
+            },
+            {
+              "name": "Remove Team Member",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{ADMIN_TOKEN}}" },
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "x-csrf-token", "value": "{{ADMIN_CSRF_TOKEN}}" },
+                  { "key": "Cookie", "value": "wd24_admin_csrf={{ADMIN_CSRF_TOKEN}}" }
+                ],
+                "body": { "mode": "raw", "raw": "{\n  \"teamId\": 1,\n  \"userId\": 2\n}" },
+                "url": { "raw": "{{BASE_URL}}/api/v1/admin/teams/members/remove", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "teams", "members", "remove"] },
+                "description": "userId accepts a single positive ID or a non-empty array, e.g. {\"teamId\":1,\"userId\":[2,3]}. Disables selected memberships without physical deletion; repeated removal remains disabled. Repeated IDs are processed once in user ID ascending order. Any invalid/foreign user, missing membership or write failure rejects and rolls back the entire batch. Missing-member errors include the same-host database name only, e.g. Team membership not found for Alice; unknown/foreign users receive a generic message. User IDs are not printed in member error messages. Scalar input returns data: { member }; array input returns data: { members }."
+              },
+              "response": []
+            }
+          ]
+        },
         {
           "name": "Users",
           "description": "User management",

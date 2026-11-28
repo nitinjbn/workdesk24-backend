@@ -39,7 +39,8 @@ export class CustomerService {
     hostId: number,
     customerId: number,
     userId: number,
-    transaction: Transaction
+    transaction: Transaction,
+    authorizeAssignment?: () => Promise<void>
   ): Promise<void> {
     await this.lockCustomerForAssignment(hostId, customerId, transaction);
     const assignments = await customerRepository.getCustomerUserAssignments(
@@ -47,6 +48,7 @@ export class CustomerService {
       transaction
     );
     if (assignments.length > 0 && !assignments.some((assignment) => Number(assignment.userId) === userId)) {
+      await authorizeAssignment?.();
       await customerRepository.saveCustomerUserAssignments(
         { hostId, customerId, userIds: [userId], createdAt: DateTimeFormatUtil.getCurrentUnixTime() },
         transaction

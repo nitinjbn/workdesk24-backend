@@ -1,7 +1,14 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
+process.env.NODE_ENV = 'test';
+process.env.DB_HOST = '127.0.0.1';
+process.env.DB_PORT = '3306';
+process.env.DB_NAME_TEST = 'wd_visit_plan_unit_test';
 const visitPlanService = require('../../src/modules/staff/services/visit-plan.service').default;
+const applicationDb = require('../../src/models').sequelize;
+test.before(() => test.mock.method(applicationDb, 'query', async () => { throw new Error('Unexpected shared database query'); }));
+test.after(() => applicationDb.close());
 
 test('Visit Plan scheduled date is parsed strictly in host timezone', () => {
   const service = visitPlanService;
@@ -659,6 +666,13 @@ function assignmentFixture(t, initialAssignments = [42, 7, 8], hostSettings = []
     history: [],
   };
   const transaction = { LOCK: { UPDATE: 'UPDATE' } };
+  const permissions = new Set(['SCHEDULE_VISIT', 'RESCHEDULE_VISIT', 'CUSTOMER_ASSIGNMENT']);
+  const eligibility = require('../../src/modules/auth/services/assignment-eligibility.service').default;
+  const permissionChecks = t.mock.method(eligibility, 'isUserEligible', async (payload) => {
+    assert.equal(payload.hostId, 1);
+    assert.equal(payload.transaction, transaction);
+    return payload.actorId === payload.targetUserId || permissions.has(payload.action);
+  });
   t.mock.method(db.sequelize, 'transaction', async (callback) => {
     const staged = structuredClone(state);
     transaction.state = staged;
@@ -709,7 +723,7 @@ function assignmentFixture(t, initialAssignments = [42, 7, 8], hostSettings = []
     assert.equal(tx, transaction);
     tx.state.assignments.push(...payload.userIds);
   });
-  return { plans, getState: () => state };
+  return { plans, permissions, permissionChecks, transaction, getState: () => state };
 }
 
 const assignmentAdmin = { id: 7, hostId: 1, isAdminUser: 1, isFieldAppUser: 0 };
@@ -719,6 +733,199 @@ const scheduleInput = {
   assignedUserId: 43,
   scheduledDate: '2026-11-27',
 };
+
+const permissionActor = { id: 42, hostId: 1, isAdminUser: 0, isFieldAppUser: 1 };
+const moveInput = { visitId: 501, scheduledDate: '2026-11-28', remarks: 'Moved', idempotencyKey: 'move-key', expectedRevision: 0 };
+
+async function prepareMoveFixture(t, assignedUserId = 43, assignments) {
+  const fixture = assignmentFixture(t, assignments);
+  t.mock.method(fixture.plans, 'findRescheduleOperation', async () => null);
+  t.mock.method(fixture.plans, 'createRescheduleOperation', async () => {});
+  await visitPlanService.schedule(assignmentAdmin, { ...scheduleInput, assignedUserId });
+  fixture.getState().plans[0].rescheduleRevision = 0;
+  return fixture;
+}
+
+test('Self scheduling needs no rules, including for a non-field-app actor', async (t) => {
+  const fixture = assignmentFixture(t);
+  fixture.permissions.clear();
+  fixture.plans.findUser.mock.mockImplementation(async (_hostId, userId, _tx, requireFieldAppUser) => {
+    assert.equal(requireFieldAppUser, false);
+    return { id: userId, hostId: 1, accountStatus: 'ACTIVE', isDeleted: 0, isFieldAppUser: 0 };
+  });
+  await visitPlanService.schedule({ ...permissionActor, isFieldAppUser: 0 }, { ...scheduleInput, assignedUserId: 42 });
+  assert.equal(fixture.getState().plans[0].assignedUserId, 42);
+  assert.deepEqual(fixture.getState().assignments, [42, 7, 8]);
+  assert.deepEqual(fixture.permissionChecks.mock.calls.map((call) => call.arguments[0].action), ['SCHEDULE_VISIT']);
+});
+
+test('Schedule permission uses authenticated scope and is independent of customer assignment', async (t) => {
+  const fixture = assignmentFixture(t);
+  fixture.permissions.clear();
+  await assert.rejects(visitPlanService.schedule(permissionActor, scheduleInput), { statusCode: 403, code: 'TEAM_ASSIGNMENT_FORBIDDEN' });
+  fixture.permissions.add('SCHEDULE_VISIT');
+  await assert.rejects(visitPlanService.schedule(permissionActor, {
+    ...scheduleInput, hostId: 2, userId: 43, actorId: 43,
+  }), { statusCode: 403, code: 'TEAM_ASSIGNMENT_FORBIDDEN' });
+  assert.deepEqual(fixture.getState().plans, []);
+  assert.deepEqual(fixture.getState().history, []);
+  assert.deepEqual(fixture.getState().assignments, [42, 7, 8]);
+  fixture.permissions.add('CUSTOMER_ASSIGNMENT');
+  await visitPlanService.schedule(permissionActor, scheduleInput);
+  assert.equal(fixture.getState().plans[0].assignedUserId, 43);
+  assert.deepEqual(fixture.getState().assignments, [42, 7, 8, 43]);
+  assert.ok(fixture.permissionChecks.mock.calls.every((call) => call.arguments[0].actorId === 42));
+});
+
+for (const assignments of [[], [42, 43]]) {
+  test(`Scheduling skips customer permission when assignments are ${assignments.length ? 'already present' : 'open'}`, async (t) => {
+    const fixture = assignmentFixture(t, assignments);
+    fixture.permissions.delete('CUSTOMER_ASSIGNMENT');
+    await visitPlanService.schedule(permissionActor, scheduleInput);
+    assert.deepEqual(fixture.getState().assignments, assignments);
+    assert.deepEqual(fixture.permissionChecks.mock.calls.map((call) => call.arguments[0].action), ['SCHEDULE_VISIT']);
+  });
+}
+
+for (const method of ['reschedule', 'rescheduleV2']) {
+  test(`${method}: unchanged other-user assignees still require reschedule permission`, async (t) => {
+    const fixture = await prepareMoveFixture(t);
+    fixture.permissions.delete('RESCHEDULE_VISIT');
+    const body = method === 'reschedule' ? moveInput : { ...moveInput, assignedUserId: 43 };
+    await assert.rejects(visitPlanService[method](permissionActor, body), { statusCode: 403, code: 'TEAM_ASSIGNMENT_FORBIDDEN' });
+    assert.equal(fixture.getState().plans[0].rescheduleRevision, 0);
+    assert.equal(fixture.getState().history.length, 1);
+    fixture.permissions.add('RESCHEDULE_VISIT');
+    fixture.permissions.delete('CUSTOMER_ASSIGNMENT');
+    await visitPlanService[method](permissionActor, body);
+    assert.equal(fixture.getState().plans[0].rescheduleRevision, 1);
+    assert.ok(fixture.permissionChecks.mock.calls.every((call) => call.arguments[0].action === 'RESCHEDULE_VISIT'));
+  });
+
+  test(`${method}: new assignees need both independent permissions before any writes`, async (t) => {
+    const fixture = await prepareMoveFixture(t, 42);
+    fixture.permissions.clear();
+    fixture.permissions.add('CUSTOMER_ASSIGNMENT');
+    await assert.rejects(visitPlanService[method](permissionActor, { ...moveInput, assignedUserId: 43 }), { statusCode: 403 });
+    fixture.permissions.clear();
+    fixture.permissions.add('RESCHEDULE_VISIT');
+    await assert.rejects(visitPlanService[method](permissionActor, { ...moveInput, assignedUserId: 43 }), { statusCode: 403 });
+    assert.deepEqual(fixture.getState().assignments, [42, 7, 8]);
+    assert.equal(fixture.getState().plans[0].assignedUserId, 42);
+    assert.equal(fixture.getState().history.length, 1);
+    fixture.permissions.add('CUSTOMER_ASSIGNMENT');
+    await visitPlanService[method](permissionActor, { ...moveInput, assignedUserId: 43 });
+    assert.equal(fixture.getState().plans[0].assignedUserId, 43);
+    assert.deepEqual(fixture.getState().assignments, [42, 7, 8, 43]);
+  });
+
+  for (const assignedUserId of [42, 43]) {
+    test(`${method}: retaining or changing to self needs no team rules (previous assignee ${assignedUserId})`, async (t) => {
+      const fixture = await prepareMoveFixture(t, assignedUserId);
+      fixture.permissions.clear();
+      await visitPlanService[method](permissionActor, { ...moveInput, assignedUserId: 42 });
+      assert.equal(fixture.getState().plans[0].assignedUserId, 42);
+      assert.equal(fixture.getState().history[1].performedBy, 42);
+      assert.ok(fixture.permissionChecks.mock.calls.every((call) => call.arguments[0].targetUserId === 42));
+    });
+  }
+
+  test(`${method}: self eligibility cannot bypass customer access or host isolation`, async (t) => {
+    const fixture = await prepareMoveFixture(t);
+    fixture.permissions.clear();
+    await assert.rejects(visitPlanService[method]({ ...permissionActor, id: 44 }, { ...moveInput, assignedUserId: 44 }), { statusCode: 403 });
+    await assert.rejects(visitPlanService[method]({ ...permissionActor, hostId: 2 }, { ...moveInput, assignedUserId: 42 }), { statusCode: 404 });
+    await assert.rejects(visitPlanService[method](permissionActor, { ...moveInput, assignedUserId: 99 }), { statusCode: 400 });
+    assert.equal(fixture.getState().history.length, 1);
+    assert.equal(fixture.permissionChecks.mock.callCount(), 0);
+  });
+
+  test(`${method}: successful replays remain valid after permission revocation`, async (t) => {
+    const fixture = await prepareMoveFixture(t);
+    let operation;
+    fixture.plans.findRescheduleOperation.mock.mockImplementation(async () => operation ?? null);
+    fixture.plans.createRescheduleOperation.mock.mockImplementation(async (payload) => { operation = payload; });
+    const body = { ...moveInput, assignedUserId: 43 };
+    const first = await visitPlanService[method](permissionActor, body);
+    delete fixture.getState().plans[0].toJSON;
+    const checks = fixture.permissionChecks.mock.callCount();
+    fixture.permissions.clear();
+    assert.deepEqual(await visitPlanService[method](permissionActor, body), JSON.parse(JSON.stringify(first)));
+    assert.equal(fixture.permissionChecks.mock.callCount(), checks);
+    assert.equal(fixture.getState().history.length, 2);
+  });
+}
+
+test('Host Admin override skips team checks but preserves existing customer restrictions', async (t) => {
+  const fixture = assignmentFixture(t);
+  fixture.permissions.clear();
+  await visitPlanService.schedule(assignmentAdmin, scheduleInput);
+  await visitPlanService.reschedule(assignmentAdmin, { ...moveInput, assignedUserId: 42, idempotencyKey: undefined });
+  assert.equal(fixture.permissionChecks.mock.callCount(), 0);
+  delete fixture.getState().plans[0].toJSON;
+  await assert.rejects(visitPlanService.schedule({ ...assignmentAdmin, id: 99 }, scheduleInput), { statusCode: 403 });
+});
+
+test('Customer auto-assignment authorizes self only at the locked insertion point', async (t) => {
+  const fixture = assignmentFixture(t, [43]);
+  fixture.permissions.clear();
+  await require('../../src/models').default.sequelize.transaction(async (transaction) => {
+    await visitPlanService.assignVisitUserToCustomer(permissionActor, 125, 42, transaction);
+  });
+  assert.deepEqual(fixture.getState().assignments, [43, 42]);
+  assert.deepEqual(fixture.permissionChecks.mock.calls.map((call) => call.arguments[0].action), ['CUSTOMER_ASSIGNMENT']);
+});
+
+test('V2 revision rejection preserves its recorded outcome without running mutation permissions', async (t) => {
+  const fixture = await prepareMoveFixture(t);
+  fixture.permissions.clear();
+  const result = await visitPlanService.rescheduleV2(permissionActor, { ...moveInput, assignedUserId: 43, expectedRevision: 1 });
+  assert.equal(result.outcome, 'rejected');
+  assert.equal(result.reason, 'REVISION_CONFLICT');
+  assert.equal(fixture.plans.createRescheduleOperation.mock.callCount(), 1);
+  assert.equal(fixture.permissionChecks.mock.callCount(), 0);
+  assert.equal(fixture.getState().plans[0].rescheduleRevision, 0);
+});
+
+test('Schedule replay remains valid after team permission revocation without repeating assignments', async (t) => {
+  const fixture = assignmentFixture(t);
+  let original;
+  t.mock.method(fixture.plans, 'findIdempotent', async () => original ? {
+    ...original, isDeleted: 0, toJSON: () => ({ ...original }),
+  } : null);
+  const body = { ...scheduleInput, idempotencyKey: 'self-bound-schedule' };
+  await visitPlanService.schedule(permissionActor, body);
+  original = fixture.getState().plans[0];
+  const checks = fixture.permissionChecks.mock.callCount();
+  fixture.permissions.clear();
+  assert.equal((await visitPlanService.schedule(permissionActor, body)).id, original.id);
+  assert.equal(fixture.permissionChecks.mock.callCount(), checks);
+  assert.equal(fixture.getState().history.length, 1);
+  assert.deepEqual(fixture.getState().assignments, [42, 7, 8, 43]);
+});
+
+test('Visit Plan Postman requests retain authenticated write contracts in both collections', () => {
+  const fs = require('node:fs');
+  for (const [file, appName] of [
+    ['Workdesk24_API_v3.postman_collection.json', 'App'],
+    ['docs/WorkDesk24.postman_collection.json', 'App Routes'],
+  ]) {
+    const collection = JSON.parse(fs.readFileSync(file, 'utf8'));
+    const routes = collection.item.find((item) => item.name === appName).item.find((item) => item.name === 'Visit Plans').item;
+    for (const name of ['Schedule Visit', 'Reschedule Visit', 'Prepare Reschedule V2', 'Execute Reschedule V2']) {
+      const { request } = routes.find((item) => item.name === name);
+      assert.equal(request.method, 'POST');
+      assert.equal(request.header.find((header) => header.key === 'Authorization').value, 'Bearer {{TOKEN}}');
+      const payload = JSON.parse(request.body.raw);
+      assert.equal(Object.hasOwn(payload, 'hostId'), false);
+      assert.equal(Object.hasOwn(payload, 'userId'), false);
+      if (name === 'Execute Reschedule V2') {
+        assert.equal(typeof payload.expectedRevision, 'number');
+        assert.ok(payload.idempotencyKey && payload.assignedUserId && payload.remarks);
+      }
+    }
+  }
+});
 
 test('Keyed reschedule replays its saved result and rejects a different payload', async (t) => {
   const fixture = assignmentFixture(t);
